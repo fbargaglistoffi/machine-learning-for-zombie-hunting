@@ -232,7 +232,7 @@ forval j = 2008/2016 {
 }
 
 
-* 
+* Size-age indicator lagged values (2008-2016)
 
 gen real_SA=. 
 replace real_SA=(-0.737*log(total_assets_2016)) + (0.043*log(total_assets_2016))^2 - (0.040 * (time)) if (year_of_status==2017 | year_of_status==2018) & total_assets_2016!=.
@@ -263,7 +263,7 @@ forval j = 2008/2015 {
 count if NEG_VA==.
 
 ********************************************************************************
-* Z score Altman + Zingales
+* Z score Altman & Zingales
 * Z SCORE for private firms Z′ = 0.717X1 + 0.847X2 + 3.107X3 + 0.420X4 + 0.998X5
 
 forval j = 2008/2016 { 
@@ -292,19 +292,21 @@ return list
 ********************************************************************************
 * Misallocated Capital (Schivardi & Tabellini, 2017)
 
-* ROA = Moving Average Ebitda (3 years) / Total Assets
+* ROA = Moving Average Ebitda (3 years) / Total Assets -> we don't do the moving average to keep the time series as wide as possible
 
 forval j = 2008/2016 { 
 	gen roa_`j' = (ebitda_`j')/(total_assets_`j') /* we don't have moving average for 2009 and 2010 */
     *gen roa_`j' = ((ebitda_`j' + ebitda_`j-1' + ebitda_`j-2')/3)/(total_assets_`j')
     *replace roa_`j'=0 if roa_`j'<=0 /* some negative values */
 	*replace roa_`j'=0 if roa_`j'>1 & roa_`j'!=.
-	quietly su roa_`j', d /* windsorize */
+	
+	/* If you want to windsorize the data "uncomment" the chunk of code below
+	quietly su roa_`j', d 
 	scalar roa_`j'_99=r(p99)
 	scalar roa_`j'_1=r(p1)
 	replace roa_`j'=roa_`j'_99 if roa_`j'>= roa_`j'_99 & roa_`j'!=.
 	replace roa_`j'=roa_`j'_1 if roa_`j'<= roa_`j'_1 & roa_`j'!=.
-	replace roa_`j'= roa_`j'*100
+	replace roa_`j'= roa_`j'*100 */
 }
 
 su roa_2016,d
@@ -416,15 +418,47 @@ replace dummy_trademark = 0 if  Number_of_trademarks==0
 
 * 1. INDICE DI SOSTENIBILITÀ ONERI FINANZIARI: Financial expenses/Revenues
 
+forval j = 2008/2016 { 
+	gen financial_sustainability_`j' = fin_expenses_`j' / revenue`j'
+}
+
+* Lagged values (2008-2016)
+gen financial_sustainability =.
+replace financial_sustainability = financial_sustainability_2016 if year_of_status==2017 | year_of_status==2018 
+forval j = 2008/2015 { 
+	replace financial_sustainability = financial_sustainability_`j' if year_of_status==(`j' + 1) 
+}
 
 * 2. INDICE DI ADEGUATEZZA PATRIMONIALE: Equity/(Short-term debts + Long-term debts)
 
+/* Download equity & short term debt */
+forval j = 2008/2016 { 
+	gen car_`j' = equity_`j' / (short_term_debt_`j' + long_term_debt) /* capital adeguacy index */
+}
+
+* Lagged values (2008-2016)
+gen car =.
+replace car = car_2016 if year_of_status==2017 | year_of_status==2018 
+forval j = 2008/2015 { 
+	replace car = car_`j' if year_of_status==(`j' + 1) 
+}
 
 * 3. INDICE DI RITORNO LIQUIDO DELL’ATTIVO: Cash flow/Total assets
 
+forval j = 2008/2016 { 
+	gen liquidity_return_`j' = cash_flow_`j' / total_assets_`j'
+}
 
-* 4. INDICE DI LIQUIDITÀ: Short-term assets/Short-term liabilities
+* Lagged values (2008-2016)
+gen liquidity_return =.
+replace liquidity_return = liquidity_return_2016 if year_of_status==2017 | year_of_status==2018 
+forval j = 2008/2015 { 
+	replace liquidity_return = liquidity_return_`j' if year_of_status==(`j' + 1) 
+}
 
+
+* 4. INDICE DI LIQUIDITÀ: liquidity_ratio is already in the data
 
 * 5. INDICE DI INDEBITAMENTO PREVIDENZIALE E TRIBUTARIO: (Tax liabilities + Social securityliabilities)/Total assets
+
 
