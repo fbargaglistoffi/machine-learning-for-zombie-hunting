@@ -10,7 +10,7 @@ cd "G:\Il mio Drive\Research\Italian Firms\Zombie Hunting New Data" /*change pat
 use zombie_complete.dta, clear
 
 * Drop company name (to decrease the size of data)
-drop Company_name
+*drop Company_name
 
 * Rename variables
 ren BvD_ID_number id
@@ -20,8 +20,8 @@ ren NUTS2 nuts2
 ren NUTS3 nuts3
 ren Region_in_country region
 ren City city
-
 ren Cons__code conscode
+
 ren NAICS naics
 ren NACE_Rev__2_Core_code__4_digits_ nace
 ren Shareholders_funds_EUR_* shareholders_funds_*
@@ -85,7 +85,7 @@ ren revenue6 revenue2009
 ren revenue7 revenue2008
 
 * Drop Poland and UK (scarce representativeness)
-drop if iso=="GB" | iso=="PL"
+drop if iso=="GB" | iso=="PL" | iso=="DE" | iso=="RO" | iso=="SE"
 count if id==""
 
 * Claning if date of incorporation is the same of status date
@@ -96,5 +96,3 @@ sort id
 quietly by id: gen dup = cond(_N==1,0,_n) 
 /*the information in the second duplicates are redundant */
 drop if dup==2 
-
-save data_clean
