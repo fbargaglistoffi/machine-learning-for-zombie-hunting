@@ -31,8 +31,8 @@ forval j = 2008/2015 {
 * Financial Constraint indicator (Nickell & Nicolitsas, 1999)
 forval j = 2008/2016 { 
     gen fin_cons_`j' =  (int_paid_`j')/(ebitda_`j') if ebitda_`j'!=. & int_paid_`j'!=.
-	*replace fin_cons_`j'=1 if fin_cons_`j'<0 /*following N&N99 */
-	*replace fin_cons_`j'=1 if fin_cons_`j'>1 & fin_cons_`j'!=. /* just for very small numbers */
+	replace fin_cons_`j'=1 if fin_cons_`j'<0 /*following N&N99 */
+	replace fin_cons_`j'=1 if fin_cons_`j'>1 & fin_cons_`j'!=.
 	
 }
 
@@ -55,10 +55,7 @@ forval j = 2008/2015 {
      replace fin_cons =  fin_cons_`j' if year_of_status==`j'+1 & ebitda_`j'!=. & int_paid_`j'!=.
 }
 
-*replace fin_cons=1 if fin_cons<0  /*following N&N99 */
-*replace fin_cons=1 if fin_cons>1 & fin_cons!=. /* just 1.6% */ 
 gen fin_cons100=fin_cons*100 /* to see the effect of 1 percentage increse */
-
 
 ********************************************************************************
 * Investments
@@ -215,7 +212,6 @@ forval j = 2009/2016 {
 }
 
 * Interest difference lagged values (2008-2016)
-
 gen interest_diff=.
 replace interest_diff= cond(DIFF_2016 <0,0,1) if (year_of_status==2017 | year_of_status==2018) & DIFF_2016!=. 
 forval j = 2009/2015 { 
