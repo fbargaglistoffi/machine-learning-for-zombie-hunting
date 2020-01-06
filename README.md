@@ -53,6 +53,7 @@ The <tt>`Stata`</tt> code files can be found </b> [<a href="https://github.com/b
 * <tt>`merging_and_cleaning_data`</tt>;
 * <tt>`creating_indicators`</tt>;
 * <tt>`descriptives`</tt>.
+The files in the the first two folder can be run following their numbering to create the dataset used for the ML analysis.
 
 Within the <tt>`merging_and_cleaning_data`</tt> folder you can find the following files:
 * <tt>`00_correcting_corrupted_data`</tt>: code to correct the corrupted Orbis files;
@@ -67,4 +68,10 @@ Within the <tt>`creating_indicators`</tt> folder you can find the following file
 * <tt>`05_indicators`</tt>: code to create the indicators used in the ML analysis;
 * <tt>`06_tfp`</tt>: code to generate the total factor productivity.
 N.B. The lagged variables were created to perform a general model. Indeed, the lagged variable assumes the values of the correspondig variable at "t-1". "t" is either the censorship time for those firms that did not fail in the time span of the analysis (2008-2018) or the failure time for those firms that failed in the same time span.
+
+Within the <tt>`descriptives`</tt> folder you can find the following files:
+* <tt>`descriptives`</tt>: code to create general descriptive statistics (later I will add more detailed references to the papers tables);
+* <tt>`eurostat_vs_orbis`</tt>: code to compare orbis data with Eurostat;
+* <tt>`eurostat_vs_orbis_MSE`</tt>: code to compare orbis data with Eurostat with the proposed MSE methodology;
+* <tt>`zombies_descriptives`</tt>: code to create general descriptive statistics for the zombie firms (after the ML analysis).
 
