@@ -45,7 +45,8 @@ First, we downloaded data on firm level characteristics and financial accounts f
 * <tt>`solvency_ratio`</tt>: firm's solvency ratio;
 * <tt>`net_income`</tt>: net income in Euro;
 * <tt>`depreciation`</tt>: depreciation in Euro;
-* <tt>`revenus`</tt>: sales in Euro.
+* <tt>`revenus`</tt>: sales in Euro;
+* <tt>`payables`</tt>: tax and pension payables in Euro (2009-2016).
 
 # Stata Code
 
