@@ -8,7 +8,8 @@ Below a brief legend of the Data and the <tt>`Stata`</tt> and <tt>`R`</tt> code 
 
 # Data
 
-First, we downloaded data on firm level characteristics and financial accounts for  803,227 enterprises (2008-2018) in Italy, Germany, Spain, France, Great Britain, Poland, Portugal, Romania and Sweden from the ORBIS database (Bureau Van Dijk). The variables that we downloaded are the following: 
+First, we downloaded data on firm level characteristics and financial accounts for 803,227 enterprises in Italy, Germany, Spain, France, Great Britain, Poland, Portugal, Romania and Sweden from the ORBIS database (Bureau Van Dijk). The status data (e.g., active firms, bankrupted firms, etc.) are available for the years 2008 - 2018, while financial account data are available for the year 2008-2016.
+The variables that we downloaded are the following: 
 
 * <tt>`id`</tt>: firm's id;
 * <tt>`guo`</tt>: global ultimate owner;
@@ -45,7 +46,8 @@ First, we downloaded data on firm level characteristics and financial accounts f
 * <tt>`solvency_ratio`</tt>: firm's solvency ratio;
 * <tt>`net_income`</tt>: net income in Euro;
 * <tt>`depreciation`</tt>: depreciation in Euro;
-* <tt>`revenus`</tt>: sales in Euro.
+* <tt>`revenus`</tt>: sales in Euro;
+* <tt>`payables`</tt>: tax and pension payables in Euro (2009-2016).
 
 # Stata Code
 
@@ -58,7 +60,7 @@ The files in the the first two folder can be run following their numbering to cr
 Within the <tt>`merging_and_cleaning_data`</tt> folder you can find the following files:
 * <tt>`00_correcting_corrupted_data`</tt>: code to correct the corrupted Orbis files;
 * <tt>`01_appending_data`</tt>: code to append the data;
-* <tt>`02_data_cleaning`</tt>: code to clean data.
+* <tt>`02_data_cleaning`</tt>: code to clean data. <br />
 As the data come in 201 different <tt>`.dta`</tt> files, the first two code files are used to correct the corrupted data files and append them to get the initial dataset.
 The <tt>`02_data_cleaning`</tt> file is used to rename the variables and exclude countries that have scarce representativity (i.e., Great Britain, Poland, Germany, Romania, Sweden) and duplicate observations.
 
@@ -66,7 +68,7 @@ Within the <tt>`creating_indicators`</tt> folder you can find the following file
 * <tt>`03_failure_and_time_variables`</tt>: code to create the outcome variable and the time related variables;
 * <tt>`04_lagged_variables`</tt>: code to create lagged variables;
 * <tt>`05_indicators`</tt>: code to create the indicators used in the ML analysis;
-* <tt>`06_tfp`</tt>: code to generate the total factor productivity.
+* <tt>`06_tfp`</tt>: code to generate the total factor productivity. <br />
 N.B. The lagged variables were created to perform a general model. Indeed, the lagged variable assumes the values of the correspondig variable at "t-1". "t" is either the censorship time for those firms that did not fail in the time span of the analysis (2008-2018) or the failure time for those firms that failed in the same time span.
 
 Within the <tt>`descriptives`</tt> folder you can find the following files:
