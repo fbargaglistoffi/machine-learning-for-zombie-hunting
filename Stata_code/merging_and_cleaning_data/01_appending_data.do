@@ -44,4 +44,4 @@ foreach v of var `r(varlist)' {
 sort BvD_ID_number
 
 * Save data
-save zombie_complete.dta, replace
+save file_intermedio.dta, replace

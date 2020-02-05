@@ -7,7 +7,7 @@ clear all
 cd "G:\Il mio Drive\Research\Italian Firms\Zombie Hunting New Data" /*change path accordingly*/
 
 * Upload data
-use zombie_complete.dta, clear
+use file_intermedio.dta, clear
 
 * Drop company name (to decrease the size of data)
 *drop Company_name
