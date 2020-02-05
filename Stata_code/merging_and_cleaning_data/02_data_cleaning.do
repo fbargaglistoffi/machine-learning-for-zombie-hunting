@@ -96,3 +96,5 @@ sort id
 quietly by id: gen dup = cond(_N==1,0,_n) 
 /*the information in the second duplicates are redundant */
 drop if dup==2 
+
+save analysis_data.dta, replace

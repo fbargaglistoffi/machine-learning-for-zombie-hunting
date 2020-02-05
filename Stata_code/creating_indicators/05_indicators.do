@@ -455,6 +455,17 @@ forval j = 2008/2015 {
 
 * 4. INDICE DI LIQUIDITÀ: liquidity_ratio is already in the data
 
-* 5. INDICE DI INDEBITAMENTO PREVIDENZIALE E TRIBUTARIO: (Tax liabilities + Social securityliabilities)/Total assets
+* 5. INDICE DI INDEBITAMENTO PREVIDENZIALE E TRIBUTARIO: (Tax liabilities + Social security liabilities)/Total assets
+* (N.B. This indicator is available for 2009 to 2016, as we don't have data on years before 2009)
+forval j = 2009/2016 { 
+	gen pension_tax_debts_`j' = (tax_payables_`j' + pension_payables_`j')/total_assets_`j'
+}
+
+* Lagged values (2009-2016)
+gen pension_tax_debts
+replace pension_tax_debts = pension_tax_debts_2016 if year_of_status==2017 | year_of_status==2018 
+forval j = 2009/2015 { 
+	replace pension_tax_debts = pension_tax_debts_`j' if year_of_status==(`j' + 1) 
+}
 
 
