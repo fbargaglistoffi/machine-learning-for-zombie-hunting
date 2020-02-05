@@ -8,7 +8,8 @@ Below a brief legend of the Data and the <tt>`Stata`</tt> and <tt>`R`</tt> code 
 
 # Data
 
-First, we downloaded data on firm level characteristics and financial accounts for  803,227 enterprises (2008-2018) in Italy, Germany, Spain, France, Great Britain, Poland, Portugal, Romania and Sweden from the ORBIS database (Bureau Van Dijk). The variables that we downloaded are the following: 
+First, we downloaded data on firm level characteristics and financial accounts for 803,227 enterprises in Italy, Germany, Spain, France, Great Britain, Poland, Portugal, Romania and Sweden from the ORBIS database (Bureau Van Dijk). The status data (e.g., active firms, bankrupted firms, etc.) are available for the years 2008 - 2018, while financial account data are available for the year 2008-2016.
+The variables that we downloaded are the following: 
 
 * <tt>`id`</tt>: firm's id;
 * <tt>`guo`</tt>: global ultimate owner;
