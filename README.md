@@ -52,25 +52,26 @@ The variables that we downloaded are the following:
 # Stata Code
 
 The <tt>`Stata`</tt> code files can be found </b> [<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are devided in three folders:
-* <tt>`merging_and_cleaning_data`</tt>;
-* <tt>`creating_indicators`</tt>;
+* <tt>`generating_and_merging_data`</tt>;
+* <tt>`creating_indicators_and_cleaning_data`</tt>;
 * <tt>`descriptives`</tt>.
 The files in the the first two folder can be run following their numbering to create the dataset used for the ML analysis.
 
-Within the <tt>`merging_and_cleaning_data`</tt> folder you can find the following files:
+Within the <tt>`generating_and_merging_data`</tt> folder you can find the following files:
 * <tt>`00.1_generate_data_on_payables.do`</tt>: code to generate variables needed for indicators from AIDA;
 * <tt>`00_correcting_corrupted_data`</tt>: code to correct the corrupted Orbis files;
 * <tt>`01_appending_data`</tt>: code to append the data;
-* <tt>`02_data_cleaning`</tt>: code to clean data. <br />
-As the data come in 201 different <tt>`.dta`</tt> files, the first two code files are used to correct the corrupted data files and append them to get the initial dataset.
-The <tt>`02_data_cleaning`</tt> file is used to rename the variables and exclude countries that have scarce representativity (i.e., Great Britain, Poland, Germany, Romania, Sweden) and duplicate observations.
+* <tt>`02_variables_renaming`</tt>: code to rename variable. <br />
+As the data come in 201 different <tt>`.dta`</tt> files, the first two code files are used to correct the corrupted data files and append them to get the initial dataset.  <br />
+N.B. The <tt>`02_variables_renaming`</tt> file is used also to exclude countries that have scarce representativity (i.e., Great Britain, Poland, Germany, Romania, Sweden) and duplicate observations.
 
-Within the <tt>`creating_indicators`</tt> folder you can find the following files:
+Within the <tt>`creating_indicators_and_cleaning_data`</tt> folder you can find the following files:
 * <tt>`03_failure_and_time_variables`</tt>: code to create the outcome variable and the time related variables;
 * <tt>`04_lagged_variables`</tt>: code to create lagged variables;
 * <tt>`05_indicators`</tt>: code to create the indicators used in the ML analysis;
 * <tt>`06_tfp`</tt>: code to generate the total factor productivity. <br />
-N.B. The lagged variables were created to perform a general model. Indeed, the lagged variable assumes the values of the correspondig variable at "t-1". "t" is either the censorship time for those firms that did not fail in the time span of the analysis (2008-2018) or the failure time for those firms that failed in the same time span.
+N.B.1 The lagged variables were created to perform a general model. Indeed, the lagged variable assumes the values of the correspondig variable at "t-1". "t" is either the censorship time for those firms that did not fail in the time span of the analysis (2008-2018) or the failure time for those firms that failed in the same time span. <br />
+N.B.2 The data cleaning is performed in multiple .do files and not just in one specific file.
 
 Within the <tt>`descriptives`</tt> folder you can find the following files:
 * <tt>`descriptives`</tt>: code to create general descriptive statistics (later I will add more detailed references to the papers tables);
