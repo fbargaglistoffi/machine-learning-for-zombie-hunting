@@ -1,5 +1,5 @@
 *****************
-* Data Cleaning *
+* Renaming Data *
 *****************
 
 *Set working directory
@@ -88,13 +88,14 @@ ren revenue7 revenue2008
 drop if iso=="GB" | iso=="PL" | iso=="DE" | iso=="RO" | iso=="SE"
 count if id==""
 
-* Claning if date of incorporation is the same of status date
+* Dropping if date of incorporation is the same of status date
 drop if Status_date==Date_of_incorporation & Status!="Active"
 
-* Work with duplicates 
+* Dropping duplicates 
 sort id
 quietly by id: gen dup = cond(_N==1,0,_n) 
 /*the information in the second duplicates are redundant */
 drop if dup==2 
+drop dup
 
 save analysis_data.dta, replace
