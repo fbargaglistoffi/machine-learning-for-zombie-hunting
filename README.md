@@ -71,7 +71,7 @@ Within the <tt>`creating_indicators_and_cleaning_data`</tt> folder you can find 
 * <tt>`04_lagged_variables`</tt>: code to create lagged variables;
 * <tt>`05_indicators`</tt>: code to create the indicators used in the ML analysis;
 * <tt>`06_tfp`</tt>: code to generate the total factor productivity. <br />
-N.B.1 The lagged variables were created to run a machine learning model with lagger predictors. In particular, the lagged variable assumes the values of the corresponding variable at "t-1", where "t" is either the censorship time for those firms that did not fail in the time span of the analysis (2008-2018), or the failure time for those firms that failed in the same time span. <br />
+N.B.1 The lagged variables were created to run a series of machine learning models with lagger predictors used to assess the performance of each model. In particular, the lagged variable assumes the values of the corresponding variable at "t-1", where "t" is either the censorship time for those firms that did not fail in the time span of the analysis (2008-2018), or the failure time for those firms that failed in the same time span. <br />
 N.B.2 The data cleaning is performed in multiple .do files and not just in one specific file.
 
 Within the <tt>`descriptives`</tt> folder you can find the following files:
