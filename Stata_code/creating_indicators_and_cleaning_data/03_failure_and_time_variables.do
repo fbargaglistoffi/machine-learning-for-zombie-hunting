@@ -83,16 +83,3 @@ tab failure
       Total |    508,043      100.00
 
 */
-
-********************************************************************************
-*                                  STSET data                                  *  
-********************************************************************************
-
-* Run this chunk of code to generate STSET data
-
-* Generate STSET data
-stset year_of_status, origin(year_of_incorporation) failure(failure)
-
-* Generate time variable
-gen time=.
-replace time=_t

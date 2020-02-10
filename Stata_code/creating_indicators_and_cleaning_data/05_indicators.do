@@ -218,9 +218,33 @@ forval j = 2009/2015 {
 	replace interest_diff = cond(DIFF_`j' <0,0,1) if year_of_status==(`j' + 1) & int_paid_`j'!=. & R_`j'!=.
 }
 
+********************************************************************************
+* Negative Value Added
+
+forval j = 2008/2016 { 
+	gen NEG_VA_`j' = .
+	replace NEG_VA_`j' = 1 if added_value_`j' <= 0
+	replace NEG_VA_`j' = 0 if added_value_`j' > 0 & added_value_`j'!=.
+} 
+
+gen NEG_VA=.
+replace NEG_VA= cond(added_value_2016<=0,1,0) if year_of_status==2017 | year_of_status==2018 & added_value_2016!=.
+forval j = 2008/2015 { 
+	replace NEG_VA= cond(added_value_`j'<=0,1,0) if year_of_status==(`j' + 1) & added_value_`j'!=.
+}
+count if NEG_VA==.
 
 ********************************************************************************
 * SIZE-AGE indicator
+
+* Run this chunk of code to generate STSET data
+* Generate STSET data
+stset year_of_status, origin(year_of_incorporation) failure(failure)
+
+* Generate time variable
+gen time=.
+replace time=_t
+drop _st _d _origin _t _t0
 
 forval j = 2008/2016 { 
 	gen real_SA_`j' = (-0.737*log(total_assets_`j')) + (0.043*log(total_assets_`j'))^2 - (0.040 * (time)) if year_of_status==`j'
@@ -241,22 +265,6 @@ replace real_SA=(-0.737*log(total_assets_2010)) + (0.043*log(total_assets_2010))
 replace real_SA=(-0.737*log(total_assets_2009)) + (0.043*log(total_assets_2009))^2 - (0.040 * (time)) if year_of_status==2010  & total_assets_2009!=.
 replace real_SA=(-0.737*log(total_assets_2008)) + (0.043*log(total_assets_2008))^2 - (0.040 * (time)) if year_of_status==2009  & total_assets_2008!=.
 count if real_SA==.
-
-********************************************************************************
-* Negative Value Added
-
-forval j = 2008/2016 { 
-	gen NEG_VA_`j' = .
-	replace NEG_VA_`j' = 1 if added_value_`j' <= 0
-	replace NEG_VA_`j' = 0 if added_value_`j' > 0 & added_value_`j'!=.
-} 
-
-gen NEG_VA=.
-replace NEG_VA= cond(added_value_2016<=0,1,0) if year_of_status==2017 | year_of_status==2018 & added_value_2016!=.
-forval j = 2008/2015 { 
-	replace NEG_VA= cond(added_value_`j'<=0,1,0) if year_of_status==(`j' + 1) & added_value_`j'!=.
-}
-count if NEG_VA==.
 
 ********************************************************************************
 * Z score Altman & Zingales
