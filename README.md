@@ -63,7 +63,7 @@ Within the <tt>`generating_and_merging_data`</tt> folder you can find the follow
 * <tt>`01_appending_data`</tt>: code to append the data;
 * <tt>`02_variables_renaming`</tt>: code to rename variable. <br />
 As the data come in 201 different <tt>`.dta`</tt> files, the first two code files are used to correct the corrupted data files and append them to get the initial dataset.  <br />
-N.B.1 The <tt>`02_variables_renaming`</tt> file is used also to exclude countries that have scarce representativity (i.e., Great Britain, Poland, Germany, Romania, Sweden) and duplicate observations.
+N.B.1 The <tt>`02_variables_renaming`</tt> file is used also to exclude countries that have scarce representativity (i.e., Great Britain, Poland, Germany, Romania, Sweden) and duplicate observations.  <br />
 N.B.2 The output of the <tt>`generating_and_merging_data`</tt> files is the <tt>`analysis_data.dta`</tt> file.
 
 Within the <tt>`creating_indicators_and_cleaning_data`</tt> folder you can find the following files:
