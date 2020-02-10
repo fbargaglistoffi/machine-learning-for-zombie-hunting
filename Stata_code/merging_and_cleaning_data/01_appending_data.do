@@ -20,6 +20,8 @@ forval j = 1/19{
 	drop _merge
 }
 
+merge m:1 BvD_ID_number using payables.dta, force
+
 * Destring Data
 drop Mark
 destring Financial_revenue_* Interest_paid_* Cash_flow_EUR_* EBITDA_EUR_* ///
