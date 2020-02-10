@@ -281,9 +281,13 @@ forval j = 2008/2016 {
 	replace Z_`j'=. if Z_`j' <= 0 /* bounded between 0 and 9 */
 	replace Z_`j'=9 if  Z_`j'>=9 & Z_`j'!=.
 }
-su Z_2016
-_pctile Z_2016, nq(20)
-return list
+
+* Generate Z-Score Lagged Values
+gen Z_score =.
+replace Z_score = Z_2016 if year_of_status==2017 | year_of_status==2018 
+forval j = 2008/2015 { 
+	replace Z_score = Z_`j' if year_of_status==(`j' + 1) 
+}
 
 ********************************************************************************
 * Misallocated Capital (Schivardi & Tabellini, 2017)
@@ -305,19 +309,10 @@ forval j = 2008/2016 {
 	replace roa_`j'= roa_`j'*100 */
 }
 
-su roa_2016,d
-_pctile roa_2016, nq(20)
-return list
-
-
 forval j = 2008/2016 { 
 	gen leverage_`j' = fin_expenses_`j' /*long term debt for financial debt*/ / total_assets_`j'
 	replace leverage_`j' = leverage_`j' * 100
 }
-
-su leverage_2008
-_pctile leverage_2008, nq(20)
-return list
 
 
 * Misallocated Capital: ROA < PRIME RATE (Z-score 1/2) & Leverage > Median Leverage (2005)
@@ -426,10 +421,8 @@ forval j = 2008/2015 {
 }
 
 * 2. INDICE DI ADEGUATEZZA PATRIMONIALE: Equity/(Short-term debts + Long-term debts)
-
-/* Download equity & short term debt */
 forval j = 2008/2016 { 
-	gen car_`j' = equity_`j' / (short_term_debt_`j' + long_term_debt) /* capital adeguacy index */
+	gen car_`j' = shareholders_funds_`j' / (current_liabilities_`j' + long_term_debt_`j') /* capital adeguacy index */
 }
 
 * Lagged values (2008-2016)
@@ -467,5 +460,3 @@ replace pension_tax_debts = pension_tax_debts_2016 if year_of_status==2017 | yea
 forval j = 2009/2015 { 
 	replace pension_tax_debts = pension_tax_debts_`j' if year_of_status==(`j' + 1) 
 }
-
-
