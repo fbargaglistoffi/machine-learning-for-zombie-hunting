@@ -176,3 +176,17 @@ replace net_income = net_income_2016 if year_of_status==2017 | year_of_status==2
 forval j = 2008/2015 { 
      replace  net_income = net_income_`j' if year_of_status==`j'+1
 }
+
+*Generating Pension Payables Lagged Values (2009-2016)
+gen pension_payables=.
+replace pension_payables = pension_payables_2016 if year_of_status==2017 | year_of_status==2018 /*just first 4 months of 2017*/
+forval j = 2009/2015 { 
+     replace  pension_payables = pension_payables_`j' if year_of_status==`j'+1
+}
+
+*Generating Tax Payables Lagged Values (2009-2016)
+gen tax_payables=.
+replace tax_payables = tax_payables_2016 if year_of_status==2017 | year_of_status==2018 /*just first 4 months of 2017*/
+forval j = 2009/2015 { 
+     replace  tax_payables = tax_payables_`j' if year_of_status==`j'+1
+}

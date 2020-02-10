@@ -462,7 +462,7 @@ forval j = 2009/2016 {
 }
 
 * Lagged values (2009-2016)
-gen pension_tax_debts
+gen pension_tax_debts = .
 replace pension_tax_debts = pension_tax_debts_2016 if year_of_status==2017 | year_of_status==2018 
 forval j = 2009/2015 { 
 	replace pension_tax_debts = pension_tax_debts_`j' if year_of_status==(`j' + 1) 
