@@ -58,6 +58,7 @@ The <tt>`Stata`</tt> code files can be found </b> [<a href="https://github.com/b
 The files in the the first two folder can be run following their numbering to create the dataset used for the ML analysis.
 
 Within the <tt>`merging_and_cleaning_data`</tt> folder you can find the following files:
+* <tt>`00.1_generate_data_on_payables.do`</tt>: code to generate variables needed for indicators from AIDA;
 * <tt>`00_correcting_corrupted_data`</tt>: code to correct the corrupted Orbis files;
 * <tt>`01_appending_data`</tt>: code to append the data;
 * <tt>`02_data_cleaning`</tt>: code to clean data. <br />
