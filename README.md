@@ -1,8 +1,7 @@
 # Code for the paper "Machine learning for zombie hunting"
 
-In this repository we provide the code for the data analysis part of the paper _"Machine learning for zombie hunting. Firms' failures, financial constraints, and misallocation"_ by F.J. Bargagli-Stoffi, M. Riccaboni and A. Rungi.
-
-The code is written both in <tt>`Stata`</tt> and <tt>`R`</tt>. The data cleaning and the creation of the indicators were performed in Stata. R was used for the machine learning analysis.
+In this repository we provide the code for the data analysis part of the paper _"Machine learning for zombie hunting. Firms' failures, financial constraints, and misallocation"_ by F.J. Bargagli-Stoffi, M. Riccaboni and A. Rungi. <br />
+The code is written both in <tt>`Stata`</tt> and <tt>`R`</tt>. The data cleaning and the creation of the indicators were performed in <tt>`Stata`</tt>. <tt>`R`</tt> was used for the machine learning analysis.
 
 Below a brief legend of the Data and the <tt>`Stata`</tt> and <tt>`R`</tt> code files. 
 
