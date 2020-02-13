@@ -21,6 +21,13 @@ forval j = 1/19{
 }
 
 merge m:1 BvD_ID_number using payables.dta, force
+drop if _merge==2
+drop _merge
+
+merge m:1 BvD_ID_number using tfp_acf_turnover, force
+drop if _merge==2
+drop _merge
+
 
 * Destring Data
 drop Mark
