@@ -69,7 +69,7 @@ N.B.2 The output of the <tt>`generating_and_merging_data`</tt> files is the <tt>
 Within the <tt>`creating_indicators_and_cleaning_data`</tt> folder you can find the following files:
 * <tt>`03_failure_and_time_variables`</tt>: code to create the outcome variable and the time related variables;
 * <tt>`04_lagged_variables`</tt>: code to create lagged variables;
-* <tt>`05_indicators`</tt>: code to create the indicators used in the ML analysis.
+* <tt>`05_indicators`</tt>: code to create the indicators used in the ML analysis. <br />
 N.B.1 The lagged variables were created to run a series of machine learning models with lagger predictors used to assess the performance of each model. In particular, the lagged variable assumes the values of the corresponding variable at "t-1", where "t" is either the censorship time for those firms that did not fail in the time span of the analysis (2008-2018), or the failure time for those firms that failed in the same time span. <br />
 N.B.2 The data cleaning is performed in multiple do files and not just in one specific file.
 
