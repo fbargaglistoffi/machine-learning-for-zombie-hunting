@@ -73,6 +73,27 @@ Within the <tt>`creating_indicators_and_cleaning_data`</tt> folder you can find 
 N.B.1 The lagged variables were created to run a series of machine learning models with lagger predictors used to assess the performance of each model. In particular, the lagged variable assumes the values of the corresponding variable at "t-1", where "t" is either the censorship time for those firms that did not fail in the time span of the analysis (2008-2018), or the failure time for those firms that failed in the same time span. <br />
 N.B.2 The data cleaning is performed in multiple do files and not just in one specific file.
 
+After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> folder we add the following additional indicators to the dataset:
+* <tt>`capital intensity`</tt>: ratio of fixed assets over employees;
+* <tt>`labour_productivity`</tt>: ratio of added value over employees;
+* <tt>`fin_cons`</tt>: financial constraint indicator by [Nickell and Nicolitsas, 1999](https://econpapers.repec.org/article/eeeeecrev/v_3a43_3ay_3a1999_3ai_3a8_3ap_3a1435-1456.html);
+* <tt>`inv`</tt>: investments indicator computed as the sum between depreciation at time t and the difference between fixed assets at time t and t-1 ;
+* <tt>`ICR`</tt>: interest coverage ratio computed as the ratio between EBIT and interest paid;
+* <tt>`ICR_failure`</tt>: indicator variable equal to 1 if <tt>`ICR`</tt><= 1 [Bank of England]();
+* <tt>`interest_diff`</tt>: benchmark interest difference indicator by [Caballero, 2008]();
+* <tt>`NEG_VA`</tt>: negative added value indicator [Bank of Korea]();
+* <tt>`real_SA`</tt>: size-age indicator by ; 
+* <tt>`Z_score`</tt>: Altman Z-score by [Altman, ]();
+* <tt>`misallocated`</tt>: misallocated capital indicator by [Schivardi et al, 2017]();
+* <tt>`profitability`</tt>: profitability indicator by [Schivardi et al, 2017]();
+* <tt>`area`</tt>: area of Italy (north, center, south, island);
+* <tt>`dummy_patents`</tt>: dummy variable assuming value 1 if the enterprise issued at leas one patent and 0 otherwise;
+* <tt>`dummy_trademark`</tt>: dummy variable assuming value 1 if the enterprise issued at leas one trademark and 0 otherwise;
+* <tt>`financial_sustainability`</tt>: ratio of financial expenses over revenues;
+* <tt>`car`</tt>: capital adeguacy ratio: ratio of shareholder funds over the sum of short and long term debt;
+* <tt>`liquidity_Return`</tt>: ratio of cash flow over total assets;
+* <tt>`pension_tax_debts`</tt>: ratio of the sum of tax and pension payables over total assets (available for years between 2009-2016).
+
 Within the <tt>`descriptives`</tt> folder you can find the following files:
 * <tt>`descriptives`</tt>: code to create general descriptive statistics (later I will add more detailed references to the papers tables);
 * <tt>`eurostat_vs_orbis`</tt>: code to compare orbis data with Eurostat;
