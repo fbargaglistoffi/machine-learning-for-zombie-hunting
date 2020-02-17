@@ -58,7 +58,8 @@ The files in the the first two folder can be run following their numbering to cr
 
 Within the <tt>`generating_and_merging_data`</tt> folder you can find the following files:
 * <tt>`00.1_generate_data_on_payables.do`</tt>: code to generate variables needed for indicators from AIDA;
-* <tt>`00_correcting_corrupted_data`</tt>: code to correct the corrupted Orbis files;
+* <tt>`00.2_generate_data_on_tfp.do`</tt>: code to generate the total factor productivity data;
+* <tt>`00.3_correcting_corrupted_data`</tt>: code to correct the corrupted Orbis files;
 * <tt>`01_appending_data`</tt>: code to append the data;
 * <tt>`02_variables_renaming`</tt>: code to rename variable. <br />
 As the data come in 201 different <tt>`.dta`</tt> files, the first two code files are used to correct the corrupted data files and append them to get the initial dataset.  <br />
@@ -68,8 +69,7 @@ N.B.2 The output of the <tt>`generating_and_merging_data`</tt> files is the <tt>
 Within the <tt>`creating_indicators_and_cleaning_data`</tt> folder you can find the following files:
 * <tt>`03_failure_and_time_variables`</tt>: code to create the outcome variable and the time related variables;
 * <tt>`04_lagged_variables`</tt>: code to create lagged variables;
-* <tt>`05_indicators`</tt>: code to create the indicators used in the ML analysis;
-* <tt>`06_tfp`</tt>: code to generate the total factor productivity. <br />
+* <tt>`05_indicators`</tt>: code to create the indicators used in the ML analysis.
 N.B.1 The lagged variables were created to run a series of machine learning models with lagger predictors used to assess the performance of each model. In particular, the lagged variable assumes the values of the corresponding variable at "t-1", where "t" is either the censorship time for those firms that did not fail in the time span of the analysis (2008-2018), or the failure time for those firms that failed in the same time span. <br />
 N.B.2 The data cleaning is performed in multiple do files and not just in one specific file.
 
