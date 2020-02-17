@@ -51,8 +51,9 @@ The variables that we downloaded are the following:
 * <tt>`payables`</tt>: tax and pension payables in Euro (2009-2016).
 
 After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> folder we add the following additional indicators to the dataset:
+* <tt>`tfp_acf`</tt>: total factor productivity computed as in []()
 * <tt>`consdummy`</tt>: dummy variable assuming value 1 if the financial account is consolidated and 0 otherwise;
-* <tt>`capital intensity`</tt>: ratio of fixed assets over employees;
+* <tt>`capital_intensity`</tt>: ratio of fixed assets over employees;
 * <tt>`labour_productivity`</tt>: ratio of added value over employees;
 * <tt>`fin_cons`</tt>: financial constraint indicator by [Nickell and Nicolitsas, 1999](https://econpapers.repec.org/article/eeeeecrev/v_3a43_3ay_3a1999_3ai_3a8_3ap_3a1435-1456.html);
 * <tt>`inv`</tt>: investments indicator computed as the sum between depreciation at time t and the difference between fixed assets at time t and t-1 ;
@@ -69,7 +70,7 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 * <tt>`dummy_trademark`</tt>: dummy variable assuming value 1 if the enterprise issued at leas one trademark and 0 otherwise;
 * <tt>`financial_sustainability`</tt>: ratio of financial expenses over revenues;
 * <tt>`car`</tt>: capital adeguacy ratio: ratio of shareholder funds over the sum of short and long term debt;
-* <tt>`liquidity_Return`</tt>: ratio of cash flow over total assets;
+* <tt>`liquidity_return`</tt>: ratio of cash flow over total assets;
 * <tt>`pension_tax_debts`</tt>: ratio of the sum of tax and pension payables over total assets (available for years between 2009-2016).
 
 # Stata Code
