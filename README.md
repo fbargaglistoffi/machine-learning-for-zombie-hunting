@@ -47,12 +47,11 @@ The variables that we downloaded are the following:
 * <tt>`solvency_ratio`</tt>: firm's solvency ratio;
 * <tt>`net_income`</tt>: net income in Euro;
 * <tt>`depreciation`</tt>: depreciation in Euro;
-* <tt>`revenus`</tt>: sales in Euro;
+* <tt>`revenues`</tt>: sales in Euro;
 * <tt>`payables`</tt>: tax and pension payables in Euro (2009-2016).
 
 After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> folder we add the following additional indicators to the dataset:
 * <tt>`consdummy`</tt>: dummy variable assuming value 1 if the financial account is consolidated and 0 otherwise;
-* <tt>`control`</tt>: 
 * <tt>`capital intensity`</tt>: ratio of fixed assets over employees;
 * <tt>`labour_productivity`</tt>: ratio of added value over employees;
 * <tt>`fin_cons`</tt>: financial constraint indicator by [Nickell and Nicolitsas, 1999](https://econpapers.repec.org/article/eeeeecrev/v_3a43_3ay_3a1999_3ai_3a8_3ap_3a1435-1456.html);
