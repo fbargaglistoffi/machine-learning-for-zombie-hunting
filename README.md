@@ -18,6 +18,8 @@ The variables that we downloaded are the following:
 * <tt>`nut`</tt>: "Nomenclature des unités territoriales statistiques" (country and region reference numbers);
 * <tt>`conscode`</tt>: consolidate financial account indicator;
 * <tt>`nace`</tt>: the Statistical classification of economic activities in the European Community;
+* <tt>`Number_of_patents`</tt>: number of patents issued by a certain firm;
+* <tt>`Number_of_trademarks`</tt>: number of trademarks issued by a certain firm;
 * <tt>`naics`</tt>: North American Industry Classification System;
 * <tt>`shareholders_funds`</tt>: shareholders funds in Euro;
 * <tt>`retained_earnings`</tt>: retained earnings in Euro;
