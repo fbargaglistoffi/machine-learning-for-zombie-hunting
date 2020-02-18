@@ -197,7 +197,7 @@ summary(fit)
 
 
 #Accurancy from cv
-fitted.results.tree <- predict(fit, newdata=test,type='response')
+fitted.results.tree <- predict(fit, newdata=test, type='response')
 postResample(fitted.results.tree, test$failure)
 #      RMSE   Rsquared        MAE 
 #0.15028213 0.03684235 0.04567466  
