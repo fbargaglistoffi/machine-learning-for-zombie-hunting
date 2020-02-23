@@ -177,6 +177,13 @@ forval j = 2008/2015 {
      replace  net_income = net_income_`j' if year_of_status==`j'+1
 }
 
+*Generating TFP Lagged Values
+gen tfp_acf=.
+replace tfp_acf = tfp_acf_2016 if year_of_status==2017 | year_of_status==2018 /*just first 4 months of 2017*/
+forval j = 2008/2015 { 
+     replace  tfp_acf = tfp_acf_`j' if year_of_status==`j'+1
+}
+
 *Generating Pension Payables Lagged Values (2009-2016)
 gen pension_payables=.
 replace pension_payables = pension_payables_2016 if year_of_status==2017 | year_of_status==2018 /*just first 4 months of 2017*/

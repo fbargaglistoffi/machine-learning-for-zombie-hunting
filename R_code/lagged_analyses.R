@@ -1,7 +1,7 @@
 ## Packages Upload
 rm(list=ls())         # to clean the memeory
 setwd("/home/falco.bargaglistoffi/Desktop/R_files/zombie_hunting/Working_Data/")
-memory.limit(size=1000000)
+memory.limit(size=10000000)
 options(java.parameters = "-Xmx15000m")
 library(rJava)
 library(bartMachine)
@@ -19,20 +19,18 @@ library(pROC)
 library(Hmisc)
 
  
-f1_score <- function(predicted, expected, positive.class="1") {
-  predicted <- factor(as.character(predicted), levels=unique(as.character(expected)))
-  expected  <- as.factor(expected)
+f1_score <- function(predicted, expected, positive.class) {
   cm = as.matrix(table(expected, predicted))
   
   precision <- diag(cm) / colSums(cm)
   recall <- diag(cm) / rowSums(cm)
   f1 <-  ifelse(precision + recall == 0, 0, 2 * precision * recall / (precision + recall))
+  f1 <- f1[positive.class]
   
   #Assuming that F1 is zero when it's not possible compute it
   f1[is.na(f1)] <- 0
   
-  #Binary F1 or Multi-class macro-averaged F1
-  ifelse(nlevels(expected) == 2, f1[positive.class], mean(f1))
+  return(f1)
 }
 
 
@@ -289,47 +287,49 @@ data_italy_bart <- data_italy[sample,]
  
 set.seed(2020)
 train_sample <- sample(seq_len(nrow(data_italy_bart)), size = nrow(data_italy_bart )*0.9, replace=FALSE) 
-train_bart <- sample[train_sample,]
-test_bart <- sample[-train_sample,]
+train_bart <- data_italy_bart[train_sample,]
+test_bart <- data_italy_bart[-train_sample,]
+train_bart$X <- as.data.frame(train_bart[predictors])
+test_bart$X <- as.data.frame(test_bart[predictors])
   
 
- 
-set_bart_machine_num_cores(4)
 system.time({
   bart_machine<-bartMachine(train_bart$X, as.factor(train_bart$failure), use_missing_data=TRUE) 
 })
   
 
  
-test_bart$X <- as.data.frame(test_bart[predictors])
 fitted.results.bart <- 1- round(predict(bart_machine, test_bart$X,  type='prob'), 6)
   
 
  
 #Roc
-fg.bart<-fitted.results.bart[test$failure==1] 
-bg.bart<-fitted.results.bart[test$failure==0]
+fg.bart<-fitted.results.bart[test_bart$failure==1] 
+bg.bart<-fitted.results.bart[test_bart$failure==0]
   
 
- 
+
 roc_bart<-roc.curve(scores.class0 = fg.bart, scores.class1 = bg.bart, curve = T)
+pdf("roc_bart.pdf") 
 plot(roc_bart)
-  
+dev.off() 
 
- 
+
+
 pr_bart<-pr.curve(scores.class0 = fg.bart, scores.class1 = bg.bart, curve = T)
+pdf("pr_bart.pdf") 
 plot(pr_bart)
-  
+dev.off()   
 
  
 #Get Accurancy
-fitted.bart <- ifelse(fitted.results.bart> 0.5 ,1,0)
-f1_bart <- f1_score(fitted.bart, test$failure, positive.class="1")
+fitted.bart <- ifelse(fitted.results.bart> 0.5, 1, 0)
+f1_bart <- f1_score(fitted.bart, test_bart$failure, positive.class="1")
   
 
  
-balanced_accuracy_bart <- balanced_accuracy(as.matrix(table(fitted.bart, test$failure)))
-accuracy_bart <- as.data.frame(rbind(postResample(as.double(fitted.bart), test$failure)))
+balanced_accuracy_bart <- balanced_accuracy(as.matrix(table(fitted.bart, test_bart$failure)))
+accuracy_bart <- as.data.frame(rbind(postResample(as.double(fitted.bart), test_bart$failure)))
   
 
  
@@ -341,8 +341,8 @@ bart_fit
 ## Save Results
 
  
-model_results <- cbind(logit_fit, ctree_fit, rf_fit, sl_fit, bart_fit)
-write.table(model_results, file = "model_results.txt")
+model_results <- rbind(logit_fit, ctree_fit, rf_fit, sl_fit, bart_fit)
+write.csv(model_results, file = "model_results.csv")
   
 
 # Model Comparison

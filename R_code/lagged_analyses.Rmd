@@ -58,31 +58,28 @@ library(Hmisc)
 ```
 
 ```{r}
-f1_score <- function(predicted, expected, positive.class="1") {
-    predicted <- factor(as.character(predicted), levels=unique(as.character(expected)))
-    expected  <- as.factor(expected)
-    cm = as.matrix(table(expected, predicted))
-
-    precision <- diag(cm) / colSums(cm)
-    recall <- diag(cm) / rowSums(cm)
-    f1 <-  ifelse(precision + recall == 0, 0, 2 * precision * recall / (precision + recall))
-
-    #Assuming that F1 is zero when it's not possible compute it
-    f1[is.na(f1)] <- 0
-
-    #Binary F1 or Multi-class macro-averaged F1
-    ifelse(nlevels(expected) == 2, f1[positive.class], mean(f1))
+f1_score <- function(predicted, expected, positive.class) {
+  cm = as.matrix(table(expected, predicted))
+  
+  precision <- diag(cm) / colSums(cm)
+  recall <- diag(cm) / rowSums(cm)
+  f1 <-  ifelse(precision + recall == 0, 0, 2 * precision * recall / (precision + recall))
+  f1 <- f1[positive.class]
+  
+  #Assuming that F1 is zero when it's not possible compute it
+  f1[is.na(f1)] <- 0
+  
+  return(f1)
 }
 
 
 balanced_accuracy <- function(c.matrix) {
-   sum(diag(c.matrix))/sum(c.matrix);  # "overall" proportion correct  
-   first.row <- c.matrix[1,1] / (c.matrix[1,1] + c.matrix[1,2])  
-   second.row <- c.matrix[2,2] / (c.matrix[2,1] + c.matrix[2,2])  
-   acc <- (first.row + second.row)/2 # "balanced" proportion correct  
-   return(acc)
+  sum(diag(c.matrix))/sum(c.matrix);  # "overall" proportion correct  
+  first.row <- c.matrix[1,1] / (c.matrix[1,1] + c.matrix[1,2])  
+  second.row <- c.matrix[2,2] / (c.matrix[2,1] + c.matrix[2,2])  
+  acc <- (first.row + second.row)/2 # "balanced" proportion correct  
+  return(acc)
 }
-
 ```
 
 ## Data Upload
@@ -102,43 +99,40 @@ levels(data$nace) <- floor(as.numeric(levels(data$nace))/100) # nace from 4 to 2
 data_italy <- data[which(data$iso=="IT"),] # get just Italian data
 ```
 
-Missingness patterns in the "raw" variables.
+Missingness in the variables.
 
 ```{r}
-raw_variables <- c("failure", "iso", "control", "Number_of_patents", "Number_of_trademarks", "conscode", "nace", "wage_bill", "shareholders_funds", "added_value", "cash_flow", "ebitda", "fin_rev", "liquidity_ratio", "total_assets", "depr", "long_term_debt", "employees", "materials", "loans", "fixed_assets", "tax", "current_liabilities", "current_assets", "fin_expenses", "int_paid", "solvency_ratio", "net_income", "revenue", "tax_payables", "pension_payables", "int_fixed_assets", "firm_value", "retained_earnings") 
-raw_data_missing <- data_italy[raw_variables]
+# Missingness in the variables
+sapply(data_italy,function(x) sum(is.na(x)))
 ```
 
+Exclude the highly missing variables:  \texit{labour_product, retained\_earnings, firm\_value, tax\_payables, pension\_payables, pension\_\tax\_debts} (above 200,000 missing: +65\% missing)
+
+
 ```{r}
-#Patterns of missingness
-sapply(raw_data_missing,function(x) sum(is.na(x)))
+raw_variables <- c("failure", "iso", "control", "Number_of_patents", "Number_of_trademarks", "conscode", "nace", "wage_bill", "shareholders_funds", "added_value", "cash_flow", "ebitda", "fin_rev", "liquidity_ratio", "total_assets", "depr", "long_term_debt", "employees", "materials", "loans", "fixed_assets", "tax", "current_liabilities", "current_assets", "fin_expenses", "int_paid", "solvency_ratio", "net_income", "revenue", "int_fixed_assets") 
+raw_data_missing <- data_italy[raw_variables]
 set.seed(2020)
 sample_1000 <- sample(nrow(raw_data_missing), 1000, replace = FALSE)
 missmap(raw_data_missing[sample_1000,], main = "Missing values vs Observed") 
 ```
 
 ```{r}
-indicators <- c("consdummy", "capital_intensity", "labour_product", "fin_cons100", "inv", "ICR_failure", "interest_diff", "NEG_VA", "real_SA", "Z_score", "misallocated_fixed", "profitability", "area", "tfp_acf", "dummy_patents", "dummy_trademark", "financial_sustainability", "liquidity_return", "pension_tax_debts") 
+indicators <- c("consdummy", "capital_intensity", "fin_cons100", "inv", "ICR_failure", "interest_diff", "NEG_VA", "real_SA", "Z_score", "misallocated_fixed", "profitability", "area", "tfp_acf", "dummy_patents", "dummy_trademark", "financial_sustainability", "liquidity_return") 
 indicators_missing <- data_italy[indicators]
-```
-
-```{r}
-#Patterns of missingness
-sapply(indicators_missing,function(x) sum(is.na(x)))
-sapply(indicators_missing, function(x) length(unique(x)))
 set.seed(2020)
 sample_100 <- sample(nrow(indicators_missing), 100, replace = FALSE)
 missmap(indicators_missing[sample_100,], main = "Missing values vs Observed")
 ```
 
-Exclude the highly missing variables:  \texit{labour_product, retained\_earnings, firm\_value, tax\_payables, pension\_payables, pension\_\tax\_debts} (above 200,000 missing: +65\% missing)
+Select the lagged variables.
 
 ```{r}
 lagged_variables <- c("failure", "iso", "control", "nace", "shareholders_funds", "added_value", "cash_flow", "ebitda", "fin_rev", "liquidity_ratio", "total_assets", "depr", "long_term_debt", "employees", "materials", "loans", "wage_bill", "tfp_acf", "fixed_assets", "tax", "current_liabilities", "current_assets", "fin_expenses", "int_paid", "solvency_ratio", "net_income", "revenue", "consdummy", "capital_intensity", "fin_cons100", "inv", "ICR_failure", "interest_diff", "NEG_VA", "real_SA", "Z_score", "misallocated_fixed", "profitability", "area", "dummy_patents", "dummy_trademark", "financial_sustainability", "liquidity_return", "int_fixed_assets")
 data_lagged <- data_italy[lagged_variables]
 ```
 
-Make new plots here!
+Select the predictors
 
 ```{r}
 predictors <- c("control", "nace", "shareholders_funds", "added_value", "cash_flow", "ebitda", "fin_rev", "liquidity_ratio", "total_assets", "depr", "long_term_debt", "employees", "materials", "loans", "wage_bill", "tfp_acf", "fixed_assets", "tax", "current_liabilities", "current_assets", "fin_expenses", "int_paid", "solvency_ratio", "net_income", "revenue", "consdummy", "capital_intensity", "fin_cons100", "inv", "ICR_failure", "interest_diff", "NEG_VA", "real_SA", "misallocated_fixed", "profitability", "area", "dummy_patents", "dummy_trademark", "financial_sustainability", "liquidity_return", "int_fixed_assets")
@@ -260,7 +254,7 @@ rf <- randomForest(formula, data=train, importance = FALSE, ntree=200)
 
 ```{r}
 # Fitted results Random Forest
-fitted.prob.rf <- predict(rf,newdata=test, type='prob') 
+fitted.prob.rf <- predict(rf, newdata=test, type='prob') 
 fitted.prob.rf <- fitted.prob.rf[,2]
 ```
 
@@ -363,26 +357,26 @@ data_italy_bart <- data_italy[sample,]
 ```{r}
 set.seed(2020)
 train_sample <- sample(seq_len(nrow(data_italy_bart)), size = nrow(data_italy_bart )*0.9, replace=FALSE) 
-train_bart <- sample[train_sample,]
-test_bart <- sample[-train_sample,]
+train_bart <- data_italy_bart[train_sample,]
+test_bart <- data_italy_bart[-train_sample,]
+train_bart$X <- as.data.frame(train_bart[predictors])
+test_bart$X <- as.data.frame(test_bart[predictors])
 ```
 
 ```{r}
-set_bart_machine_num_cores(4)
 system.time({
 bart_machine<-bartMachine(train_bart$X, as.factor(train_bart$failure), use_missing_data=TRUE) 
 })
 ```
 
 ```{r}
-test_bart$X <- as.data.frame(test_bart[predictors])
 fitted.results.bart <- 1- round(predict(bart_machine, test_bart$X,  type='prob'), 6)
 ```
 
 ```{r}
 #Roc
-fg.bart<-fitted.results.bart[test$failure==1] 
-bg.bart<-fitted.results.bart[test$failure==0]
+fg.bart<-fitted.results.bart[test_bart$failure==1] 
+bg.bart<-fitted.results.bart[test_bart$failure==0]
 ```
 
 ```{r}
@@ -397,13 +391,13 @@ plot(pr_bart)
 
 ```{r}
 #Get Accurancy
-fitted.bart <- ifelse(fitted.results.bart> 0.5 ,1,0)
-f1_bart <- f1_score(fitted.bart, test$failure, positive.class="1")
+fitted.bart <- ifelse(fitted.results.bart> 0.5, 1, 0)
+f1_bart <- f1_score(fitted.bart, test_bart$failure, positive.class="1")
 ```
 
 ```{r}
-balanced_accuracy_bart <- balanced_accuracy(as.matrix(table(fitted.bart, test$failure)))
-accuracy_bart <- as.data.frame(rbind(postResample(as.double(fitted.bart), test$failure)))
+balanced_accuracy_bart <- balanced_accuracy(as.matrix(table(fitted.bart, test_bart$failure)))
+accuracy_bart <- as.data.frame(rbind(postResample(as.double(fitted.bart), test_bart$failure)))
 ```
 
 ```{r}
@@ -415,16 +409,120 @@ bart_fit
 ## Save Results
 
 ```{r}
-model_results <- cbind(logit_fit, ctree_fit, rf_fit, sl_fit, bart_fit)
-write.table(model_results, file = "model_results.txt")
+model_results <- rbind(logit_fit, ctree_fit, rf_fit, sl_fit, bart_fit)
+write.csv(model_results, file = "model_results.csv")
 ```
 
 # Model Comparison
 
 ```{r}
-
+model_compare <- function(predicted, expected, positive.class) {
+  cm = as.matrix(table(expected, predicted))
+  
+  # Precision
+  precision <- diag(cm) / colSums(cm)
+  precision <- precision[positive.class]
+  
+  # False Discovery Rate
+  fdr <- cm[1,2]/(cm[1,2] + cm[2,2])
+  return(c(precision, fdr))
+}
 ```
 
 ```{r}
+precision_bart <- as.data.frame(t(model_compare(fitted.bart, test_bart$failure, "1")))
+colnames(precision_bart) <- c("Precision BART", "FDR BART")
+write.csv(precision_bart, "precision_and_fdr_bart.csv")
+```
 
+```{r}
+seq <- seq(1, 10, 1)
+precision_zscore <- matrix(NA, ncol = 2, nrow = length(seq))
+for(i in seq) {
+  failed_zscore <- ifelse(test$Z_score <= quantile(test$Z_score, i/100), 1, 0)
+  precision_zscore[i, c(1:2)] <- t(model_compare(failed_zscore, test$failure, "1"))
+}
+```
+
+
+The following chunk of code reproduces the Distance-to-Default measure by Merton (1974).
+The Formula for the Merton Model is:
+\begin{equation}
+E = V_t \cdot N(d_1) - K\cdot exp(-r\cdot \DeltaT)\cdotN(d_2)
+\end{equation}
+where:
+\begin{equation}
+
+\end{equation}
+
+
+$E$ = Theoretical value of a company's equity;
+$V_t$ = Value of the company's assets at time $t$;
+$K$ = Value of the company's debt
+$t$ = Current time period
+$T$ = Future time period (1 year in our case)
+$r$ = Risk-free interest rate (assumed equal to 1 as in the "ifrogs" package)
+$N$ = Cumulative standard normal distribution
+$e$ = Exponential term(i.e. 2.7183...)
+$\sigma$=Standard deviation of stock returns
+
+The average equity volatility in the considered time series is 27.9120 (Bank of Italy), while for the average risk free interest rate we use the long term government bond yields" EMU (Eurostat) that has a value of 4.2937.
+
+
+```{r}
+# mcap: value of company assets
+# debt: debt of the firm
+# vol: equity volatility 
+# r: risk free interes rate
+DtD <- function(mcap, debt, vol, r){
+  debt <- debt + 1 # to avoid infinite when computing the ratio
+  Maturity <- 1
+  
+  ## Values of firm's market value and its volatility
+  sV <- mcap * vol / debt # as in the R packages ifrogs
+
+  d1 <- function(mcap, debt, sV, Maturity) {
+    if(which(mcap/debt<0)){
+      num <- 0 + r + 0.5*sV*sV*Maturity
+    }
+    else{
+      num <- log(mcap/debt) + r + 0.5*sV*sV*Maturity
+    }
+    den <- sV * sqrt(Maturity)
+    num/den
+  }
+    
+  d2 <- function(mcap, debt, sV, Maturity) {
+    d1(mcap, debt, sV, Maturity) -     sV*sqrt(Maturity)
+  }
+  
+  e <- mcap*pnorm(d1(mcap, debt, sV, Maturity)) - debt*pnorm(d2(mcap, debt, sV, Maturity))*exp(-r)
+  if(e < 0){
+    e <- 0
+  }
+  else{
+    e <- e
+  }
+  
+  return(e)
+}
+```
+
+```{r warning=FALSE}
+dtd_score <- DtD(mcap = test$shareholders_funds, debt = test$long_term_debt, vol = 27.9120, r = 4.2937)
+```
+
+```{r}
+seq <- seq(1, 10, 1)
+precision_dtd_score <- matrix(NA, ncol = 2, nrow = length(seq))
+for(i in seq) {
+  failed_dtd_score <- ifelse(dtd_score <= quantile(dtd_score, i/100), 1, 0)
+  precision_dtd_score[i, c(1:2)] <- t(model_compare(failed_dtd_score, test$failure, "1"))
+}
+```
+
+```{r}
+precision_models <- as.data.frame(cbind(precision_dtd_score, precision_zscore))
+colnames(precision_models) <- c("Precision DtD", "FDR DtD", "Precision Z-score", "FDR Z-score")
+write.csv(precision_models, "precision_and_fdr_scores.csv")
 ```
