@@ -24,7 +24,7 @@ f1_score <- function(predicted, expected, positive.class) {
   recall <- diag(c.matrix) / rowSums(c.matrix)
   
   # Compute F-1 Score
-  f1 <-  ifelse(precision + recall == 0, 0, 2 * precision * recall / (precision + recall))7
+  f1 <-  ifelse(precision + recall == 0, 0, 2 * precision * recall / (precision + recall))
   
   # Extract F1-score for the pre-defined "positive class"
   f1 <- f1[positive.class]

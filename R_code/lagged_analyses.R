@@ -17,30 +17,7 @@ library(SuperLearner)
 library(Metrics)
 library(pROC)
 library(Hmisc)
-
- 
-f1_score <- function(predicted, expected, positive.class) {
-  cm = as.matrix(table(expected, predicted))
-  
-  precision <- diag(cm) / colSums(cm)
-  recall <- diag(cm) / rowSums(cm)
-  f1 <-  ifelse(precision + recall == 0, 0, 2 * precision * recall / (precision + recall))
-  f1 <- f1[positive.class]
-  
-  #Assuming that F1 is zero when it's not possible compute it
-  f1[is.na(f1)] <- 0
-  
-  return(f1)
-}
-
-
-balanced_accuracy <- function(c.matrix) {
-  sum(diag(c.matrix))/sum(c.matrix);  # "overall" proportion correct  
-  first.row <- c.matrix[1,1] / (c.matrix[1,1] + c.matrix[1,2])  
-  second.row <- c.matrix[2,2] / (c.matrix[2,1] + c.matrix[2,2])  
-  acc <- (first.row + second.row)/2 # "balanced" proportion correct  
-  return(acc)
-}
+source('functions')
 
   
 
@@ -57,6 +34,11 @@ data$area <- as.factor(data$area)
 levels(data$nace) <- floor(as.numeric(levels(data$nace))/100) # nace from 4 to 2 digits
 data_italy <- data[which(data$iso=="IT"),] # get just Italian data
   
+
+
+
+
+
 
 
 lagged_variables <- c("failure", "iso", "control", "nace", "shareholders_funds", "added_value", "cash_flow", "ebitda", "fin_rev", "liquidity_ratio", "total_assets", "depr", "long_term_debt", "employees", "materials", "loans", "wage_bill", "tfp_acf", "fixed_assets", "tax", "current_liabilities", "current_assets", "fin_expenses", "int_paid", "solvency_ratio", "net_income", "revenue", "consdummy", "capital_intensity", "fin_cons100", "inv", "ICR_failure", "interest_diff", "NEG_VA", "real_SA", "Z_score", "misallocated_fixed", "profitability", "area", "dummy_patents", "dummy_trademark", "financial_sustainability", "liquidity_return", "int_fixed_assets")
