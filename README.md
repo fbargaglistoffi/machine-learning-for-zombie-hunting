@@ -104,3 +104,15 @@ Within the <tt>`descriptives`</tt> folder you can find the following files:
 * <tt>`eurostat_vs_orbis_MSE`</tt>: code to compare orbis data with Eurostat with the proposed MSE methodology;
 * <tt>`zombies_descriptives`</tt>: code to create general descriptive statistics for the zombie firms (after the ML analysis).
 
+# R code
+
+The <tt>`R`</tt> code files can be found </b> [<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/R_code">here</a>]. The files are devided in two folders:
+* <tt>`lagged_analysis`</tt>;
+* <tt>`year_by_year_analysis`</tt>;
+* <tt>`robustness_checks`</tt>;
+* <tt>`country_specific_analysis`</tt>.
+
+Within the <tt>`lagged_analysis`</tt> folder you can find the following files:
+* <tt>`lagged_analyses.R`</tt>: R code to reproduce the lagged machine learning analyses;
+* <tt>`functions.R`</tt>: R functions built to perform the <tt>`lagged_analyses.R`</tt>;
+* <tt>`lagged_analyses.pdf`</tt> pdf generated using *R markdown* with the commented code and the results from <tt>`lagged_analyses.R`</tt>.
