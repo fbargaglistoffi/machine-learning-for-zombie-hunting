@@ -51,7 +51,7 @@ The variables that we downloaded are the following:
 * <tt>`payables`</tt>: tax and pension payables in Euro (2009-2016).
 
 After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> folder we add the following additional indicators to the dataset:
-* <tt>`tfp_acf`</tt>: total factor productivity computed as in []()
+* <tt>`tfp_acf`</tt>: total factor productivity computed as in [Ackerberg, Caves and Frazer, 2006](https://mpra.ub.uni-muenchen.de/38349/)
 * <tt>`consdummy`</tt>: dummy variable assuming value 1 if the financial account is consolidated and 0 otherwise;
 * <tt>`capital_intensity`</tt>: ratio of fixed assets over employees;
 * <tt>`labour_productivity`</tt>: ratio of added value over employees;
