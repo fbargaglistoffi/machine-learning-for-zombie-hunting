@@ -106,7 +106,7 @@ Within the <tt>`descriptives`</tt> folder you can find the following files:
 
 # R code
 
-The <tt>`R`</tt> code files can be found </b> [<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/R_code">here</a>]. The files are devided in two folders:
+The <tt>`R`</tt> code files can be found </b> [<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/R_code">here</a>]. The files are devided in four folders:
 * <tt>`lagged_analysis`</tt>;
 * <tt>`year_by_year_analysis`</tt>;
 * <tt>`robustness_checks`</tt>;
