@@ -8,12 +8,12 @@
 
 rm(list=ls())
 memory.limit(size=1000000)
-options(java.parameters = "-Xmx15000m")
+options(java.parameters = "-Xmx100g")
 library(rJava)
 library(bartMachine)
 library(haven)
 
-setwd("/home/falco.bargaglistoffi/Research/Zombie Hunting/Data/")
+setwd("/home/falco.bargaglistoffi/Desktop/R_files/zombie_hunting/Working_Data/")
 
 data <- read_dta("analysis_data_indicators.dta")
 
@@ -72,8 +72,8 @@ predictors <- c("control", "nace", "consdummy", "area", "dummy_patents", "dummy_
 years <- c(2009:2016)
 failed <- matrix(NA, ncol = length(years), nrow = nrow(data))
 for (i in (years)){
-  failed[,which(years==i)][which(data$year_of_status == i & data$year_of_incorporation<= i & data$failure== 1)] <- "1"
-  failed[,which(years==i)][which(data$year_of_incorporation <= i & data$failure==0)] <- "0"
+  failed[,which(years==i)][which(data$year_of_status == i & data$year_of_incorporation<= i & data$failure== 1)] <- 1
+  failed[,which(years==i)][which(data$year_of_incorporation <= i & data$failure==0)] <- 0
 }
   
 data$failure_2009 <- failed[,1]
@@ -85,8 +85,8 @@ data$failure_2014 <- failed[,6]
 data$failure_2015 <- failed[,7]
 data$failure_2016 <- failed[,8]
 data$failure_2017 <- matrix(NA, ncol = 1, nrow = nrow(data))
-data$failure_2017[which((data$year_of_status == 2017 | data$year_of_status == 2018) & data$year_of_incorporation<= 2017 & data$failure== 1)] <- "1"
-data$failure_2017[which(data$year_of_incorporation <= 2017 & data$failure==0)] <- "0"
+data$failure_2017[which((data$year_of_status == 2017 | data$year_of_status == 2018) & data$year_of_incorporation<= 2017 & data$failure== 1)] <- 1
+data$failure_2017[which(data$year_of_incorporation <= 2017 & data$failure==0)] <- 0
 
 data_italy <- data[which(data$iso=="IT"),] 
 data_spain <- data[which(data$iso=="ES"),] 
@@ -94,33 +94,26 @@ data_france <- data[which(data$iso=="FR"),]
 data_portugal <- data[which(data$iso=="PT"),] 
 
 years <- c(2009:2016)
-prob <- matrix(NA, ncol = length(years), nrow = nrow(data))
+prob <- matrix(NA, ncol = length(years), nrow = nrow(data_italy))
 for (i in (years)){
   # Subset data by Year
   data_model <- data_italy[which(!is.na(data_italy[,paste("failure", sep = "_", i + 1)])),]
   
   # Get Predictors Matrix
-  X <- cbind(data_model[,paste(lagged_predictors, sep = "_", i)], data_model[,paste(predictors)])
+  X <- as.data.frame(cbind(data_model[,paste(lagged_predictors, sep = "_", i)], data_model[,paste(predictors)]))
   
   # Get Outcome Vector
-  y <- data_model[,paste("failure", sep = "_", i + 1)]
-  
+  y <- as.vector(data_model[,paste("failure", sep = "_", i + 1)])
+  y <- as.factor(unlist(y, use.names = FALSE))
   
   # Run the model
-  bart_machine<-bartMachine(X, as.factor(y),
-                            use_missing_data=TRUE) 
+  bart_machine<-bartMachine(X, y, use_missing_data=TRUE) 
   
   # Get fitted values
   prob[,i] <-  1 - round(predict(bart_machine, X, type='prob'), 6)
   
 }
 
+
 # add int_diff & inv
-
-
-
-
-                               
-                      
-
 
