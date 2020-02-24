@@ -110,10 +110,51 @@ for (i in (years)){
   bart_machine<-bartMachine(X, y, use_missing_data=TRUE) 
   
   # Get fitted values
-  prob[,i] <-  1 - round(predict(bart_machine, X, type='prob'), 6)
+  prob[,which(years==i)] <-  1 - round(predict(bart_machine, X, type='prob'), 6)
   
 }
 
+# Save Results
+data$prob_2010 <- prob[,1]
+data$prob_2011 <- prob[,2]
+data$prob_2012 <- prob[,3]
+data$prob_2013 <- prob[,4]
+data$prob_2014 <- prob[,5]
+data$prob_2015 <- prob[,6]
+data$prob_2016 <- prob[,7]
+data$prob_2017 <- prob[,8]
 
-# add int_diff & inv
+# Failures 2009 (no investments and interest-difference)
+
+# Subset data by Year
+data_model <- data_italy[which(!is.na(data_italy[,paste("failure", sep = "_", 2009)])),]
+lagged_predictors <- c("shareholders_funds",
+                       "added_value", "cash_flow", "ebitda",
+                       "fin_rev", "liquidity_ratio", "total_assets",
+                       "depr", "long_term_debt", "employees",
+                       "materials", "loans", "wage_bill", "tfp_acf",
+                       "fixed_assets", "tax", "current_liabilities",
+                       "current_assets", "fin_expenses", "int_paid",
+                       "solvency_ratio", "net_income", "revenue",
+                       "capital_intensity", "fin_cons",
+                       "ICR_failure", "NEG_VA",
+                       "real_SA", "profitability", "misallocated_fixed",
+                       "financial_sustainability", "liquidity_return",
+                       "int_fixed_assets")
+# Get Predictors Matrix
+X <- as.data.frame(cbind(data_model[,paste(lagged_predictors, sep = "_", 2008)], data_model[,paste(predictors)]))
+
+# Get Outcome Vector
+y <- as.vector(data_model[,paste("failure", sep = "_", 2009)])
+y <- as.factor(unlist(y, use.names = FALSE))
+
+# Run the model
+bart_machine<-bartMachine(X, y, use_missing_data=TRUE) 
+
+# Get fitted values
+data$prob_2009 <-  1 - round(predict(bart_machine, X, type='prob'), 6)
+
+# Save Overall Data
+save(data, "data_probabilities.dta")
+
 
