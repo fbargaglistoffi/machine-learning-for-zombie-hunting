@@ -43,7 +43,7 @@ f1_score <- function(predicted, expected, positive.class) {
 balanced_accuracy <- function(predicted, expected) {
   
   # Generate Confusion Matrix
-  c.matrix = as.matrix(table(expected, predicted))
+  c.matrix = as.matrix(table(predicted, expected))
   
   # First Row Generation
   first.row <- c.matrix[1,1] / (c.matrix[1,1] + c.matrix[1,2])  

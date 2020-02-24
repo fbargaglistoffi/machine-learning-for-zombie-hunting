@@ -39,6 +39,8 @@ library(PRROC)
 library(rpart)
 library(party)
 library(caret)
+library(Amelia)
+library(PresenceAbsence)
 library(devtools)
 library(SuperLearner)
 library(Metrics)
@@ -107,68 +109,88 @@ prop.table(table_2, 1)
 Run the following chunks of code to produce Table 9 in the paper. 
 
 ```{r}
-icr_italy <- table(data_italy$ICR_failure)
+icr_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
+                   data_italy$year_of_incorporation<=2016),]$ICR_failure_2016)
 prop.table(icr_italy)
-icr_spain <- table(data_spain$ICR_failure)
+icr_spain <- table(data_spain[which(data_sapin$year_of_status>=2016 &
+                   data_spain$year_of_incorporation<=2016),]$ICR_failure)
 prop.table(icr_spain)
-icr_france <- table(data_france$ICR_failure)
-prop.table(icr_france)
-icr_portugal <- table(data_portugal$ICR_failure)
+icr_portugal <- table(data_portugal[which(data_portugal$year_of_status>=2016 &
+                   data_portugal$year_of_incorporation<=2016),]$ICR_failure)
 prop.table(icr_portugal)
+icr_france <- table(data_france[which(data_france$year_of_status>=2016 &
+                   data_france$year_of_incorporation<=2016),]$ICR_failure)
+prop.table(icr_france)
 ```
 
 ```{r}
-neg_va_italy <- table(data_italy$NEG_VA)
+neg_va_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
+                      data_italy$year_of_incorporation<=2016),]$NEG_VA)
 prop.table(neg_va_italy)
-neg_va_spain <- table(data_spain$NEG_VA)
+neg_va_spain <- table(data_spain[which(data_spain$year_of_status>=2016 &
+                   data_spain$year_of_incorporation<=2016),]$NEG_VA)
 prop.table(neg_va_spain)
-neg_va_france <- table(data_france$NEG_VA)
-prop.table(neg_va_france)
-neg_va_portugal <- table(data_portugal$NEG_VA)
+neg_va_portugal <- table(data_portugal[which(data_portugal$year_of_status>=2016 &
+                   data_portugal$year_of_incorporation<=2016),]$NEG_VA)
 prop.table(neg_va_portugal)
+neg_va_france <- table(data_france[which(data_france$year_of_status>=2016 &
+                   data_france$year_of_incorporation<=2016),]$NEG_VA)
+prop.table(neg_va_france)
 ```
 
 ```{r}
-interest_diff_italy <- table(data_italy$interest_diff)
+interest_diff_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
+                       data_italy$year_of_incorporation<=2016),]$interest_diff)
 prop.table(interest_diff_italy)
-interest_diff_spain <- table(data_spain$interest_diff)
+interest_diff_spain <- table(data_spain[which(data_spain$year_of_status>=2016 &
+                   data_spain$year_of_incorporation<=2016),]$interest_diff)
 prop.table(interest_diff_spain)
-interest_diff_france <- table(data_france$interest_diff)
-prop.table(interest_diff_france)
-interest_diff_portugal <- table(data_portugal$interest_diff)
+interest_diff_portugal <- table(data_portugal[which(data_portugal$year_of_status>=2016 &
+                   data_portugal$year_of_incorporation<=2016),]$interest_diff)
 prop.table(interest_diff_portugal)
+interest_diff_france <- table(data_france[which(data_france$year_of_status>=2016 &
+                   data_france$year_of_incorporation<=2016),]$interest_diff)
+prop.table(interest_diff_france)
 ```
 
 ```{r}
-profitability_italy <- table(data_italy$profitability)
+profitability_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
+                       data_italy$year_of_incorporation<=2016),]$profitability)
 prop.table(profitability_italy)
-profitability_spain <- table(data_spain$profitability)
+profitability_spain <- table(data_spain[which(data_spain$year_of_status>=2016 &
+                   data_spain$year_of_incorporation<=2016),]$profitability)
 prop.table(profitability_spain)
-profitability_france <- table(data_france$profitability)
-prop.table(profitability_france)
-profitability_portugal <- table(data_portugal$profitability)
+profitability_portugal <- table(data_portugal[which(data_portugal$year_of_status>=2016 &
+                   data_portugal$year_of_incorporation<=2016),]$profitability)
 prop.table(profitability_portugal)
+profitability_france <- table(data_france[which(data_france$year_of_status>=2016 &
+                   data_france$year_of_incorporation<=2016),]$profitability)
+prop.table(profitability_france)
 ```
 
 ```{r}
-misallocated_fixed_italy <- table(data_italy$misallocated_fixed)
+misallocated_fixed_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
+                            data_italy$year_of_incorporation<=2016),]$misallocated_fixed)
 prop.table(misallocated_fixed_italy)
-misallocated_fixed_spain <- table(data_spain$misallocated_fixed)
+misallocated_fixed_spain <- table(data_spain[which(data_spain$year_of_status>=2016 &
+                   data_spain$year_of_incorporation<=2016),]$misallocated_fixed)
 prop.table(misallocated_fixed_spain)
-misallocated_fixed_france <- table(data_france$misallocated_fixed)
-prop.table(misallocated_fixed_france)
-misallocated_fixed_portugal <- table(data_portugal$misallocated_fixed)
+misallocated_fixed_portugal <- table(data_portugal[which(data_portugal$year_of_status>=2016 &
+                   data_portugal$year_of_incorporation<=2016),]$misallocated_fixed)
 prop.table(misallocated_fixed_portugal)
+misallocated_fixed_france <- table(data_france[which(data_france$year_of_status>=2016 &
+                   data_france$year_of_incorporation<=2016),]$misallocated_fixed)
+prop.table(misallocated_fixed_france)
 ```
 
 Run the following code to explore the missingness patterns in the variables.
 
-```{r}
+```{r eval=FALSE}
 # Missingness in the variables
 sapply(data_italy,function(x) sum(is.na(x)))
 ```
 
-Exclude the highly missing variables:  \texit{labour_product, retained\_earnings, firm\_value, tax\_payables, pension\_payables, pension\_\tax\_debts} (above 200,000 missing: +65\% missing).
+Exclude the highly missing variables:  \textit{labour\_product, retained\_earnings, firm\_value, tax\_payables, pension\_payables, pension\_tax\_debts} (above 200,000 missing: +65\% missing).
 
 Run the following code to reproduce the "missingness maps" in Figures 1 and 2 of the paper.
 
@@ -184,15 +206,12 @@ raw_variables <- c("failure", "iso", "control", "Number_of_patents",
                    "net_income", "revenue", "int_fixed_assets") 
 raw_data_missing <- data_italy[raw_variables]
 set.seed(2020)
-sample_1000 <- sample(nrow(raw_data_missing),
-                      1000, replace = FALSE)
-pdf("missing_variables.pdf") 
-missmap(raw_data_missing[sample_1000,],
-        main = "Missing values vs Observed") 
-dev.off()
+sample_10000 <- sample(nrow(raw_data_missing), 10000, replace = FALSE)
+missmap(raw_data_missing[sample_10000,], main = "Missing values vs Observed",
+        margins = c(8,5), x.cex = 0.8) 
 ```
 
-```{r}
+```{r warning=FALSE}
 indicators <- c("consdummy", "capital_intensity", "fin_cons100",
                 "inv", "ICR_failure", "interest_diff", "NEG_VA",
                 "real_SA", "Z_score", "misallocated_fixed",
@@ -200,10 +219,9 @@ indicators <- c("consdummy", "capital_intensity", "fin_cons100",
                 "dummy_trademark", "financial_sustainability",
                 "liquidity_return") 
 indicators_missing <- data_italy[indicators]
-pdf("missing_indicators.pdf") 
-missmap(indicators_missing[sample_1000,],
-        main = "Missing values vs Observed")
-dev.off()
+missmap(indicators_missing[sample_10000,],
+        main = "Missing values vs Observed",
+        margins = c(8,5), x.cex = 0.8)
 ```
 
 # Machine Learning Analysis
@@ -212,7 +230,7 @@ dev.off()
 
 Select the lagged variables.
 
-```{r}
+```{r warning=FALSE}
 lagged_variables <- c("failure", "iso", "control", "nace",
                       "shareholders_funds", "added_value",
                       "cash_flow", "ebitda", "fin_rev",
@@ -309,8 +327,7 @@ f1_logit <- f1_score(fitted.logit,
 ```
 
 ```{r}
-balanced_accuracy_logit<-balanced_accuracy(as.matrix(table(fitted.logit,
-                                                             test$failure)))
+balanced_accuracy_logit<-balanced_accuracy(fitted.logit, test$failure)
 accuracy_logit <- as.data.frame(rbind(postResample(fitted.logit,
                                                    test$failure)))
 ```
@@ -376,8 +393,7 @@ f1_ctree <- f1_score(fitted.ctree,
 ```
 
 ```{r}
-balanced_accuracy_ctree <- balanced_accuracy(as.matrix(table(fitted.ctree,
-                                                            test$failure)))
+balanced_accuracy_ctree <- balanced_accuracy(fitted.ctree, test$failure)
 accuracy_ctree <- as.data.frame(rbind(postResample(as.double(fitted.ctree), test$failure)))
 ```
 
@@ -441,8 +457,7 @@ f1_rf <- f1_score(fitted.rf,
 ```
 
 ```{r}
-balanced_accuracy_rf <- balanced_accuracy(as.matrix(table(fitted.rf,
-                                                      test$failure)))
+balanced_accuracy_rf <- balanced_accuracy(fitted.rf, test$failure)
 accuracy_rf <- as.data.frame(rbind(postResample(as.double(fitted.rf),
                                                       test$failure)))
 ```
@@ -515,8 +530,7 @@ f1_sl <- f1_score(fitted.sl,
 ```
 
 ```{r}
-balanced_accuracy_sl <- balanced_accuracy(as.matrix(table(fitted.sl,
-                                                      test$failure)))
+balanced_accuracy_sl <- balanced_accuracy(fitted.sl, test$failure)
 accuracy_sl <- as.data.frame(rbind(postResample(as.double(fitted.sl),
                                                       test$failure)))
 ```
@@ -606,8 +620,7 @@ f1_bart <- f1_score(fitted.bart,
 ```
 
 ```{r eval=FALSE}
-balanced_accuracy_bart <- balanced_accuracy(as.matrix(table(fitted.bart,
-                                                    test_bart$failure)))
+balanced_accuracy_bart <- balanced_accuracy(fitted.bart, test_bart$failure)
 accuracy_bart <- as.data.frame(rbind(postResample(as.double(fitted.bart),
                                                     test_bart$failure)))
 ```
@@ -681,7 +694,8 @@ for(i in seq) {
 The average equity volatility in the considered time series is 27.9120 (Bank of Italy), while for the average risk free interest rate we use the long term government bond yields" EMU (Eurostat) that has a value of 4.2937.
 
 ```{r warning=FALSE, eval=FALSE}
-dtd_score <- DtD(mcap = test$shareholders_funds, debt = test$long_term_debt, vol = 27.9120, r = 4.2937)
+dtd_score <- DtD(mcap = test$shareholders_funds, debt = test$long_term_debt,
+                 vol = 27.9120, r = 4.2937)
 ```
 
 ```{r eval=FALSE}

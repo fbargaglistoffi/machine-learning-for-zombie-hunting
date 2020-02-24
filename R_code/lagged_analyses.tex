@@ -182,6 +182,8 @@ reproduce the following analyses.
 \KeywordTok{library}\NormalTok{(rpart)}
 \KeywordTok{library}\NormalTok{(party)}
 \KeywordTok{library}\NormalTok{(caret)}
+\KeywordTok{library}\NormalTok{(Amelia)}
+\KeywordTok{library}\NormalTok{(PresenceAbsence)}
 \KeywordTok{library}\NormalTok{(devtools)}
 \KeywordTok{library}\NormalTok{(SuperLearner)}
 \KeywordTok{library}\NormalTok{(Metrics)}
@@ -190,6 +192,942 @@ reproduce the following analyses.
 \KeywordTok{source}\NormalTok{(}\StringTok{'functions.R'}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
+
+\hypertarget{data-upload}{%
+\subsection{Data Upload}\label{data-upload}}
+
+In the following chunks of code we upload the data, we initialize the
+main variables used in the analysis and we restrict the sample to the
+Italian firms.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{data <-}\StringTok{ }\KeywordTok{read_dta}\NormalTok{(}\StringTok{"analysis_data_indicators.dta"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{names}\NormalTok{(data)[}\KeywordTok{names}\NormalTok{(data) }\OperatorTok{==}\StringTok{ 'GUO___BvD_ID_number'}\NormalTok{] <-}\StringTok{ 'guo'}
+\NormalTok{data}\OperatorTok{$}\NormalTok{control <-}\StringTok{ }\KeywordTok{ifelse}\NormalTok{(data}\OperatorTok{$}\NormalTok{guo}\OperatorTok{==}\StringTok{""}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{)}
+\NormalTok{data}\OperatorTok{$}\NormalTok{nace <-}\StringTok{ }\KeywordTok{as.factor}\NormalTok{(data}\OperatorTok{$}\NormalTok{nace)}
+\NormalTok{data}\OperatorTok{$}\NormalTok{area <-}\StringTok{ }\KeywordTok{as.factor}\NormalTok{(data}\OperatorTok{$}\NormalTok{area)}
+\KeywordTok{levels}\NormalTok{(data}\OperatorTok{$}\NormalTok{nace) <-}\StringTok{ }\KeywordTok{floor}\NormalTok{(}\KeywordTok{as.numeric}\NormalTok{(}\KeywordTok{levels}\NormalTok{(data}\OperatorTok{$}\NormalTok{nace))}\OperatorTok{/}\DecValTok{100}\NormalTok{) }
+\NormalTok{data_italy <-}\StringTok{ }\NormalTok{data[}\KeywordTok{which}\NormalTok{(data}\OperatorTok{$}\NormalTok{iso}\OperatorTok{==}\StringTok{"IT"}\NormalTok{),] }
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{explorative-data-analysis-eda}{%
+\subsection{Explorative Data Analysis
+(EDA)}\label{explorative-data-analysis-eda}}
+
+Run the following chunks of code to produce Tables 1 in the paper.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{table_}\DecValTok{1}\NormalTok{ <-}\StringTok{ }\KeywordTok{table}\NormalTok{(status_aggregated)}
+\NormalTok{table_}\DecValTok{1}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## status_aggregated
+##         Active     Bankruptcy      Dissolved In Liquidation 
+##         287587           1533           8540           7221
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{prop.table}\NormalTok{(table_}\DecValTok{1}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## status_aggregated
+##         Active     Bankruptcy      Dissolved In Liquidation 
+##    0.943276229    0.005028191    0.028010929    0.023684651
+\end{verbatim}
+
+Run the following chunk of code to produce Table 8 in the paper.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{table}\NormalTok{(data}\OperatorTok{$}\NormalTok{iso)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##     ES     FR     IT     PT 
+##  86979  74821 304906  41166
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{table_}\DecValTok{2}\NormalTok{ <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data}\OperatorTok{$}\NormalTok{iso, data}\OperatorTok{$}\NormalTok{failure)}
+\NormalTok{table_}\DecValTok{2}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##     
+##           0      1
+##   ES  83639   3340
+##   FR  70191   4630
+##   IT 287587  17319
+##   PT  38248   2918
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{prop.table}\NormalTok{(table_}\DecValTok{2}\NormalTok{, }\DecValTok{1}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##     
+##               0          1
+##   ES 0.96159993 0.03840007
+##   FR 0.93811898 0.06188102
+##   IT 0.94319889 0.05680111
+##   PT 0.92911626 0.07088374
+\end{verbatim}
+
+Run the following chunks of code to produce Table 9 in the paper.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{icr_italy <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_italy}\OperatorTok{$}\NormalTok{ICR_failure)}
+\KeywordTok{prop.table}\NormalTok{(icr_italy)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##         0         1 
+## 0.7830209 0.2169791
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{icr_spain <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_spain}\OperatorTok{$}\NormalTok{ICR_failure)}
+\KeywordTok{prop.table}\NormalTok{(icr_spain)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##         0         1 
+## 0.7733839 0.2266161
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{icr_france <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_france}\OperatorTok{$}\NormalTok{ICR_failure)}
+\KeywordTok{prop.table}\NormalTok{(icr_france)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##         0         1 
+## 0.7355627 0.2644373
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{icr_portugal <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_portugal}\OperatorTok{$}\NormalTok{ICR_failure)}
+\KeywordTok{prop.table}\NormalTok{(icr_portugal)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##         0         1 
+## 0.7596578 0.2403422
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{neg_va_italy <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_italy}\OperatorTok{$}\NormalTok{NEG_VA)}
+\KeywordTok{prop.table}\NormalTok{(neg_va_italy)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##          0          1 
+## 0.96555555 0.03444445
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{neg_va_spain <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_spain}\OperatorTok{$}\NormalTok{NEG_VA)}
+\KeywordTok{prop.table}\NormalTok{(neg_va_spain)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##         0         1 
+## 0.9429404 0.0570596
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{neg_va_france <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_france}\OperatorTok{$}\NormalTok{NEG_VA)}
+\KeywordTok{prop.table}\NormalTok{(neg_va_france)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##          0          1 
+## 0.98668644 0.01331356
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{neg_va_portugal <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_portugal}\OperatorTok{$}\NormalTok{NEG_VA)}
+\KeywordTok{prop.table}\NormalTok{(neg_va_portugal)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##          0          1 
+## 0.96941531 0.03058469
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{interest_diff_italy <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_italy}\OperatorTok{$}\NormalTok{interest_diff)}
+\KeywordTok{prop.table}\NormalTok{(interest_diff_italy)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##         0         1 
+## 0.5763131 0.4236869
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{interest_diff_spain <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_spain}\OperatorTok{$}\NormalTok{interest_diff)}
+\KeywordTok{prop.table}\NormalTok{(interest_diff_spain)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##         0         1 
+## 0.7468279 0.2531721
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{interest_diff_france <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_france}\OperatorTok{$}\NormalTok{interest_diff)}
+\KeywordTok{prop.table}\NormalTok{(interest_diff_france)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##         0         1 
+## 0.7394369 0.2605631
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{interest_diff_portugal <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_portugal}\OperatorTok{$}\NormalTok{interest_diff)}
+\KeywordTok{prop.table}\NormalTok{(interest_diff_portugal)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##         0         1 
+## 0.7437028 0.2562972
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{profitability_italy <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_italy}\OperatorTok{$}\NormalTok{profitability)}
+\KeywordTok{prop.table}\NormalTok{(profitability_italy)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##          0          1 
+## 0.96418232 0.03581768
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{profitability_spain <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_spain}\OperatorTok{$}\NormalTok{profitability)}
+\KeywordTok{prop.table}\NormalTok{(profitability_spain)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##          0          1 
+## 0.98663231 0.01336769
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{profitability_france <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_france}\OperatorTok{$}\NormalTok{profitability)}
+\KeywordTok{prop.table}\NormalTok{(profitability_france)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##          0          1 
+## 0.96267853 0.03732147
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{profitability_portugal <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_portugal}\OperatorTok{$}\NormalTok{profitability)}
+\KeywordTok{prop.table}\NormalTok{(profitability_portugal)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##          0          1 
+## 0.93905444 0.06094556
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{misallocated_fixed_italy <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_italy}\OperatorTok{$}\NormalTok{misallocated_fixed)}
+\KeywordTok{prop.table}\NormalTok{(misallocated_fixed_italy)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##         0         1 
+## 0.8794937 0.1205063
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{misallocated_fixed_spain <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_spain}\OperatorTok{$}\NormalTok{misallocated_fixed)}
+\KeywordTok{prop.table}\NormalTok{(misallocated_fixed_spain)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##          0          1 
+## 0.97075506 0.02924494
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{misallocated_fixed_france <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_france}\OperatorTok{$}\NormalTok{misallocated_fixed)}
+\KeywordTok{prop.table}\NormalTok{(misallocated_fixed_france)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##         0         1 
+## 0.8888808 0.1111192
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{misallocated_fixed_portugal <-}\StringTok{ }\KeywordTok{table}\NormalTok{(data_portugal}\OperatorTok{$}\NormalTok{misallocated_fixed)}
+\KeywordTok{prop.table}\NormalTok{(misallocated_fixed_portugal)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##         0         1 
+## 0.7938577 0.2061423
+\end{verbatim}
+
+Run the following code to explore the missingness patterns in the
+variables.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Missingness in the variables}
+\KeywordTok{sapply}\NormalTok{(data_italy,}\ControlFlowTok{function}\NormalTok{(x) }\KeywordTok{sum}\NormalTok{(}\KeywordTok{is.na}\NormalTok{(x)))}
+\end{Highlighting}
+\end{Shaded}
+
+
+Exclude the highly missing variables:
+\textit{labour\_product, retained\_earnings, firm\_value, tax\_payables, pension\_payables, pension\_tax\_debts}
+(above 200,000 missing: +65\% missing).
+
+Run the following code to reproduce the ``missingness maps'' in Figures
+1 and 2 of the paper.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{raw_variables <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"failure"}\NormalTok{, }\StringTok{"iso"}\NormalTok{, }\StringTok{"control"}\NormalTok{, }\StringTok{"Number_of_patents"}\NormalTok{,}
+                   \StringTok{"Number_of_trademarks"}\NormalTok{, }\StringTok{"conscode"}\NormalTok{, }\StringTok{"nace"}\NormalTok{,}
+                   \StringTok{"wage_bill"}\NormalTok{,}\StringTok{"shareholders_funds"}\NormalTok{, }\StringTok{"added_value"}\NormalTok{,}
+                   \StringTok{"cash_flow"}\NormalTok{, }\StringTok{"ebitda"}\NormalTok{, }\StringTok{"fin_rev"}\NormalTok{, }\StringTok{"liquidity_ratio"}\NormalTok{,}
+                   \StringTok{"total_assets"}\NormalTok{, }\StringTok{"depr"}\NormalTok{, }\StringTok{"long_term_debt"}\NormalTok{, }\StringTok{"employees"}\NormalTok{,}
+                   \StringTok{"materials"}\NormalTok{, }\StringTok{"loans"}\NormalTok{, }\StringTok{"fixed_assets"}\NormalTok{, }\StringTok{"tax"}\NormalTok{,}
+                   \StringTok{"current_liabilities"}\NormalTok{, }\StringTok{"current_assets"}\NormalTok{, }
+                   \StringTok{"fin_expenses"}\NormalTok{, }\StringTok{"int_paid"}\NormalTok{, }\StringTok{"solvency_ratio"}\NormalTok{,}
+                   \StringTok{"net_income"}\NormalTok{, }\StringTok{"revenue"}\NormalTok{, }\StringTok{"int_fixed_assets"}\NormalTok{) }
+\NormalTok{raw_data_missing <-}\StringTok{ }\NormalTok{data_italy[raw_variables]}
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{2020}\NormalTok{)}
+\NormalTok{sample_}\DecValTok{1000}\NormalTok{ <-}\StringTok{ }\KeywordTok{sample}\NormalTok{(}\KeywordTok{nrow}\NormalTok{(raw_data_missing),}
+                      \DecValTok{1000}\NormalTok{, }\DataTypeTok{replace =} \OtherTok{FALSE}\NormalTok{)}
+\KeywordTok{pdf}\NormalTok{(}\StringTok{"missing_variables.pdf"}\NormalTok{) }
+\KeywordTok{missmap}\NormalTok{(raw_data_missing[sample_}\DecValTok{1000}\NormalTok{,],}
+        \DataTypeTok{main =} \StringTok{"Missing values vs Observed"}\NormalTok{) }
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning in if (class(obj) == "amelia") {: la condizione la lunghezza > 1 e
+## solo il promo elemento verrÃ  utilizzato
+\end{verbatim}
+
+\begin{verbatim}
+## Warning: Unknown or uninitialised column: 'arguments'.
+
+## Warning: Unknown or uninitialised column: 'arguments'.
+\end{verbatim}
+
+\begin{verbatim}
+## Warning: Unknown or uninitialised column: 'imputations'.
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{dev.off}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## pdf 
+##   2
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{indicators <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"consdummy"}\NormalTok{, }\StringTok{"capital_intensity"}\NormalTok{, }\StringTok{"fin_cons100"}\NormalTok{,}
+                \StringTok{"inv"}\NormalTok{, }\StringTok{"ICR_failure"}\NormalTok{, }\StringTok{"interest_diff"}\NormalTok{, }\StringTok{"NEG_VA"}\NormalTok{,}
+                \StringTok{"real_SA"}\NormalTok{, }\StringTok{"Z_score"}\NormalTok{, }\StringTok{"misallocated_fixed"}\NormalTok{,}
+                \StringTok{"profitability"}\NormalTok{, }\StringTok{"area"}\NormalTok{, }\StringTok{"tfp_acf"}\NormalTok{, }\StringTok{"dummy_patents"}\NormalTok{,}
+                \StringTok{"dummy_trademark"}\NormalTok{, }\StringTok{"financial_sustainability"}\NormalTok{,}
+                \StringTok{"liquidity_return"}\NormalTok{) }
+\NormalTok{indicators_missing <-}\StringTok{ }\NormalTok{data_italy[indicators]}
+\KeywordTok{pdf}\NormalTok{(}\StringTok{"missing_indicators.pdf"}\NormalTok{) }
+\KeywordTok{missmap}\NormalTok{(indicators_missing[sample_}\DecValTok{1000}\NormalTok{,],}
+        \DataTypeTok{main =} \StringTok{"Missing values vs Observed"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning in if (class(obj) == "amelia") {: la condizione la lunghezza > 1 e
+## solo il promo elemento verrÃ  utilizzato
+\end{verbatim}
+
+\begin{verbatim}
+## Warning: Unknown or uninitialised column: 'arguments'.
+
+## Warning: Unknown or uninitialised column: 'arguments'.
+\end{verbatim}
+
+\begin{verbatim}
+## Warning: Unknown or uninitialised column: 'imputations'.
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{dev.off}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## pdf 
+##   2
+\end{verbatim}
+
+\hypertarget{machine-learning-analysis}{%
+\section{Machine Learning Analysis}\label{machine-learning-analysis}}
+
+\hypertarget{data-inizialization}{%
+\subsection{Data Inizialization}\label{data-inizialization}}
+
+Select the lagged variables.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{lagged_variables <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"failure"}\NormalTok{, }\StringTok{"iso"}\NormalTok{, }\StringTok{"control"}\NormalTok{, }\StringTok{"nace"}\NormalTok{,}
+                      \StringTok{"shareholders_funds"}\NormalTok{, }\StringTok{"added_value"}\NormalTok{,}
+                      \StringTok{"cash_flow"}\NormalTok{, }\StringTok{"ebitda"}\NormalTok{, }\StringTok{"fin_rev"}\NormalTok{,}
+                      \StringTok{"liquidity_ratio"}\NormalTok{, }\StringTok{"total_assets"}\NormalTok{,}
+                      \StringTok{"depr"}\NormalTok{, }\StringTok{"long_term_debt"}\NormalTok{, }\StringTok{"employees"}\NormalTok{,}
+                      \StringTok{"materials"}\NormalTok{, }\StringTok{"loans"}\NormalTok{, }\StringTok{"wage_bill"}\NormalTok{,}
+                      \StringTok{"tfp_acf"}\NormalTok{, }\StringTok{"fixed_assets"}\NormalTok{, }\StringTok{"tax"}\NormalTok{,}
+                      \StringTok{"current_liabilities"}\NormalTok{, }\StringTok{"current_assets"}\NormalTok{,}
+                      \StringTok{"fin_expenses"}\NormalTok{, }\StringTok{"int_paid"}\NormalTok{,}
+                      \StringTok{"solvency_ratio"}\NormalTok{, }\StringTok{"net_income"}\NormalTok{,}
+                      \StringTok{"revenue"}\NormalTok{, }\StringTok{"consdummy"}\NormalTok{, }\StringTok{"capital_intensity"}\NormalTok{,}
+                      \StringTok{"fin_cons100"}\NormalTok{, }\StringTok{"inv"}\NormalTok{, }\StringTok{"ICR_failure"}\NormalTok{,}
+                      \StringTok{"interest_diff"}\NormalTok{, }\StringTok{"NEG_VA"}\NormalTok{, }\StringTok{"real_SA"}\NormalTok{,}
+                      \StringTok{"Z_score"}\NormalTok{, }\StringTok{"misallocated_fixed"}\NormalTok{,}
+                      \StringTok{"profitability"}\NormalTok{, }\StringTok{"area"}\NormalTok{, }\StringTok{"dummy_patents"}\NormalTok{,}
+                      \StringTok{"dummy_trademark"}\NormalTok{,}\StringTok{"financial_sustainability"}\NormalTok{,}
+                      \StringTok{"liquidity_return"}\NormalTok{, }\StringTok{"int_fixed_assets"}\NormalTok{)}
+\NormalTok{data_lagged <-}\StringTok{ }\NormalTok{data_italy[lagged_variables]}
+\end{Highlighting}
+\end{Shaded}
+
+Select the predictors.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{predictors <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"control"}\NormalTok{, }\StringTok{"nace"}\NormalTok{, }\StringTok{"shareholders_funds"}\NormalTok{,}
+                \StringTok{"added_value"}\NormalTok{, }\StringTok{"cash_flow"}\NormalTok{, }\StringTok{"ebitda"}\NormalTok{,}
+                \StringTok{"fin_rev"}\NormalTok{, }\StringTok{"liquidity_ratio"}\NormalTok{, }\StringTok{"total_assets"}\NormalTok{,}
+                \StringTok{"depr"}\NormalTok{, }\StringTok{"long_term_debt"}\NormalTok{, }\StringTok{"employees"}\NormalTok{,}
+                \StringTok{"materials"}\NormalTok{, }\StringTok{"loans"}\NormalTok{, }\StringTok{"wage_bill"}\NormalTok{, }\StringTok{"tfp_acf"}\NormalTok{,}
+                \StringTok{"fixed_assets"}\NormalTok{, }\StringTok{"tax"}\NormalTok{, }\StringTok{"current_liabilities"}\NormalTok{,}
+                \StringTok{"current_assets"}\NormalTok{, }\StringTok{"fin_expenses"}\NormalTok{, }\StringTok{"int_paid"}\NormalTok{,}
+                \StringTok{"solvency_ratio"}\NormalTok{, }\StringTok{"net_income"}\NormalTok{, }\StringTok{"revenue"}\NormalTok{,}
+                \StringTok{"consdummy"}\NormalTok{, }\StringTok{"capital_intensity"}\NormalTok{, }\StringTok{"fin_cons100"}\NormalTok{,}
+                \StringTok{"inv"}\NormalTok{, }\StringTok{"ICR_failure"}\NormalTok{, }\StringTok{"interest_diff"}\NormalTok{, }\StringTok{"NEG_VA"}\NormalTok{,}
+                \StringTok{"real_SA"}\NormalTok{, }\StringTok{"misallocated_fixed"}\NormalTok{, }\StringTok{"profitability"}\NormalTok{,}
+                \StringTok{"area"}\NormalTok{, }\StringTok{"dummy_patents"}\NormalTok{, }\StringTok{"dummy_trademark"}\NormalTok{,}
+                \StringTok{"financial_sustainability"}\NormalTok{, }\StringTok{"liquidity_return"}\NormalTok{,}
+                \StringTok{"int_fixed_assets"}\NormalTok{)}
+\NormalTok{formula <-}\StringTok{ }\KeywordTok{as.formula}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\StringTok{"as.factor(failure) ~"}\NormalTok{,}
+                            \KeywordTok{paste}\NormalTok{(predictors, }\DataTypeTok{collapse=}\StringTok{"+"}\NormalTok{)))}
+\end{Highlighting}
+\end{Shaded}
+
+Create training and testing sets by assigning 90\% of the observations
+to the training set and 10\% to the testing set.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{omitted <-}\StringTok{ }\KeywordTok{na.omit}\NormalTok{(data_lagged)}
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{2020}\NormalTok{)}
+\NormalTok{index <-}\StringTok{ }\KeywordTok{sample}\NormalTok{(}\KeywordTok{seq_len}\NormalTok{(}\KeywordTok{nrow}\NormalTok{(omitted)), }\DataTypeTok{size =} \KeywordTok{nrow}\NormalTok{(omitted)}\OperatorTok{*}\FloatTok{0.9}\NormalTok{) }
+\NormalTok{train <-}\StringTok{ }\NormalTok{omitted[index,]}
+\NormalTok{test <-}\StringTok{ }\NormalTok{omitted[}\OperatorTok{-}\NormalTok{index,]}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{logit}{%
+\subsection{Logit}\label{logit}}
+
+Run a Logistic regression analysis.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{system.time}\NormalTok{(\{}
+\NormalTok{logit <-}\StringTok{ }\KeywordTok{glm}\NormalTok{(formula, }\DataTypeTok{data=}\NormalTok{ train,  }\DataTypeTok{na.action =} \StringTok{"na.omit"}\NormalTok{,}
+             \DataTypeTok{family=}\KeywordTok{binomial}\NormalTok{(}\DataTypeTok{link=}\StringTok{'logit'}\NormalTok{))}
+\NormalTok{\})}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##    user  system elapsed 
+##    6.97    0.32    9.56
+\end{verbatim}
+
+Depict the performance measures by running the following chunks.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fitted.prob.logit <-}\StringTok{ }\KeywordTok{predict}\NormalTok{(logit, }\DataTypeTok{newdata=}\NormalTok{test, }\DataTypeTok{type=}\StringTok{'response'}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fitted.logit <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(fitted.prob.logit)}
+\NormalTok{fg.logit <-}\StringTok{ }\NormalTok{fitted.logit[test}\OperatorTok{$}\NormalTok{failure}\OperatorTok{==}\DecValTok{1}\NormalTok{]}
+\NormalTok{bg.logit <-}\StringTok{ }\NormalTok{fitted.logit[test}\OperatorTok{$}\NormalTok{failure}\OperatorTok{==}\DecValTok{0}\NormalTok{]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{roc_logit <-}\StringTok{ }\KeywordTok{roc.curve}\NormalTok{(}\DataTypeTok{scores.class0 =}\NormalTok{ fg.logit,}
+                       \DataTypeTok{scores.class1 =}\NormalTok{ bg.logit,}
+                       \DataTypeTok{curve =}\NormalTok{ T)}
+\KeywordTok{plot}\NormalTok{(roc_logit)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lagged_analyses_files/figure-latex/unnamed-chunk-22-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pr_logit <-}\StringTok{ }\KeywordTok{pr.curve}\NormalTok{(}\DataTypeTok{scores.class0 =}\NormalTok{ fg.logit,}
+                     \DataTypeTok{scores.class1 =}\NormalTok{ bg.logit,}
+                     \DataTypeTok{curve =}\NormalTok{ T)}
+\KeywordTok{plot}\NormalTok{(pr_logit) }
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lagged_analyses_files/figure-latex/unnamed-chunk-23-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fitted.logit <-}\StringTok{ }\KeywordTok{ifelse}\NormalTok{(fitted.prob.logit}\OperatorTok{>}\FloatTok{0.5}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{)}
+\NormalTok{f1_logit <-}\StringTok{ }\KeywordTok{f1_score}\NormalTok{(fitted.logit,}
+\NormalTok{                     test}\OperatorTok{$}\NormalTok{failure,}
+                     \DataTypeTok{positive.class=}\StringTok{"1"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{balanced_accuracy_logit<-}\KeywordTok{balanced_accuracy}\NormalTok{(fitted.logit, test}\OperatorTok{$}\NormalTok{failure)}
+\NormalTok{accuracy_logit <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(}\KeywordTok{rbind}\NormalTok{(}\KeywordTok{postResample}\NormalTok{(fitted.logit,}
+\NormalTok{                                                   test}\OperatorTok{$}\NormalTok{failure)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{logit_fit <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(}\KeywordTok{cbind}\NormalTok{(roc_logit}\OperatorTok{$}\NormalTok{auc,}
+\NormalTok{                                 pr_logit}\OperatorTok{$}\NormalTok{auc.integral,}
+\NormalTok{                                 f1_logit,}
+\NormalTok{                                 balanced_accuracy_logit,}
+\NormalTok{                                 accuracy_logit}\OperatorTok{$}\NormalTok{Rsquared))}
+\KeywordTok{colnames}\NormalTok{(logit_fit) <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"AUC"}\NormalTok{, }\StringTok{"PR"}\NormalTok{, }\StringTok{"f1-score"}\NormalTok{, }\StringTok{"BACC"}\NormalTok{, }\StringTok{"Rsquared"}\NormalTok{)}
+\NormalTok{logit_fit}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##         AUC        PR  f1-score      BACC   Rsquared
+## 1 0.8896212 0.3575797 0.2098214 0.8433113 0.08287033
+\end{verbatim}
+
+\hypertarget{classification-tree}{%
+\subsection{Classification Tree}\label{classification-tree}}
+
+Run a classification tree analysis.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{2020}\NormalTok{)}
+\KeywordTok{system.time}\NormalTok{(\{}
+\NormalTok{c.tree <-}\StringTok{ }\KeywordTok{ctree}\NormalTok{(formula, }\DataTypeTok{data=}\NormalTok{train,}
+               \DataTypeTok{control =} \KeywordTok{ctree_control}\NormalTok{(}\DataTypeTok{testtype =} \StringTok{"MonteCarlo"}\NormalTok{,}
+               \DataTypeTok{mincriterion =} \FloatTok{0.90}\NormalTok{, }\DataTypeTok{nresample =} \DecValTok{1000}\NormalTok{))}
+\NormalTok{\})}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##    user  system elapsed 
+##  402.23    0.85  411.26
+\end{verbatim}
+
+Depict the performance measures by running the following chunks.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fitted.results.tree <-}\StringTok{ }\KeywordTok{as.matrix}\NormalTok{(}\KeywordTok{unlist}\NormalTok{(}\KeywordTok{predict}\NormalTok{(c.tree,}
+                                 \DataTypeTok{newdata =}\NormalTok{ test, }\DataTypeTok{type=}\StringTok{'prob'}\NormalTok{)))}
+\NormalTok{fitted.prob.tree <-}\StringTok{ }\NormalTok{fitted.results.tree[}\KeywordTok{seq_along}\NormalTok{(fitted.results.tree) }\OperatorTok{%%}\DecValTok{2} \OperatorTok{==}\StringTok{ }\DecValTok{0}\NormalTok{]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{#Roc}
+\NormalTok{fg.tree<-fitted.prob.tree[test}\OperatorTok{$}\NormalTok{failure}\OperatorTok{==}\DecValTok{1}\NormalTok{]}
+\NormalTok{bg.tree<-fitted.prob.tree[test}\OperatorTok{$}\NormalTok{failure}\OperatorTok{==}\DecValTok{0}\NormalTok{]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{roc_ctree <-}\StringTok{ }\KeywordTok{roc.curve}\NormalTok{(}\DataTypeTok{scores.class0 =}\NormalTok{ fg.tree,}
+                       \DataTypeTok{scores.class1 =}\NormalTok{ bg.tree,}
+                       \DataTypeTok{curve =}\NormalTok{ T)}
+\KeywordTok{plot}\NormalTok{(roc_ctree) }
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lagged_analyses_files/figure-latex/unnamed-chunk-30-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pr_ctree <-}\StringTok{ }\KeywordTok{pr.curve}\NormalTok{(}\DataTypeTok{scores.class0 =}\NormalTok{ fg.tree,}
+                     \DataTypeTok{scores.class1 =}\NormalTok{ bg.tree,}
+                     \DataTypeTok{curve =}\NormalTok{ T)}
+\KeywordTok{plot}\NormalTok{(pr_ctree) }
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lagged_analyses_files/figure-latex/unnamed-chunk-31-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fitted.ctree <-}\StringTok{ }\KeywordTok{predict}\NormalTok{(c.tree,}
+                        \DataTypeTok{newdata =}\NormalTok{ test,}
+                        \DataTypeTok{type=}\StringTok{'response'}\NormalTok{)}
+\NormalTok{f1_ctree <-}\StringTok{ }\KeywordTok{f1_score}\NormalTok{(fitted.ctree,}
+\NormalTok{                     test}\OperatorTok{$}\NormalTok{failure,}
+                     \DataTypeTok{positive.class=}\StringTok{"1"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{balanced_accuracy_ctree <-}\StringTok{ }\KeywordTok{balanced_accuracy}\NormalTok{(fitted.ctree, test}\OperatorTok{$}\NormalTok{failure)}
+\NormalTok{accuracy_ctree <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(}\KeywordTok{rbind}\NormalTok{(}\KeywordTok{postResample}\NormalTok{(}\KeywordTok{as.double}\NormalTok{(fitted.ctree), test}\OperatorTok{$}\NormalTok{failure)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{ctree_fit <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(}\KeywordTok{cbind}\NormalTok{(roc_ctree}\OperatorTok{$}\NormalTok{auc,}
+\NormalTok{                                 pr_ctree}\OperatorTok{$}\NormalTok{auc.integral,}
+\NormalTok{                                 f1_ctree,}
+\NormalTok{                                 balanced_accuracy_ctree,}
+\NormalTok{                                 accuracy_ctree}\OperatorTok{$}\NormalTok{Rsquared))}
+\KeywordTok{colnames}\NormalTok{(ctree_fit) <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"AUC"}\NormalTok{, }\StringTok{"PR"}\NormalTok{, }\StringTok{"f1-score"}\NormalTok{, }\StringTok{"BACC"}\NormalTok{, }\StringTok{"Rsquared"}\NormalTok{)}
+\NormalTok{ctree_fit}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##         AUC        PR f1-score     BACC   Rsquared
+## 1 0.8889458 0.3568026      0.2 0.780396 0.06540008
+\end{verbatim}
+
+\hypertarget{random-forest}{%
+\subsection{Random Forest}\label{random-forest}}
+
+Run a Random Forest analysis.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{2020}\NormalTok{)}
+
+\KeywordTok{system.time}\NormalTok{(\{}
+\NormalTok{rf <-}\StringTok{ }\KeywordTok{randomForest}\NormalTok{(formula, }\DataTypeTok{data=}\NormalTok{train,}
+                   \DataTypeTok{importance =} \OtherTok{FALSE}\NormalTok{,}
+                   \DataTypeTok{ntree=}\DecValTok{200}\NormalTok{)}
+\NormalTok{\})}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##    user  system elapsed 
+##  204.77    0.83  208.34
+\end{verbatim}
+
+Depict the performance measures by running the following chunks.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Fitted results Random Forest}
+\NormalTok{fitted.prob.rf <-}\StringTok{ }\KeywordTok{predict}\NormalTok{(rf, }\DataTypeTok{newdata=}\NormalTok{test, }\DataTypeTok{type=}\StringTok{'prob'}\NormalTok{) }
+\NormalTok{fitted.prob.rf <-}\StringTok{ }\NormalTok{fitted.prob.rf[,}\DecValTok{2}\NormalTok{]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{#Roc}
+\NormalTok{fg.rf<-fitted.prob.rf[test}\OperatorTok{$}\NormalTok{failure}\OperatorTok{==}\DecValTok{1}\NormalTok{]}
+\NormalTok{bg.rf<-fitted.prob.rf[test}\OperatorTok{$}\NormalTok{failure}\OperatorTok{==}\DecValTok{0}\NormalTok{]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{roc_rf <-}\StringTok{ }\KeywordTok{roc.curve}\NormalTok{(}\DataTypeTok{scores.class0 =}\NormalTok{ fg.rf,}
+                    \DataTypeTok{scores.class1 =}\NormalTok{ bg.rf,}
+                    \DataTypeTok{curve =}\NormalTok{ T)}
+\KeywordTok{plot}\NormalTok{(roc_rf)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lagged_analyses_files/figure-latex/unnamed-chunk-38-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pr_rf<-}\KeywordTok{pr.curve}\NormalTok{(}\DataTypeTok{scores.class0 =}\NormalTok{ fg.rf,}
+                \DataTypeTok{scores.class1 =}\NormalTok{ bg.rf,}
+                \DataTypeTok{curve =}\NormalTok{ T)}
+\KeywordTok{plot}\NormalTok{(pr_rf)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lagged_analyses_files/figure-latex/unnamed-chunk-39-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fitted.rf <-}\StringTok{ }\KeywordTok{ifelse}\NormalTok{(fitted.prob.rf }\OperatorTok{>}\StringTok{ }\FloatTok{0.5}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{)}
+\NormalTok{f1_rf <-}\StringTok{ }\KeywordTok{f1_score}\NormalTok{(fitted.rf,}
+\NormalTok{                  test}\OperatorTok{$}\NormalTok{failure,}
+                  \DataTypeTok{positive.class=}\StringTok{"1"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{balanced_accuracy_rf <-}\StringTok{ }\KeywordTok{balanced_accuracy}\NormalTok{(fitted.rf, test}\OperatorTok{$}\NormalTok{failure)}
+\NormalTok{accuracy_rf <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(}\KeywordTok{rbind}\NormalTok{(}\KeywordTok{postResample}\NormalTok{(}\KeywordTok{as.double}\NormalTok{(fitted.rf),}
+\NormalTok{                                                      test}\OperatorTok{$}\NormalTok{failure)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{rf_fit <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(}\KeywordTok{cbind}\NormalTok{(roc_rf}\OperatorTok{$}\NormalTok{auc,}
+\NormalTok{                              pr_rf}\OperatorTok{$}\NormalTok{auc.integral,}
+\NormalTok{                              f1_rf, balanced_accuracy_rf,}
+\NormalTok{                              accuracy_rf}\OperatorTok{$}\NormalTok{Rsquared))}
+\KeywordTok{colnames}\NormalTok{(rf_fit) <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"AUC"}\NormalTok{, }\StringTok{"PR"}\NormalTok{, }\StringTok{"f1-score"}\NormalTok{, }\StringTok{"BACC"}\NormalTok{, }\StringTok{"Rsquared"}\NormalTok{)}
+\NormalTok{rf_fit}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##         AUC        PR  f1-score      BACC   Rsquared
+## 1 0.9050392 0.4262259 0.2256637 0.8515472 0.09220139
+\end{verbatim}
+
+\hypertarget{super-learner}{%
+\subsection{Super Learner}\label{super-learner}}
+
+Run a super learner analysis, by using an ensemble method with three
+learners: a logistic regression, a classification tree and a random
+forest.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{SL.library <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"SL.glm"}\NormalTok{,  }\StringTok{"SL.randomForest"}\NormalTok{, }\StringTok{"SL.rpartPrune"}\NormalTok{) }
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{train}\OperatorTok{$}\NormalTok{X <-(train[predictors])}
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{123}\NormalTok{)}
+\KeywordTok{system.time}\NormalTok{(\{}
+\NormalTok{  SL <-}\StringTok{ }\KeywordTok{SuperLearner}\NormalTok{(}\DataTypeTok{Y=}\NormalTok{train}\OperatorTok{$}\NormalTok{failure, }\DataTypeTok{X=}\NormalTok{train}\OperatorTok{$}\NormalTok{X,}
+                     \DataTypeTok{SL.library =}\NormalTok{ SL.library,}
+                     \DataTypeTok{verbose =} \OtherTok{FALSE}\NormalTok{,}
+                     \DataTypeTok{method =} \StringTok{"method.NNLS"}\NormalTok{,}
+                     \DataTypeTok{family =} \KeywordTok{binomial}\NormalTok{())}
+\NormalTok{\})}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##     user   system  elapsed 
+## 11308.47   385.36 12721.22
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{coef}\NormalTok{(SL)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##          SL.glm_All SL.randomForest_All   SL.rpartPrune_All 
+##          0.18903816          0.78628692          0.02467493
+\end{verbatim}
+
+Depict the performance measures by running the following chunks.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{test}\OperatorTok{$}\NormalTok{X <-(test[predictors])}
+\NormalTok{sl.fitted <-}\StringTok{ }\KeywordTok{predict.SuperLearner}\NormalTok{(SL, test}\OperatorTok{$}\NormalTok{X,}
+                                  \DataTypeTok{X =}\NormalTok{ train}\OperatorTok{$}\NormalTok{X,}
+                                  \DataTypeTok{Y =}\NormalTok{ train}\OperatorTok{$}\NormalTok{failure,}
+                                  \DataTypeTok{onlySL =} \OtherTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{#Roc}
+\NormalTok{fg.sl<-sl.fitted}\OperatorTok{$}\NormalTok{pred[test}\OperatorTok{$}\NormalTok{failure}\OperatorTok{==}\DecValTok{1}\NormalTok{] }
+\NormalTok{bg.sl<-sl.fitted}\OperatorTok{$}\NormalTok{pred[test}\OperatorTok{$}\NormalTok{failure}\OperatorTok{==}\DecValTok{0}\NormalTok{]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{roc_sl<-}\KeywordTok{roc.curve}\NormalTok{(}\DataTypeTok{scores.class0 =}\NormalTok{ fg.sl,}
+                  \DataTypeTok{scores.class1 =}\NormalTok{ bg.sl,}
+                  \DataTypeTok{curve =}\NormalTok{ T)}
+\KeywordTok{plot}\NormalTok{(roc_sl) }
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lagged_analyses_files/figure-latex/unnamed-chunk-47-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pr_sl<-}\KeywordTok{pr.curve}\NormalTok{(}\DataTypeTok{scores.class0 =}\NormalTok{ fg.sl,}
+                \DataTypeTok{scores.class1 =}\NormalTok{ bg.sl,}
+                \DataTypeTok{curve =}\NormalTok{ T)}
+\KeywordTok{plot}\NormalTok{(pr_sl)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lagged_analyses_files/figure-latex/unnamed-chunk-48-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fitted.sl <-}\StringTok{ }\KeywordTok{ifelse}\NormalTok{(sl.fitted}\OperatorTok{$}\NormalTok{pred }\OperatorTok{>}\StringTok{ }\FloatTok{0.5}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{)}
+\NormalTok{f1_sl <-}\StringTok{ }\KeywordTok{f1_score}\NormalTok{(fitted.sl,}
+\NormalTok{                  test}\OperatorTok{$}\NormalTok{failure,}
+                  \DataTypeTok{positive.class=}\StringTok{"1"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{balanced_accuracy_sl <-}\StringTok{ }\KeywordTok{balanced_accuracy}\NormalTok{(fitted.sl, test}\OperatorTok{$}\NormalTok{failure)}
+\NormalTok{accuracy_sl <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(}\KeywordTok{rbind}\NormalTok{(}\KeywordTok{postResample}\NormalTok{(}\KeywordTok{as.double}\NormalTok{(fitted.sl),}
+\NormalTok{                                                      test}\OperatorTok{$}\NormalTok{failure)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{sl_fit <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(}\KeywordTok{cbind}\NormalTok{(roc_sl}\OperatorTok{$}\NormalTok{auc,}
+\NormalTok{                              pr_sl}\OperatorTok{$}\NormalTok{auc.integral,}
+\NormalTok{                              f1_sl,}
+\NormalTok{                              balanced_accuracy_sl,}
+\NormalTok{                              accuracy_sl}\OperatorTok{$}\NormalTok{Rsquared))}
+\KeywordTok{colnames}\NormalTok{(sl_fit) <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"AUC"}\NormalTok{, }\StringTok{"PR"}\NormalTok{, }\StringTok{"f1-score"}\NormalTok{, }\StringTok{"BACC"}\NormalTok{, }\StringTok{"Rsquared"}\NormalTok{)}
+\NormalTok{sl_fit}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##        AUC        PR  f1-score      BACC  Rsquared
+## 1 0.907256 0.4310831 0.2232143 0.8665509 0.0944695
+\end{verbatim}
 
 \hypertarget{bart-mia}{%
 \subsection{BART-mia}\label{bart-mia}}
@@ -294,8 +1232,7 @@ Depict the performance measures by running the following chunks.
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{balanced_accuracy_bart <-}\StringTok{ }\KeywordTok{balanced_accuracy}\NormalTok{(}\KeywordTok{as.matrix}\NormalTok{(}\KeywordTok{table}\NormalTok{(fitted.bart,}
-\NormalTok{                                                    test_bart}\OperatorTok{$}\NormalTok{failure)))}
+\NormalTok{balanced_accuracy_bart <-}\StringTok{ }\KeywordTok{balanced_accuracy}\NormalTok{(fitted.bart, test_bart}\OperatorTok{$}\NormalTok{failure)}
 \NormalTok{accuracy_bart <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(}\KeywordTok{rbind}\NormalTok{(}\KeywordTok{postResample}\NormalTok{(}\KeywordTok{as.double}\NormalTok{(fitted.bart),}
 \NormalTok{                                                    test_bart}\OperatorTok{$}\NormalTok{failure)))}
 \end{Highlighting}
@@ -326,9 +1263,9 @@ Depict the performance measures by running the following chunks.
 \section{Model Comparison}\label{model-comparison}}
 
 Here, we run an empirical horse race where we define two competitors
-(benchmark or ``usual methods'') of our preferred BART methodology.
-Natural candidates are ``default probability predictors''
-(credit-ratings type of measures) such as:
+(benchmark or ``usual methods'') and we compare them with our preferred
+BART methodology. Natural candidates are ``default probability
+predictors'' (credit-ratings type of measures) such as:
 
 \begin{enumerate}
 \item  Altman Z-score;
