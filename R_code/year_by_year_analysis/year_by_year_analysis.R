@@ -50,7 +50,7 @@ train_it$X <-as.data.frame(train_it[predictors])
 
 set_bart_machine_num_cores(4)
 system.time({
-  bart_it_2017<-bartMachine(train_it$X,as.factor(train_it$failure_2017), use_missing_data=TRUE) 
+  bart_it_2017 <- bartMachine(train_it$X,as.factor(train_it$failure_2017), use_missing_data=TRUE) 
 }) # 9 minutes
 
 test_it$X <- as.data.frame(test_it[predictors])
