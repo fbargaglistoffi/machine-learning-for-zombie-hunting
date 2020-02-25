@@ -63,9 +63,9 @@ The stability of predictions is checked with respect to the unit level predicted
  f_(x) = \hat{Y}(X_i=x).
 \end{equation}
 
-\par The "robustness" of the predictions is tested with respect to the inclusion of new predictors uncorrelated with varying correlations with the outcome (from 0.1 to 0.9).
+\par The "robustness" of the predictions is tested with respect to the inclusion of new predictors uncorrelated with varying correlations with the outcome.
 
-\par In particular, this check is performed by generating a new predictor, a "confounder" $R_i$, orthogonal to the set of predictors $\mathbf{X}$ and with a correlation with the outcome that varies between 0.1 and 0.5, and checking how the inclusion of this additional predictor affects on the original model.
+\par In particular, this check is performed by generating a new predictor, a "confounder" $R_i$, orthogonal to the set of predictors $\mathbf{X}$ and with a correlation with the outcome that varies between 0.1 and 0.4, and checking how the inclusion of this additional predictor affects on the original model.
 The new model is the following:
 \begin{equation}
  f_(x,r) = \hat{Y}(X_i=x, R_i=r).
@@ -127,14 +127,14 @@ predictors <- c("control", "nace", "shareholders_funds",
 Here we will use the same observations used in the main analysis.
 
 ```{r}
-omitted <- na.omit(data_lagged)
+omitted <- as.data.frame(na.omit(data_lagged))
 set.seed(2020)
 index <- sample(seq_len(nrow(omitted)), size = nrow(omitted)*0.9) 
 train_bart <- omitted[index,]
 test_bart <- omitted[-index,]
 train_bart$X <- as.data.frame(train_bart[predictors])
 test_bart$X <- as.data.frame(test_bart[predictors])
-y_train <- as.factor(train_bart$failure)
+y_train <- train_bart$failure
 ```
 
 ```{r results = 'hide', include = TRUE, message = FALSE, warning = FALSE}
@@ -180,7 +180,7 @@ par(xpd = FALSE)
 lines(sensitivity$`RMSE synthetic model`*sqrt(1000/qchisq(0.99,df = 1000)), col = "blue", lty=2, type = "o")
 lines(sensitivity$`RMSE synthetic model`*sqrt(1000/qchisq(0.01,df = 1000)), col = "blue", lty=2, type = "o")
 abline(h= postResample(main_bart$yhat.train.mean, y_train)[1], col = "red", lwd = 2)
-axis(1, at=1:(length(sensitivity$`RMSE synthetic model`)), labels=c(seq(0.1,0.5,0.1)))
+axis(1, at=1:(length(sensitivity$`RMSE synthetic model`)), labels=c(seq(0.1,0.4,0.1)))
 ```
 
 ### R squared
@@ -215,5 +215,5 @@ par(xpd = FALSE)
 lines(lb_new, col = "blue", lty=2, type = "o")
 lines(ub_new, col = "blue", lty=2, type = "o")
 abline(h= r2, col = "red", lwd = 2)
-axis(1, at=1:(length(sensitivity$`Rsquared synthetic model`)), labels=c(seq(0.1,0.5,0.1)))
+axis(1, at=1:(length(sensitivity$`Rsquared synthetic model`)), labels=c(seq(0.1,0.4,0.1)))
 ```
