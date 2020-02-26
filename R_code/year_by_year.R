@@ -303,7 +303,7 @@ data_france$prob_2009[which(!is.na(data_france[,paste("failure", sep = "_", 2009
 prob <- matrix(NA, ncol = length(years), nrow = nrow(data_portugal))
 for (i in (years)){
   # Subset data by Year
-  data_model <- data_france[which(!is.na(data_france[,paste("failure", sep = "_", i + 1)])),]
+  data_model <- data_portugal[which(!is.na(data_portugal[,paste("failure", sep = "_", i + 1)])),]
   
   # Get Predictors Matrix
   X <- as.data.frame(cbind(data_model[,paste(lagged_predictors, sep = "_", i)], data_model[,paste(predictors)]))
@@ -316,23 +316,23 @@ for (i in (years)){
   bart_machine<-bartMachine(X, y, use_missing_data=TRUE) 
   
   # Get fitted values
-  prob[which(!is.na(data_france[,paste("failure", sep = "_", i + 1)])), which(years==i)] <-  1 - round(predict(bart_machine, X, type='prob'), 6)
+  prob[which(!is.na(data_portugal[,paste("failure", sep = "_", i + 1)])), which(years==i)] <-  1 - round(predict(bart_machine, X, type='prob'), 6)
   
 }
 
 # Save Results
-data_france$prob_2010 <- prob[,1]
-data_france$prob_2011 <- prob[,2]
-data_france$prob_2012 <- prob[,3]
-data_france$prob_2013 <- prob[,4]
-data_france$prob_2014 <- prob[,5]
-data_france$prob_2015 <- prob[,6]
-data_france$prob_2016 <- prob[,7]
-data_france$prob_2017 <- prob[,8]
+data_portugal$prob_2010 <- prob[,1]
+data_portugal$prob_2011 <- prob[,2]
+data_portugal$prob_2012 <- prob[,3]
+data_portugal$prob_2013 <- prob[,4]
+data_portugal$prob_2014 <- prob[,5]
+data_portugal$prob_2015 <- prob[,6]
+data_portugal$prob_2016 <- prob[,7]
+data_portugal$prob_2017 <- prob[,8]
 
 # Failures 2009 (no investments and interest-difference)
 # Subset data by Year
-data_model <- data_france[which(!is.na(data_france[,paste("failure", sep = "_", 2009)])),]
+data_model <- data_portugal[which(!is.na(data_portugal[,paste("failure", sep = "_", 2009)])),]
 lagged_predictors <- c("shareholders_funds",
                        "added_value", "cash_flow", "ebitda",
                        "fin_rev", "liquidity_ratio", "total_assets",
@@ -357,8 +357,9 @@ y <- as.factor(unlist(y, use.names = FALSE))
 bart_machine<-bartMachine(X, y, use_missing_data=TRUE) 
 
 # Get fitted values
-data_france$prob_2009 <- matrix(NA, ncol = 1, nrow = nrow(data_france))
-data_france$prob_2009[which(!is.na(data_france[,paste("failure", sep = "_", 2009)]))] <-  1 - round(predict(bart_machine, X, type='prob'), 6)
+data_portugal$prob_2009 <- matrix(NA, ncol = 1, nrow = nrow(data_portugal))
+data_portugal$prob_2009[which(!is.na(data_portugal[,paste("failure", sep = "_", 2009)]))] <-  1 - round(predict(bart_machine, X, type='prob'), 6)
+
 
 # Organize the Data into a Single Data frame
 prob_data <- rbind(data_italy, data_spain, data_portugal, data_france)

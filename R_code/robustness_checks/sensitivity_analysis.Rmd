@@ -139,7 +139,7 @@ y_train <- train_bart$failure
 
 ```{r results = 'hide', include = TRUE, message = FALSE, warning = FALSE}
 set.seed(2019)
-sensitivity_bart <- sensitivity(x_train = train_bart$X,
+sensitivity <- sensitivity_bart(x_train = train_bart$X,
                      y_train = y_train,
                      x_test = test_bart$X,
                      nburn = 500, 
