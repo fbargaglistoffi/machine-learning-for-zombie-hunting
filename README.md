@@ -60,7 +60,7 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 * <tt>`ICR`</tt>: interest coverage ratio computed as the ratio between EBIT and interest paid;
 * <tt>`ICR_failure`</tt>: indicator variable equal to 1 if <tt>`ICR`</tt><= 1 by [Bank of England, 2013](https://www.bankofengland.co.uk/inflation-report/2013/august-2013);
 * <tt>`interest_diff`</tt>: benchmark interest difference indicator by [Caballero, 2008](https://www.aeaweb.org/articles?id=10.1257/aer.98.5.1943);
-* <tt>`NEG_VA`</tt>: negative added value indicator by [Bank of Korea, 2013];
+* <tt>`NEG_VA`</tt>: negative added value indicator by Bank of Korea, 2013;
 * <tt>`real_SA`</tt>: size-age indicator by ; 
 * <tt>`Z_score`</tt>: Altman Z-score by [Altman, 2000](http://pages.stern.nyu.edu/~ealtman/Zscores.pdf);
 * <tt>`misallocated`</tt>: misallocated capital indicator by [Schivardi et al, 2017](https://www.bis.org/publ/work669.pdf);
