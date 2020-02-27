@@ -60,8 +60,8 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 * <tt>`ICR`</tt>: interest coverage ratio computed as the ratio between EBIT and interest paid;
 * <tt>`ICR_failure`</tt>: indicator variable equal to 1 if <tt>`ICR`</tt><= 1 by [Bank of England, 2013](https://www.bankofengland.co.uk/inflation-report/2013/august-2013);
 * <tt>`interest_diff`</tt>: benchmark interest difference indicator by [Caballero, 2008](https://www.aeaweb.org/articles?id=10.1257/aer.98.5.1943);
-* <tt>`NEG_VA`</tt>: negative added value indicator by [Bank of Korea, 2013];
-* <tt>`real_SA`</tt>: size-age indicator by ; 
+* <tt>`NEG_VA`</tt>: negative added value indicator by Bank of Korea, 2013;
+* <tt>`real_SA`</tt>: size-age indicator by [Handlock and Pierce, 2010](https://academic.oup.com/rfs/article-abstract/23/5/1909/1602852?redirectedFrom=PDF); 
 * <tt>`Z_score`</tt>: Altman Z-score by [Altman, 2000](http://pages.stern.nyu.edu/~ealtman/Zscores.pdf);
 * <tt>`misallocated`</tt>: misallocated capital indicator by [Schivardi et al, 2017](https://www.bis.org/publ/work669.pdf);
 * <tt>`profitability`</tt>: profitability indicator by [Schivardi et al, 2017](https://www.bis.org/publ/work669.pdf);
@@ -109,10 +109,15 @@ Within the <tt>`descriptives`</tt> folder you can find the following files:
 The <tt>`R`</tt> code files can be found </b> [<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/R_code">here</a>]. The files are devided in four folders:
 * <tt>`lagged_analysis`</tt>;
 * <tt>`year_by_year_analysis`</tt>;
-* <tt>`robustness_checks`</tt>;
-* <tt>`country_specific_analysis`</tt>.
+* <tt>`robustness_checks`</tt>.
 
 Within the <tt>`lagged_analysis`</tt> folder you can find the following files:
 * <tt>`lagged_analyses.R`</tt>: R code to reproduce the lagged machine learning analyses;
 * <tt>`functions.R`</tt>: R functions built to perform the <tt>`lagged_analyses.R`</tt>;
 * <tt>`lagged_analyses.pdf`</tt> pdf generated using *R markdown* with the commented code and the results from <tt>`lagged_analyses.R`</tt>.
+
+Within the <tt>`year_by_year_analysis`</tt> folder you can find the following files:
+* <tt>`year_by_year.R`</tt>: R code to reproduce the yearly machine learning analysis for Italy, Spain, Portugal and France.
+
+
+
