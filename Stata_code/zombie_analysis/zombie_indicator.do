@@ -1,4 +1,4 @@
-*Zombie Indicator
+*Zombie Indicator (for firm's that stay alive)
 clear all 
 cd "G:\Il mio Drive\Research\Italian Firms\Zombie Hunting New Data"
 

@@ -76,8 +76,8 @@ predictors <- c("control", "nace", "consdummy", "area", "dummy_patents", "dummy_
 years <- c(2009:2016)
 failed <- matrix(NA, ncol = length(years), nrow = nrow(data))
 for (i in (years)){
-  failed[,which(years==i)][which(data$year_of_status == i & data$year_of_incorporation<= i & data$failure== 1)] <- 1
-  failed[,which(years==i)][which(data$year_of_incorporation <= i & data$failure==0)] <- 0
+  failed[,which(years==i)][which(data$year_of_incorporation <= i)] <- 0
+  failed[,which(years==i)][which(data$year_of_status == i & data$year_of_incorporation<= i)] <- 1
 }
 data$failure_2009 <- failed[,1]
 data$failure_2010 <- failed[,2]
@@ -88,8 +88,8 @@ data$failure_2014 <- failed[,6]
 data$failure_2015 <- failed[,7]
 data$failure_2016 <- failed[,8]
 data$failure_2017 <- matrix(NA, ncol = 1, nrow = nrow(data))
-data$failure_2017[which((data$year_of_status == 2017 | data$year_of_status == 2018) & data$year_of_incorporation<= 2017 & data$failure== 1)] <- 1
-data$failure_2017[which(data$year_of_incorporation <= 2017 & data$failure==0)] <- 0
+data$failure_2017[which((data$year_of_status == 2017 | data$year_of_status == 2018) & data$year_of_incorporation<= 2017)] <- 1
+data$failure_2017[which(data$year_of_incorporation <= 2017)] <- 0
 
 # Get Country Specific Data
 data_italy <- data[which(data$iso=="IT"),] 

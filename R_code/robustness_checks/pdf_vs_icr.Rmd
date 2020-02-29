@@ -1,16 +1,21 @@
 ---
-title: "PDF v. ICR"
+title: "Why not just using a single indicator?"
 author: "Falco J. Bargagli Stoffi"
-date: "2/12/2018"
+date: "29/02/2020"
 output:
   pdf_document:
     keep_tex: true
 ---
 
-# Why not just using ICR?
+# Introduction 
 
-In this section of the Appendix we check what is the comparative advantage of using our Machine-Learning-based definition of Persistently Distressed Firms (PDF) rather than other commonly used deterministic indicators (i.e., Interest Covarage Ratio [ICR], negative added value). 
-\par The first and more obvious advantage is that the PDF indicator can be constructed even in the presence of missing data. As we saw in the Section of the paper about missing data, there are significant missingness patterns in the two variables that compose the ICR (EBIT and Interest Paid).
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'G:\\Il mio Drive\\Research\\Italian Firms\\Zombie Hunting New Data')
+```
+
+In this section of the Appendix we check what is the comparative advantage of using our Machine-Learning-based definition of Persistently Distressed Firms (PDF) rather than other commonly used deterministic indicators (i.e., Interest Covarage Ratio [ICR], negative added value, etc.). 
+\par The first and more obvious advantage is that the PDF indicator can be constructed even in the presence of missing data. As we show in the Section of the paper about missing data, there are significant missingness patterns in the two variables that compose the ICR indicator (EBIT and Interest Paid).
 \par The second advantage is that, while ICR entails a deterministic definition of zombies, PDF represents a probabilistic based definition that can be tuned to embody different "likelihoods" of being zombie.
 \par Beside these clear advantages, there are more subtle benefits that can be obtained by using PDF instead of ICR.
 To highlight these advantages we focus on a particular dimension of our PDF definition. To be a PDF a firm needs to be at high risk of failure (but not failing) for three consecutive years. 
@@ -40,49 +45,65 @@ library(PRROC)
 library(caret)
 library(glmnet)
 
-#Upload dati
-setwd("G:\\Il mio Drive\\Research\\Italian Firms\\Zombie Hunting New Data")
+# Load Data
+data <- read_dta("analysis_data_indicators.dta")
 
-#LOAD DATA
-
-data <- read_dta("data_lagged_10_07.dta")
+# Initialize Data
+names(data)[names(data) == 'GUO___BvD_ID_number'] <- 'guo'
+data$control <- ifelse(data$guo=="", 0, 1)
+data$nace <- as.factor(data$nace)
+data$area <- as.factor(data$area)
+levels(data$nace) <- floor(as.numeric(levels(data$nace))/100) 
 
 #OMIITED DATA
-myvariables <- c("iso", "tfp_acf",  "Number_of_patents", "Number_of_trademarks",
-                 "consdummy", "control", "failure", "nace_2","fin_rev", "int_paid",
-                 "ebitda", "cash_flow", "depr", "revenue", "total_assets", 
-                 "long_term_debt", "employees", "added_value", "materials", "wage_bill",
-                 "loans" , "int_fixed_assets", "fixed_assets", "current_liabilities",
-                 "liquidity_ratio",  "solvency_ratio", "current_assets", "fin_expenses",
-                 "net_income", "fin_cons", "fin_cons100", "inv",  "ICR_t", "time",
-                 "real_SA", "shareholders_funds", "NEG_VA", "ICR_failure", "profitability",
-                 "misallocated_fixed","interest_diff")
-#capital_intensity, labour_product,retained_earnings, firm_value excluded: highly missing
-dati <- na.omit(data[myvariables])
-predictors <- c("iso", "tfp_acf",  "Number_of_patents", "Number_of_trademarks",
-                "consdummy", "control", "nace_2","fin_rev", "int_paid", "ebitda",
-                "cash_flow", "depr", "revenue", "total_assets", "long_term_debt",
-                "employees", "added_value", "materials", "wage_bill", "loans" ,
-                "int_fixed_assets",  "fixed_assets", "current_liabilities",
-                "liquidity_ratio",  "solvency_ratio", "current_assets",
-                 "fin_expenses", "net_income", "fin_cons", "fin_cons100", "inv",
-                "ICR_t", "time", "real_SA", "shareholders_funds", "NEG_VA",
-                "ICR_failure", "profitability", "misallocated_fixed", 
-                "interest_diff")
+lagged_variables <- c("failure", "iso", "control", "nace",
+                      "shareholders_funds", "added_value",
+                      "cash_flow", "ebitda", "fin_rev",
+                      "liquidity_ratio", "total_assets",
+                      "depr", "long_term_debt", "employees",
+                      "materials", "loans", "wage_bill",
+                      "tfp_acf", "fixed_assets", "tax",
+                      "current_liabilities", "current_assets",
+                      "fin_expenses", "int_paid",
+                      "solvency_ratio", "net_income",
+                      "revenue", "consdummy", "capital_intensity",
+                      "fin_cons100", "inv", "ICR_failure",
+                      "interest_diff", "NEG_VA", "real_SA",
+                      "Z_score", "misallocated_fixed",
+                      "profitability", "area", "dummy_patents",
+                      "dummy_trademark","financial_sustainability",
+                      "liquidity_return", "int_fixed_assets")
+omitted <- na.omit(data[legged_variables])
+predictors <- c("control", "nace", "shareholders_funds",
+                "added_value", "cash_flow", "ebitda",
+                "fin_rev", "liquidity_ratio", "total_assets",
+                "depr", "long_term_debt", "employees",
+                "materials", "loans", "wage_bill", "tfp_acf",
+                "fixed_assets", "tax", "current_liabilities",
+                "current_assets", "fin_expenses", "int_paid",
+                "solvency_ratio", "net_income", "revenue",
+                "consdummy", "capital_intensity", "fin_cons100",
+                "inv", "ICR_failure", "interest_diff", "NEG_VA",
+                "real_SA", "misallocated_fixed", "profitability",
+                "area", "dummy_patents", "dummy_trademark",
+                "financial_sustainability", "liquidity_return",
+                "int_fixed_assets")
+formula <- as.formula(paste("as.factor(failure) ~",
+                            paste(predictors, collapse="+")))
 
 ### Define samples
 set.seed(123)
-train_sample <- sample(seq_len(nrow(dati)), size = nrow(dati)*0.5) 
-train <- as.data.frame(dati[train_sample,])
-test <- as.data.frame(dati[-train_sample,])
+train_sample <- sample(seq_len(nrow(omitted)), size = nrow(omitted)*0.5) 
+train <- as.data.frame(omitted[train_sample,])
+test <- as.data.frame(omitted[-train_sample,])
 ```
 
 In this chunck we contruct the LOGIT model, we get the predicted probabilities and the confusion matrix.
 We use as a threshold 0.3 (namely,  $\hat{p}_i(Y_i = 1 | X_i = x)>0.3 \rightarrow \hat{y}_i=1$), however this threshold can be moved up to 0.5 without any meaninful change. 
 
 ```{r include = TRUE, message = FALSE, warning = FALSE}
-log = glm(formula = train$failure ~ ., family = binomial, data = train)
-prob_pred = predict(log, type = 'response', newdata = test)
+log <- glm(formula, family = binomial, data = train)
+prob_pred <- predict(log, type = 'response', newdata = test)
 prediction <- as.numeric(prob_pred > 0.3) # change up to 0.5
 cmlog=table(test$failure,prediction)
 cmlog
@@ -95,16 +116,7 @@ test$prediction <- prediction
 positive <- test[which(test$prediction==1),]
 positive$iso <- as.numeric(as.factor(positive$iso))
 positive$control <- as.numeric(as.factor(positive$control))
-x<-as.matrix(positive[, c("iso", "tfp_acf",  "Number_of_patents", "Number_of_trademarks",
-                          "consdummy", "control","nace_2","fin_rev", "int_paid", "ebitda",
-                          "cash_flow", "depr", "revenue", "total_assets", "long_term_debt",
-                          "employees", "added_value", "materials", "wage_bill", "loans" ,
-                          "int_fixed_assets","fixed_assets", "current_liabilities",
-                          "liquidity_ratio",  "solvency_ratio", "current_assets",
-                          "fin_expenses", "net_income", "fin_cons", "fin_cons100", "inv",
-                          "ICR_t",  "time", "real_SA", "shareholders_funds", "NEG_VA",
-                          "ICR_failure", "profitability", "misallocated_fixed", 
-                          "interest_diff")])
+x<-as.matrix(positive[predictors])
 y <- as.numeric(positive$prediction==1 & positive$failure==0)
 
 mod <- cv.glmnet(x , y, alpha=1)
@@ -128,8 +140,7 @@ We use as a threshold 0.3 (namely,  $\hat{p}_i(Y_i = 1 | X_i = x)>0.3 \rightarro
 
 ```{r include = TRUE, message = FALSE, warning = FALSE}
 ### Define samples
-italy <- dati[which(dati$iso == "IT"),]
-italy <- italy[, -which(names(italy) %in% c("iso"))] 
+italy <- omitted[which(data$iso=="IT"),] 
 
 set.seed(123)
 train_sample <- sample(seq_len(nrow(italy)), size = nrow(italy)*0.5) 
@@ -137,7 +148,7 @@ train <- as.data.frame(italy[train_sample,])
 test <- as.data.frame(italy[-train_sample,])
 
 
-log = glm(formula = train$failure ~ ., family = binomial, data = train)
+log = glm(formula, family = binomial, data = train)
 prob_pred = predict(log, type = 'response', newdata = test)
 prediction <- as.numeric(prob_pred > 0.3) # change up to 0.5
 cmlog=table(test$failure,prediction)
@@ -150,16 +161,7 @@ In this chunck we use a LASSO model to select the variables with the highest pre
 test$prediction <- prediction
 positive <- test[which(test$prediction==1),]
 positive$control <- as.numeric(as.factor(positive$control))
-x<-as.matrix(positive[, c("tfp_acf",  "Number_of_patents", "Number_of_trademarks",
-                          "consdummy", "control","nace_2","fin_rev", "int_paid", "ebitda",
-                          "cash_flow", "depr", "revenue", "total_assets", "long_term_debt",
-                          "employees", "added_value", "materials", "wage_bill", "loans" ,
-                          "int_fixed_assets","fixed_assets", "current_liabilities",
-                          "liquidity_ratio",  "solvency_ratio", "current_assets",
-                          "fin_expenses", "net_income", "fin_cons", "fin_cons100", "inv",
-                          "ICR_t",  "time", "real_SA", "shareholders_funds", "NEG_VA",
-                          "ICR_failure", "profitability", "misallocated_fixed", 
-                          "interest_diff")])
+x<-as.matrix(positive[predictors])
 y <- as.numeric(positive$prediction==1 & positive$failure==0)
 
 mod <- cv.glmnet(x , y, alpha=1)
@@ -217,18 +219,6 @@ bart <- function(train1, test1, output){
 And in this last chunck we fit the models (namely, one with all predictors and one just on the subset of observations where ICR is more than one [\textit{ICR\_failure}==0]) on two bootstraped samples from the data.
 
 ```{r results = 'hide', include = TRUE, message = FALSE, warning = FALSE}
-### Vector of predictors
-predictors <- c("iso", "tfp_acf",  "Number_of_patents", "Number_of_trademarks",
-                "consdummy", "control", "nace_2","fin_rev", "int_paid", "ebitda",
-                "cash_flow", "depr", "revenue", "total_assets", "long_term_debt",
-                "employees", "added_value", "materials", "wage_bill", "loans" ,
-                "int_fixed_assets",  "fixed_assets", "current_liabilities",
-                "liquidity_ratio",  "solvency_ratio", "current_assets",
-                 "fin_expenses", "net_income", "fin_cons", "fin_cons100", "inv",
-                "ICR_t", "time", "real_SA", "shareholders_funds", "NEG_VA",
-                "ICR_failure", "profitability", "misallocated_fixed", 
-                "interest_diff")
-
 ### Create matrix to save bootstrapped results (N = B)
 B=2
 number_of_models=3
