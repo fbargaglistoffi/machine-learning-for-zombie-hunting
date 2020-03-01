@@ -165,7 +165,7 @@ se_{RMSE}=sqrt{\frac{n}{\chi^2_{1-\alpha,n}}}\cdot RMSE.
 \end{equation}
 Source: https://stats.stackexchange.com/questions/78079/confidence-interval-of-rmse.
 
-```{r}
+```{r warning=FALSE}
 par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
 plot(sensitivity$`RMSE synthetic model`,
      main = "Sensitivity of Predictions (RMSE)",
@@ -175,11 +175,12 @@ plot(sensitivity$`RMSE synthetic model`,
      type = "o",
      col = "blue",
      lwd = 2,
-     ylim=c(min(postResample(main_bart$yhat.train.mean, y_train)[1]*sqrt(1000/qchisq(0.05,df = 1000)))-8,max(postResample(main_bart$yhat.train.mean, y_train)[1]*sqrt(1000/qchisq(0.95,df = 1000)))+8))
+     ylim=c(min(sensitivity$`RMSE original model`*sqrt(1000/qchisq(0.05,df = 1000)))-0.1,
+            max(sensitivity$`RMSE original model`*sqrt(1000/qchisq(0.95,df = 1000)))+0.1))
 par(xpd = FALSE)
 lines(sensitivity$`RMSE synthetic model`*sqrt(1000/qchisq(0.99,df = 1000)), col = "blue", lty=2, type = "o")
 lines(sensitivity$`RMSE synthetic model`*sqrt(1000/qchisq(0.01,df = 1000)), col = "blue", lty=2, type = "o")
-abline(h= postResample(main_bart$yhat.train.mean, y_train)[1], col = "red", lwd = 2)
+abline(h= sensitivity$`RMSE original model`, col = "red", lwd = 2)
 axis(1, at=1:(length(sensitivity$`RMSE synthetic model`)), labels=c(seq(0.1,0.4,0.1)))
 ```
 
@@ -194,13 +195,17 @@ where $k$ is the number of predictors. See Cohen et al. (2003), Applied Multiple
 
 
 ```{r}
+n = nrow(train_bart$X)
+k = ncol(train_bart$X)
+r2 = sensitivity$`Rsquared original model`
 ub_new <- lb_new <- c()
-for(k in (1:length(sensitivity$`Rsquared synthetic model`))){
-  r2_new = sensitivity$`Rsquared synthetic model`[k]
+for(j in (1:length(sensitivity$`Rsquared synthetic model`))){
+  r2_new = sensitivity$`Rsquared synthetic model`[j]
   se_r2_new <- sqrt((4*r2_new*(1-r2_new)^2*(n-k-1)^2)/((n^2-1)*(n+3)))
-  ub_new[k] = r2_new + 2.58*se_r2_new # Change Z-score for difference alpha levels (here 0.01)
-  lb_new[k] = r2_new - 2.58*se_r2_new # Change Z-score for difference alpha levels (here 0.01)
+  ub_new[j] = r2_new + 2.58*se_r2_new # Change Z-score for difference alpha levels
+  lb_new[j] = r2_new - 2.58*se_r2_new # Change Z-score for difference alpha levels
 }
+
 par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
 plot(sensitivity$`Rsquared synthetic model`,
      main = "Sensitivity of Predictions (R Squared)",
@@ -210,10 +215,131 @@ plot(sensitivity$`Rsquared synthetic model`,
      type = "o",
      col = "blue",
      lwd = 2,
-     ylim=c(r2-0.05,r2+0.05))
+     ylim=c(r2-0.5,r2+0.5))
 par(xpd = FALSE)
 lines(lb_new, col = "blue", lty=2, type = "o")
 lines(ub_new, col = "blue", lty=2, type = "o")
 abline(h= r2, col = "red", lwd = 2)
-axis(1, at=1:(length(sensitivity$`Rsquared synthetic model`)), labels=c(seq(0.1,0.4,0.1)))
+axis(1, at=1:(length(sensitivity$`Rsquared synthetic model`)), 
+     labels=c(seq(0.1,0.4,0.1)))
 ```
+
+# Standardized Difference in Means
+
+Moreover, the standardized difference in the means between $\hat{p}(Y_i =1 |X_i = x)$ and $\hat{p}(Y_i = 1|X_i = x, R_i = r)$ is not significant in all the cases.
+
+```{r include=FALSE}
+# Run BART model (Original Model)
+  bart <- wbart(x.train=train_bart$X,
+                      y.train=y_train,
+                      x.test=test_bart$X,
+                      nskip=100,
+                      ndpost=100)
+  
+  # Get Draws from the Posterior Distribution
+  ppd <- t(apply(bart$yhat.train,
+                 1, function(x) rnorm(n = length(x),
+                                      mean=x, sd=bart$sigma)))
+  ppd_mean <- apply(ppd,2,mean)
+  ppd_sd <- apply(ppd,2,sd)
+  
+    
+    # Build a Correlated New Predictor
+    # Generate x1, make sure y is first column, and X is the last
+    xy <- cbind(y_train, x1 = rnorm(length(y_train)), data.matrix(train_bart$X))
+    
+    # Center and scale
+    mns <- apply(xy, 2, mean)
+    sds <- apply(xy, 2, sd)
+    
+    xy2 <- sweep(xy, 2, mns, FUN="-")
+    xy2 <- sweep(xy2, 2, sds, FUN="/")
+    
+    # Find existing correlations
+    v.obs <- cor(xy2)
+    
+    # Remove correlation
+    xy3 <- xy2 %*% solve(chol(v.obs))
+    
+    # New correlation
+    r <- v.obs
+    r[2,] <- r[,2] <- 0
+    r[1,2] <- r[2,1] <- 0.4
+    diag(r) <- 1
+    
+    # Use Cholesky decomposition to generate the new matrix
+    xy4 <- xy3 %*% chol(r)
+    
+    # Undo center and scale
+    xy4 <- sweep(xy4, 2, sds, FUN="*")
+    xy4 <- sweep(xy4, 2, mns, FUN="+")
+    
+    # Extract x
+    x <- as.vector(xy4[,2])
+    
+    # Run BART model with New Predictor (Synthetic model)
+    x_train_new <- cbind(train_bart$X, x)
+    x_test_new <- cbind(test_bart$X, rep(0, nrow(test_bart$X)))
+    new_bart <- wbart(x.train=x_train_new,
+                            y.train=y_train,
+                            x.test=x_test_new,
+                            nskip=100,
+                            ndpost=100)
+    
+    # Get Draws from the Posterior Distribution
+    
+    # For Training Sample
+    new_ppd <- t(apply(new_bart$yhat.train,
+                       1, function(x) rnorm(n=length(x),
+                                            mean = x, sd = new_bart$sigma)))
+    new_ppd_mean <- apply(new_ppd,2,mean)
+    new_ppd_sd <- apply(new_ppd,2,sd)
+``` 
+
+Standardized differences in mean and their standard deviations from Cohen (1988, p.44).
+
+```{r}
+# Standardized difference in means
+diff.means <- ppd_mean - new_ppd_mean
+standard.diff.means <-  (diff.means)/sqrt((ppd_sd^2 + new_ppd_sd^2)/2)
+
+# 99% CI (t-student distribution)
+x0 <- standard.diff.means - 2.58 * 
+  sqrt((ppd_sd^2 + new_ppd_sd^2)/2)
+x1 <-standard.diff.means  + 2.58 * 
+  sqrt((ppd_sd^2 + new_ppd_sd^2)/2)
+```
+
+This can be seen from the plot of the Standardized difference in means for the probabilities predicted by the two models.
+
+
+```{r echo = FALSE}
+par(mfrow=c(1,1))
+par(mar=c(2,5,2,5), xpd=FALSE)
+plot(standard.diff.means[1:50], 1:50, col="forestgreen", xlab=NA, ylab=NA, yaxt="n",
+     arrows(y0 = c(1:50), 
+            x0 = x0[1:50], 
+            x1 = x1[1:50], 
+            col = 'forestgreen',
+            code=3,
+            length=0,
+            lwd=2),
+    xlim=c(min(c(x0[1:50]))-1,
+            max(c(x1[1:50]))+1
+     ),
+     pch=15,
+     main="Standardized difference in means for Predicted Probabilities")
+
+
+axis(2, at=1:50, las=1)
+abline(h=1:50, lty="dotted")
+abline(v=0, lwd=2)
+par(xpd=TRUE)
+legend("right",
+       inset = c(-0.1,0),
+       legend = c("SDM"),
+       pch = 15,
+       col = c("forestgreen"),
+       cex = 1)
+```
+
