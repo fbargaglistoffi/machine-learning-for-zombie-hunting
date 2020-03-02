@@ -233,8 +233,8 @@ Moreover, the standardized difference in the means between $\hat{p}(Y_i =1 |X_i 
   bart <- wbart(x.train=train_bart$X,
                       y.train=y_train,
                       x.test=test_bart$X,
-                      nskip=100,
-                      ndpost=100)
+                      nskip=500,
+                      ndpost=1000)
   
   # Get Draws from the Posterior Distribution
   ppd <- t(apply(bart$yhat.train,
@@ -283,8 +283,8 @@ Moreover, the standardized difference in the means between $\hat{p}(Y_i =1 |X_i 
     new_bart <- wbart(x.train=x_train_new,
                             y.train=y_train,
                             x.test=x_test_new,
-                            nskip=100,
-                            ndpost=100)
+                            nskip=500,
+                            ndpost=1000)
     
     # Get Draws from the Posterior Distribution
     
@@ -314,18 +314,20 @@ This can be seen from the plot of the Standardized difference in means for the p
 
 
 ```{r echo = FALSE}
+set.seed(2020)
+sample <- sample(length(standard.diff.means), size= 50, replace=FALSE)
 par(mfrow=c(1,1))
 par(mar=c(2,5,2,5), xpd=FALSE)
-plot(standard.diff.means[1:50], 1:50, col="forestgreen", xlab=NA, ylab=NA, yaxt="n",
+plot(standard.diff.means[sample], 1:50, col="forestgreen", xlab=NA, ylab=NA, yaxt="n",
      arrows(y0 = c(1:50), 
-            x0 = x0[1:50], 
-            x1 = x1[1:50], 
+            x0 = x0[sample], 
+            x1 = x1[sample], 
             col = 'forestgreen',
             code=3,
             length=0,
             lwd=2),
-    xlim=c(min(c(x0[1:50]))-1,
-            max(c(x1[1:50]))+1
+    xlim=c(min(c(x0[sample]))-1,
+            max(c(x1[sample]))+1
      ),
      pch=15,
      main="Standardized difference in means for Predicted Probabilities")
