@@ -33,7 +33,6 @@ options(java.parameters = "-Xmx15000m")
 library(haven)
 library(BART)
 library(ggplot2)
-source('sensitivity.R')
 ```
 
 ## Data Upload
@@ -71,13 +70,7 @@ The new model is the following:
  f_(x,r) = \hat{Y}(X_i=x, R_i=r).
 \end{equation}
 
-This check is done with respect to the following dimensions:
-\begin{enumerate}
- \item percentual decrease in the bias of $f_(x,r)$ wrt $f_(x)$;
- \item percentual decrease in the RMSE of $f_(x,r)$ wrt $f_(x)$;
- \item percentual increase in the $R^2$ of $f_(x,r)$ wrt $f_(x)$;
- \item statistical difference between $\hat{Y}(x,r)$ and $\hat{Y}(x)$ at a significance level of $\alpha$.
-\end{enumerate}
+This check is done with respect to the statistical difference between $\hat{Y}(x,r)$ and $\hat{Y}(x)$ at a significance level of $\alpha$.
 
 \par We argue that if these differences are not wide, there is room to think that the original model is capturing much of the signal in the data. In this case, the original model is stable and the addition of a new important predictor (i.e., the best predictors have roughly correlation 0.5 with the output) is not inducing substantial changes in the accuracy measures (i.e., bias, RMSE, $R^2$) and, more importantly, is not affecting in a sensible way the predicted values.
 
@@ -137,98 +130,10 @@ test_bart$X <- as.data.frame(test_bart[predictors])
 y_train <- train_bart$failure
 ```
 
-```{r results = 'hide', include = TRUE, message = FALSE, warning = FALSE}
-set.seed(2019)
-sensitivity <- sensitivity_bart(x_train = train_bart$X,
-                     y_train = y_train,
-                     x_test = test_bart$X,
-                     nburn = 500, 
-                     nsamp = 1000,
-                     alpha = 0.1)
-```
-
-```{r}
-sensitivity
-```
-
-## Testing Differences in RMSE and R squared
-
-
-In order to test if the predictive performance of the synthetic model is better than the one of the original model we construct the condidence intervals for both the RMSE and $R^2$ of the synthetic model and we check if they overlap the values for the original model. In the following we depict the 99\% confidence intervals
-
-### RMSE
-
-In the following chunk of code we construct confidence intervals for the $RMSE$.
-The standard error of the $RMSE$ can be derived as follows:
-\begin{equation}
-se_{RMSE}=sqrt{\frac{n}{\chi^2_{1-\alpha,n}}}\cdot RMSE.
-\end{equation}
-Source: https://stats.stackexchange.com/questions/78079/confidence-interval-of-rmse.
-
-```{r warning=FALSE}
-par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
-plot(sensitivity$`RMSE synthetic model`,
-     main = "Sensitivity of Predictions (RMSE)",
-     xlab = "Corr(y,r)",
-     ylab = "Estimated RMSE for Synthetic model", 
-     xaxt='n',
-     type = "o",
-     col = "blue",
-     lwd = 2,
-     ylim=c(min(sensitivity$`RMSE original model`*sqrt(1000/qchisq(0.05,df = 1000)))-0.1,
-            max(sensitivity$`RMSE original model`*sqrt(1000/qchisq(0.95,df = 1000)))+0.1))
-par(xpd = FALSE)
-lines(sensitivity$`RMSE synthetic model`*sqrt(1000/qchisq(0.99,df = 1000)), col = "blue", lty=2, type = "o")
-lines(sensitivity$`RMSE synthetic model`*sqrt(1000/qchisq(0.01,df = 1000)), col = "blue", lty=2, type = "o")
-abline(h= sensitivity$`RMSE original model`, col = "red", lwd = 2)
-axis(1, at=1:(length(sensitivity$`RMSE synthetic model`)), labels=c(seq(0.1,0.4,0.1)))
-```
-
-### R squared
-
-In the following chunk of code we construct confidence intervals for the $R^2$.
-The standard error of the $R^2$ can be derived as follows:
-\begin{equation}
-se_{R^2}=\sqrt{\frac{4R^2(1-R^2)^2(n-k-1)^2}{(n^2-1)(n+3)}} 
-\end{equation}
-where $k$ is the number of predictors. See Cohen et al. (2003), Applied Multiple Regression/Correlation Analysis for the Behavioral Sciences, p. 88 for details.
-
-
-```{r}
-n = nrow(train_bart$X)
-k = ncol(train_bart$X)
-r2 = sensitivity$`Rsquared original model`
-ub_new <- lb_new <- c()
-for(j in (1:length(sensitivity$`Rsquared synthetic model`))){
-  r2_new = sensitivity$`Rsquared synthetic model`[j]
-  se_r2_new <- sqrt((4*r2_new*(1-r2_new)^2*(n-k-1)^2)/((n^2-1)*(n+3)))
-  ub_new[j] = r2_new + 2.58*se_r2_new # Change Z-score for difference alpha levels
-  lb_new[j] = r2_new - 2.58*se_r2_new # Change Z-score for difference alpha levels
-}
-
-par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
-plot(sensitivity$`Rsquared synthetic model`,
-     main = "Sensitivity of Predictions (R Squared)",
-     xlab = "Corr(y,r)",
-     ylab = "Estimated R Squared", 
-     xaxt='n',
-     type = "o",
-     col = "blue",
-     lwd = 2,
-     ylim=c(r2-0.5,r2+0.5))
-par(xpd = FALSE)
-lines(lb_new, col = "blue", lty=2, type = "o")
-lines(ub_new, col = "blue", lty=2, type = "o")
-abline(h= r2, col = "red", lwd = 2)
-axis(1, at=1:(length(sensitivity$`Rsquared synthetic model`)), 
-     labels=c(seq(0.1,0.4,0.1)))
-```
-
-# Standardized Difference in Means
-
-Moreover, the standardized difference in the means between $\hat{p}(Y_i =1 |X_i = x)$ and $\hat{p}(Y_i = 1|X_i = x, R_i = r)$ is not significant in all the cases.
+The standard deviation for the failure probabilities is computed as in Hanson and Schuermann (2006).
 
 ```{r include=FALSE}
+require(bayestestR)
 # Run BART model (Original Model)
   bart <- wbart(x.train=train_bart$X,
                       y.train=y_train,
@@ -236,14 +141,20 @@ Moreover, the standardized difference in the means between $\hat{p}(Y_i =1 |X_i 
                       nskip=500,
                       ndpost=1000)
   
-  # Get Draws from the Posterior Distribution
-  ppd <- t(apply(bart$yhat.train,
+    # Get Draws from the Posterior Distribution
+    ppd <- t(apply(bart$yhat.train,
                  1, function(x) rnorm(n = length(x),
-                                      mean=x, sd=bart$sigma)))
-  ppd_mean <- apply(ppd,2,mean)
-  ppd_sd <- apply(ppd,2,sd)
-  
+                                      mean=x,sd=bart$sigma)))
+    ppd_mean <- apply(ppd,2,mean)
+    ppd_sd <- sqrt(abs((ppd_mean)*(1-ppd_mean)))
     
+    # Get Credibility intervals for Each Unit Level PPD
+    conf.int <- as.data.frame(matrix(NA, ncol = 2, nrow = ncol(ppd)))
+    for (k in (1:ncol(ppd))){
+      conf.int[k, 1:2] <- as.data.frame(ci(ppd[,k], method = "HDI", ci = 0.90))[2:3]
+    }
+    names(conf.int) <- c("low", "high")
+
     # Build a Correlated New Predictor
     # Generate x1, make sure y is first column, and X is the last
     xy <- cbind(y_train, x1 = rnorm(length(y_train)), data.matrix(train_bart$X))
@@ -264,7 +175,7 @@ Moreover, the standardized difference in the means between $\hat{p}(Y_i =1 |X_i 
     # New correlation
     r <- v.obs
     r[2,] <- r[,2] <- 0
-    r[1,2] <- r[2,1] <- 0.4
+    r[1,2] <- r[2,1] <- 0.2 # correlation of best predictors (i.e., ICR)
     diag(r) <- 1
     
     # Use Cholesky decomposition to generate the new matrix
@@ -293,8 +204,16 @@ Moreover, the standardized difference in the means between $\hat{p}(Y_i =1 |X_i 
                        1, function(x) rnorm(n=length(x),
                                             mean = x, sd = new_bart$sigma)))
     new_ppd_mean <- apply(new_ppd,2,mean)
-    new_ppd_sd <- apply(new_ppd,2,sd)
+    new_ppd_sd <- sqrt(abs((new_ppd_mean)*(1-new_ppd_mean)))
+    
+    length(which(new_ppd_mean >= conf.int[1] | new_ppd_mean <= conf.int[2]))/nrow(x_train)
+    
+    
 ``` 
+
+# Standardized Difference in Means
+
+Moreover, the standardized difference in the means between $\hat{p}(Y_i =1 |X_i = x)$ and $\hat{p}(Y_i = 1|X_i = x, R_i = r)$ is not significant in all the cases.
 
 Standardized differences in mean and their standard deviations from Cohen (1988, p.44).
 

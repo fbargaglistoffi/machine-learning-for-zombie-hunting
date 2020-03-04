@@ -17,7 +17,8 @@ library(gtools)
 library(labelVector)
 
 # Set Working Directory
-setwd('G:\\Il mio Drive\\Research\\Italian Firms\\Zombie Hunting New Data')
+#setwd('G:\\Il mio Drive\\Research\\Italian Firms\\Zombie Hunting New Data')
+setwd("/home/falco.bargaglistoffi/Desktop/R_files/zombie_hunting/Working_Data/")
 
 # Upload Data
 data <- read_dta("data_probabilities.dta")
@@ -116,8 +117,6 @@ cat_data$cat_2014 <- cat_data$cat[,6]
 cat_data$cat_2015 <- cat_data$cat[,7]
 cat_data$cat_2016 <- cat_data$cat[,8]
 cat_data$cat_2017 <- cat_data$cat[,9]
-
-table(cat_data$cat_2009[which(data$iso=="ES",)])
 
 # Save Overall Data
 write_dta(cat_data, "data_categories.dta")

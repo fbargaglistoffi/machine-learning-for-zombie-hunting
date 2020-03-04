@@ -16,6 +16,7 @@ library(haven)
 
 # Set Working Directory
 setwd("/home/falco.bargaglistoffi/Desktop/R_files/zombie_hunting/Working_Data/")
+setwd("G:/Il mio Drive/Research/Italian Firms/Zombie Hunting New Data")
 
 # Upload Data
 data <- read_dta("analysis_data_indicators.dta")
@@ -76,8 +77,14 @@ predictors <- c("control", "nace", "consdummy", "area", "dummy_patents", "dummy_
 years <- c(2009:2016)
 failed <- matrix(NA, ncol = length(years), nrow = nrow(data))
 for (i in (years)){
-  failed[,which(years==i)][which(data$year_of_incorporation <= i)] <- 0
-  failed[,which(years==i)][which(data$year_of_status == i & data$year_of_incorporation<= i)] <- 1
+  if(which(years==i)==1){
+    failed[,which(years==i)][which(data$year_of_incorporation <= i)] <- 0
+    failed[,which(years==i)][which(data$year_of_status == i & data$year_of_incorporation<= i)] <- 1
+  }
+  else{
+    failed[,which(years==i)][which(data$year_of_incorporation <= i & failed[,which(years==i-1)]!=1)] <- 0
+    failed[,which(years==i)][which(data$year_of_status == i & data$year_of_incorporation<= i)] <- 1
+  }
 }
 data$failure_2009 <- failed[,1]
 data$failure_2010 <- failed[,2]
@@ -88,8 +95,9 @@ data$failure_2014 <- failed[,6]
 data$failure_2015 <- failed[,7]
 data$failure_2016 <- failed[,8]
 data$failure_2017 <- matrix(NA, ncol = 1, nrow = nrow(data))
-data$failure_2017[which((data$year_of_status == 2017 | data$year_of_status == 2018) & data$year_of_incorporation<= 2017)] <- 1
-data$failure_2017[which(data$year_of_incorporation <= 2017)] <- 0
+data$failure_2017[which(data$year_of_incorporation <= 2017 & data$failure_2016!=1)] <- 0
+data$failure_2017[which((data$year_of_status == 2017 | data$year_of_status == 2018) & data$year_of_incorporation<= 2017 & data$failure==1)] <- 1
+
 
 # Get Country Specific Data
 data_italy <- data[which(data$iso=="IT"),] 
@@ -113,6 +121,7 @@ for (i in (years)){
   y <- as.factor(unlist(y, use.names = FALSE))
   
   # Run the model
+  set.seed(2020)
   bart_machine<-bartMachine(X, y, use_missing_data=TRUE) 
   
   # Get fitted values
@@ -154,6 +163,7 @@ y <- as.vector(data_model[,paste("failure", sep = "_", 2009)])
 y <- as.factor(unlist(y, use.names = FALSE))
 
 # Run the model
+set.seed(2020)
 bart_machine<-bartMachine(X, y, use_missing_data=TRUE) 
 
 # Get fitted values
@@ -189,6 +199,7 @@ for (i in (years)){
   y <- as.factor(unlist(y, use.names = FALSE))
   
   # Run the model
+  set.seed(2020)
   bart_machine<-bartMachine(X, y, use_missing_data=TRUE) 
   
   # Get fitted values
@@ -230,6 +241,7 @@ y <- as.vector(data_model[,paste("failure", sep = "_", 2009)])
 y <- as.factor(unlist(y, use.names = FALSE))
 
 # Run the model
+set.seed(2020)
 bart_machine<-bartMachine(X, y, use_missing_data=TRUE) 
 
 # Get fitted values
@@ -251,6 +263,7 @@ for (i in (years)){
   y <- as.factor(unlist(y, use.names = FALSE))
   
   # Run the model
+  set.seed(2020)
   bart_machine<-bartMachine(X, y, use_missing_data=TRUE) 
   
   # Get fitted values
@@ -292,6 +305,7 @@ y <- as.vector(data_model[,paste("failure", sep = "_", 2009)])
 y <- as.factor(unlist(y, use.names = FALSE))
 
 # Run the model
+set.seed(2020)
 bart_machine<-bartMachine(X, y, use_missing_data=TRUE) 
 
 # Get fitted values
@@ -313,6 +327,7 @@ for (i in (years)){
   y <- as.factor(unlist(y, use.names = FALSE))
   
   # Run the model
+  set.seed(2020)
   bart_machine<-bartMachine(X, y, use_missing_data=TRUE) 
   
   # Get fitted values
@@ -354,6 +369,7 @@ y <- as.vector(data_model[,paste("failure", sep = "_", 2009)])
 y <- as.factor(unlist(y, use.names = FALSE))
 
 # Run the model
+set.seed(2020)
 bart_machine<-bartMachine(X, y, use_missing_data=TRUE) 
 
 # Get fitted values
