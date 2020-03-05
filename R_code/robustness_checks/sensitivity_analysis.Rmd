@@ -206,7 +206,7 @@ require(bayestestR)
     new_ppd_mean <- apply(new_ppd,2,mean)
     new_ppd_sd <- sqrt(abs((new_ppd_mean)*(1-new_ppd_mean)))
     
-    length(which(new_ppd_mean >= conf.int[1] | new_ppd_mean <= conf.int[2]))/nrow(x_train)
+    length(which(new_ppd_mean >= conf.int[1] | new_ppd_mean <= conf.int[2]))/nrow(train_bart)
     
     
 ``` 
@@ -237,11 +237,11 @@ set.seed(2020)
 sample <- sample(length(standard.diff.means), size= 50, replace=FALSE)
 par(mfrow=c(1,1))
 par(mar=c(2,5,2,5), xpd=FALSE)
-plot(standard.diff.means[sample], 1:50, col="forestgreen", xlab=NA, ylab=NA, yaxt="n",
+plot(standard.diff.means[sample], 1:50, col="blue", xlab=NA, ylab=NA, yaxt="n",
      arrows(y0 = c(1:50), 
             x0 = x0[sample], 
             x1 = x1[sample], 
-            col = 'forestgreen',
+            col = 'blue',
             code=3,
             length=0,
             lwd=2),
@@ -257,10 +257,10 @@ abline(h=1:50, lty="dotted")
 abline(v=0, lwd=2)
 par(xpd=TRUE)
 legend("right",
-       inset = c(-0.1,0),
+       inset = c(0,0),
        legend = c("SDM"),
        pch = 15,
-       col = c("forestgreen"),
+       col = c("blue"),
        cex = 1)
 ```
 
