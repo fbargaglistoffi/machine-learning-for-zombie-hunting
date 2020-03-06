@@ -75,6 +75,33 @@ lassologit dummy_2016 control consdummy area dummy_patents dummy_trademark tfp_a
 rlassologit dummy_2016 control consdummy area dummy_patents dummy_trademark tfp_acf_2013 shareholders_funds_2013 added_value_2013 cash_flow_2013 ebitda_2013 fin_rev_2013 liquidity_ratio_2013 total_assets_2013 depr_2013 long_term_debt_2013 employees_2013 materials_2013 loans_2013 wage_bill_2013 fixed_assets tax_2013 current_liabilities_2013 current_assets_2013 fin_expenses_2013 int_paid_2013 solvency_ratio_2013 net_income_2013 revenue_2013 capital_intensity_2013 fin_cons_2013 ICR_failure_2013 interest_diff_2013 NEG_VA_2013 real_SA_2013 profitability_2013 misallocated_fixed_2013 financial_sustainability_2013 liquidity_return_2013 int_fixed_assets_2013 
 
 /*
+  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
+------+---------------------------------------------------------+----------------
+     1|   1  1.135e+04     0     1.77289  60805.40261   0.0000  | Added control _cons.
+     2|   8 5877.33820     2     2.37660  49910.55438   0.1792  | Added real_SA_2013.
+     3|  12 4035.66748     3     2.99095  44683.19432   0.2651  | Added ICR_failure_2013.
+     4|  14 3344.12669     4     4.35756  42409.73677   0.3025  | Added fin_cons_2013.
+     5|  20 1902.76329     5     7.95549  38138.24868   0.3728  | Added NEG_VA_2013.
+     6|  22 1576.71105     6     9.12870  37209.15633   0.3880  | Added interest_diff_2013.
+     7|  26 1082.64682     7    11.23335  35825.71798   0.4108  | Added liquidity_return_2013.
+     8|  31  676.71402     8    13.52687  34846.29643   0.4269  | Added profitability_2013.
+     9|  32  616.01154     9    13.94717  34695.94992   0.4294  | Added capital_intensity_2013.
+    10|  35  464.66490    10    15.07736  34348.36837   0.4351  | Added solvency_ratio_2013.
+    11|  36  422.98361    11    15.42504  34257.68237   0.4366  | Added area.
+    12|  37  385.04121    13    15.74574  34133.82714   0.4386  | Added materials_2013
+      |                                                         | net_income_2013.
+    13|  38  350.50231    11    16.07460  34111.33376   0.4390  | Removed materials_2013
+      |                                                         | net_income_2013.
+    14|  39  319.06162    12    16.31160  34054.69895   0.4399  | Added misallocated_fixed_2013.
+    15|  40  290.44121    12    16.77359  33925.53896   0.4420  | Added materials_2013
+      |                                                         | revenue_2013.
+    16|  41  264.38810    14    17.39624  33851.06020   0.4433  | Added consdummy
+      |                                                         | liquidity_ratio_2013. Removed
+      |                                                         | materials_2013.
+    17|  44  199.43112    15    19.25464  33658.11134   0.4464  | Added shareholders_funds_2013
+      |                                                         | materials_2013 net_income_2013.
+    18|  46  165.25716    16    20.10992  33581.76121   0.4477  | Removed revenue_2013.
+
 
 ---------------------------------------------------
          Selected |       Logistic       Post
@@ -116,6 +143,41 @@ lassologit dummy_2015 control consdummy area dummy_patents dummy_trademark tfp_a
 rlassologit dummy_2015 control consdummy area dummy_patents dummy_trademark tfp_acf_2012 shareholders_funds_2012 added_value_2012 cash_flow_2012 ebitda_2012 fin_rev_2012 liquidity_ratio_2012 total_assets_2012 depr_2012 long_term_debt_2012 employees_2012 materials_2012 loans_2012 wage_bill_2012 fixed_assets tax_2012 current_liabilities_2012 current_assets_2012 fin_expenses_2012 int_paid_2012 solvency_ratio_2012 net_income_2012 revenue_2012 capital_intensity_2012 fin_cons_2012 ICR_failure_2012 interest_diff_2012 NEG_VA_2012 real_SA_2012 profitability_2012 misallocated_fixed_2012 financial_sustainability_2012 liquidity_return_2012 int_fixed_assets_2012 
 
 /* 
+  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
+------+---------------------------------------------------------+----------------
+     1|   1  1.280e+04     0     1.61219  67192.29123  -0.0000  | Added _cons.
+     2|   2  1.165e+04     1     1.72047  64485.59769   0.0403  | Added control.
+     3|   7 7282.94070     2     2.11675  55944.94262   0.1674  | Added real_SA_2012.
+     4|  12 4552.23990     3     3.76599  48142.74475   0.2835  | Added fin_cons_2012.
+     5|  15 3433.80921     4     5.89445  44441.52778   0.3386  | Added liquidity_return_2012.
+     6|  18 2590.16352     5     8.31144  41747.90972   0.3787  | Added ICR_failure_2012.
+     7|  22 1778.53279     6    11.17758  39314.83765   0.4149  | Added NEG_VA_2012.
+     8|  26 1221.22748     7    13.73062  37761.46863   0.4380  | Added interest_diff_2012.
+     9|  27 1111.68115     8    14.31701  37450.74833   0.4426  | Added profitability_2012.
+    10|  32  694.86208     9    16.94698  36370.49943   0.4587  | Added dummy_patents.
+    11|  36  477.12624    10    18.68388  35798.63845   0.4672  | Added net_income_2012.
+    12|  37  434.32715     9    19.10914  35780.68908   0.4675  | Removed net_income_2012.
+    13|  38  395.36721    11    19.16728  35786.34873   0.4674  | Added area net_income_2012.
+    14|  39  359.90205    11    19.86088  35627.62567   0.4697  | Added capital_intensity_2012.
+      |                                                         | Removed net_income_2012.
+    15|  40  327.61818    12    20.06100  35541.24590   0.4710  | Added dummy_trademark.
+    16|  41  298.23024    13    19.88097  36210.43313   0.4611  | Added net_income_2012.
+    17|  42  271.47844    14    20.34785  35548.58056   0.4709  | Added shareholders_funds_2012
+      |                                                         | total_assets_2012
+      |                                                         | long_term_debt_2012
+      |                                                         | materials_2012. Removed
+      |                                                         | net_income_2012.
+    18|  43  247.12633    13    21.15806  35323.74156   0.4743  | Added net_income_2012. Removed
+      |                                                         | shareholders_funds_2012
+      |                                                         | total_assets_2012
+      |                                                         | long_term_debt_2012
+      |                                                         | materials_2012.
+    19|  46  186.41036    14    21.95292  35224.74547   0.4757  | Added cash_flow_2012
+      |                                                         | liquidity_ratio_2012.
+    20|  47  169.68901    16    22.16467  35195.33976   0.4762  | Added solvency_ratio_2012.
+    21|  49  140.61157    17    22.53764  35146.05053   0.4769  | Added
+      |                                                         | financial_sustainability_2012.
+
 
 ---------------------------------------------------
          Selected |       Logistic       Post
@@ -348,13 +410,30 @@ lassologit dummy_2011 control consdummy area dummy_patents dummy_trademark tfp_a
 rlassologit dummy_2011 control consdummy area dummy_patents dummy_trademark tfp_acf_2008 shareholders_funds_2008 added_value_2008 cash_flow_2008 ebitda_2008 fin_rev_2008 liquidity_ratio_2008 total_assets_2008 depr_2008 long_term_debt_2008 employees_2008 materials_2008 loans_2008 wage_bill_2008 fixed_assets tax_2008 current_liabilities_2008 current_assets_2008 fin_expenses_2008 int_paid_2008 solvency_ratio_2008 net_income_2008 revenue_2008 capital_intensity_2008 fin_cons_2008 ICR_failure_2008 NEG_VA_2008 real_SA_2008 profitability_2008 misallocated_fixed_2008 financial_sustainability_2008 liquidity_return_2008 int_fixed_assets_2008 
 
 /*
+  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
+------+---------------------------------------------------------+----------------
+     1|   1 8892.65760     0     1.54968  51348.87935   0.0000  | Added control _cons.
+     2|   6 5558.40181     2     2.23237  44616.78957   0.1311  | Added fin_cons_2008.
+     3|   9 4192.76922     3     2.79006  40709.86226   0.2072  | Added real_SA_2008.
+     4|  12 3162.65616     4     3.09808  37331.33055   0.2730  | Added solvency_ratio_2008.
+     5|  16 2171.63420     5     5.42068  34291.61001   0.3322  | Added liquidity_return_2008.
+     6|  21 1357.39123     7     8.48237  32019.69126   0.3764  | Added dummy_trademark
+      |                                                         | ICR_failure_2008.
+     7|  24 1023.89650     8    10.16672  31067.48754   0.3950  | Added NEG_VA_2008.
+     8|  26  848.44444     9    11.25154  30580.09102   0.4045  | Added dummy_patents.
+     9|  27  772.33743    10    11.78299  30369.29748   0.4086  | Added area.
+    10|  38  274.68028    11    16.57083  29188.37007   0.4316  | Added net_income_2008.
+    11|  39  250.04096    12    16.87862  29134.12057   0.4326  | Added capital_intensity_2008.
+    12|  40  227.61183    13    17.17424  29089.98931   0.4335  | Added misallocated_fixed_2008.
+    13|  42  188.60890    14    17.71717  29023.82097   0.4348  | Added tfp_acf_2008.
+    14|  45  142.26996    15    18.40185  28957.55164   0.4361  | Added liquidity_ratio_2008.
+
 
 ---------------------------------------------------
          Selected |       Logistic       Post
                   |       Lasso          logit
 ------------------+--------------------------------
           control |      -3.4856560     -4.0884542
-    dummy_patents |      -0.3769872     -0.6906350
   dummy_trademark |      -0.8871345     -1.4080695
 solvency_rat~2008 |      -0.0142978     -0.0173143
     fin_cons_2008 |       2.0651690      2.2579527
