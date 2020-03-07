@@ -134,7 +134,7 @@ seq <- seq(0.01, 0.5, 0.01)
 out <- matrix(NA, ncol=2, nrow=length(seq))
 for (i in (seq)){
   pred <- ifelse(data$prob_2017>i, 1,0)
-  score <- f1_score(pred, data$failure_2017, "1")
+  score <-f1_score(pred, data$failure_2017, "1")
   out[which(seq==i), 1:2] <- cbind(as.numeric(i), score)
 }
 
