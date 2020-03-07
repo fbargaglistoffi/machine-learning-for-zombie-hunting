@@ -221,10 +221,50 @@ restore
 
 *Zombies 2012/2014
 *LASSO REGRESSION
-lassologit dummy_alive_2014 control consdummy area dummy_alive_patents dummy_alive_trademark tfp_acf_2011 shareholders_funds_2011 added_value_2011 cash_flow_2011 ebitda_2011 fin_rev_2011 liquidity_ratio_2011 total_assets_2011 depr_2011 long_term_debt_2011 employees_2011 materials_2011 loans_2011 wage_bill_2011 fixed_assets tax_2011 current_liabilities_2011 current_assets_2011 fin_expenses_2011 int_paid_2011 solvency_ratio_2011 net_income_2011 revenue_2011 capital_intensity_2011 fin_cons_2011 ICR_failure_2011 interest_diff_2011 NEG_VA_2011 real_SA_2011 profitability_2011 misallocated_fixed_2011 financial_sustainability_2011 liquidity_return_2011 int_fixed_assets_2011 
-rlassologit dummy_alive_2014 control consdummy area dummy_alive_patents dummy_alive_trademark tfp_acf_2011 shareholders_funds_2011 added_value_2011 cash_flow_2011 ebitda_2011 fin_rev_2011 liquidity_ratio_2011 total_assets_2011 depr_2011 long_term_debt_2011 employees_2011 materials_2011 loans_2011 wage_bill_2011 fixed_assets tax_2011 current_liabilities_2011 current_assets_2011 fin_expenses_2011 int_paid_2011 solvency_ratio_2011 net_income_2011 revenue_2011 capital_intensity_2011 fin_cons_2011 ICR_failure_2011 interest_diff_2011 NEG_VA_2011 real_SA_2011 profitability_2011 misallocated_fixed_2011 financial_sustainability_2011 liquidity_return_2011 int_fixed_assets_2011 
+lassologit dummy_alive_2014 control consdummy area dummy_patents dummy_trademark tfp_acf_2011 shareholders_funds_2011 added_value_2011 cash_flow_2011 ebitda_2011 fin_rev_2011 liquidity_ratio_2011 total_assets_2011 depr_2011 long_term_debt_2011 employees_2011 materials_2011 loans_2011 wage_bill_2011 fixed_assets tax_2011 current_liabilities_2011 current_assets_2011 fin_expenses_2011 int_paid_2011 solvency_ratio_2011 net_income_2011 revenue_2011 capital_intensity_2011 fin_cons_2011 ICR_failure_2011 interest_diff_2011 NEG_VA_2011 real_SA_2011 profitability_2011 misallocated_fixed_2011 financial_sustainability_2011 liquidity_return_2011 int_fixed_assets_2011 
+rlassologit dummy_alive_2014 control consdummy area dummy_patents dummy_trademark tfp_acf_2011 shareholders_funds_2011 added_value_2011 cash_flow_2011 ebitda_2011 fin_rev_2011 liquidity_ratio_2011 total_assets_2011 depr_2011 long_term_debt_2011 employees_2011 materials_2011 loans_2011 wage_bill_2011 fixed_assets tax_2011 current_liabilities_2011 current_assets_2011 fin_expenses_2011 int_paid_2011 solvency_ratio_2011 net_income_2011 revenue_2011 capital_intensity_2011 fin_cons_2011 ICR_failure_2011 interest_diff_2011 NEG_VA_2011 real_SA_2011 profitability_2011 misallocated_fixed_2011 financial_sustainability_2011 liquidity_return_2011 int_fixed_assets_2011 
 
-/* 
+/*
+  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
+------+---------------------------------------------------------+----------------
+     1|   1  1.270e+04     0     1.54899  67402.00127   0.0000  | Added control _cons.
+     2|   8 6579.66515     3     2.05527  55126.07870   0.1821  | Added fin_cons_2011 real_SA_2011.
+     3|  13 4112.65387     4     4.35284  46311.36872   0.3129  | Added ICR_failure_2011.
+     4|  22 1765.12400     5    10.00626  39085.31838   0.4201  | Added NEG_VA_2011.
+     5|  25 1331.45423     7    11.81431  37878.99279   0.4380  | Added interest_diff_2011 liquidity_return_2011.
+     6|  27 1103.29992     8    12.98607  37205.66536   0.4480  | Added dummy_patents.
+     7|  28 1004.33191     9    13.77359  36831.20993   0.4535  | Added profitability_2011.
+     8|  29  914.24151    10    14.61582  36472.95568   0.4589  | Added area.
+     9|  30  832.23238    11    15.44273  36149.16104   0.4637  | Added dummy_trademark.
+    10|  37  431.05265    12    20.53254  34711.23113   0.4850  | Added tfp_acf_2011.
+    11|  42  269.43170    13    23.30751  34254.14415   0.4918  | Added capital_intensity_2011.
+    12|  46  185.00497    14    25.04346  34057.31237   0.4947  | Added misallocated_fixed_2011.
+    13|  47  168.40968    15    25.42643  34014.11153   0.4953  | Added net_income_2011.
+    14|  48  153.30303    16    25.61993  34031.04667   0.4951  | Added fin_rev_2011 materials_2011. Removed
+      |                                                         | net_income_2011.
+    15|  49  139.55147    12    25.44350  34029.35433   0.4951  | Added tax_2011 net_income_2011. Removed
+      |                                                         | fin_rev_2011 materials_2011 NEG_VA_2011
+      |                                                         | profitability_2011 misallocated_fixed_2011.
+    16|  50  127.03345    15    26.30992  33941.15648   0.4964  | Added NEG_VA_2011 profitability_2011.
+
+---------------------------------------------------
+         Selected |       Logistic       Post
+                  |       Lasso          logit
+------------------+--------------------------------
+          control |      -4.4499650     -5.5488054
+             area |      -0.0911618     -0.1566826
+    dummy_patents |      -0.4101454     -0.7190413
+  dummy_trademark |      -0.3124479     -0.6793819
+     tfp_acf_2011 |      -0.0015507     -0.0081489
+    fin_cons_2011 |       1.3261559      1.2523172
+ ICR_failure_2011 |       0.8452853      1.0273970
+interest_dif~2011 |       0.2927119      0.4396921
+      NEG_VA_2011 |       0.6064629      0.8046721
+     real_SA_2011 |       0.8816817      1.0450368
+profitabilit~2011 |       0.2509646      0.5363204
+liquidity_re~2011 |      -3.5056872     -6.4369616
+            _cons |       8.7480719     10.9231810
+---------------------------------------------------
 */ 
 
 * Logit Regression
@@ -243,10 +283,47 @@ restore
 
 *Zombies 2011/2013
 *LASSO REGRESSION
-lassologit dummy_alive_2013  control consdummy area dummy_alive_patents dummy_alive_trademark tfp_acf_2010 shareholders_funds_2010 added_value_2010 cash_flow_2010 ebitda_2010 fin_rev_2010 liquidity_ratio_2010 total_assets_2010 depr_2010 long_term_debt_2010 employees_2010 materials_2010 loans_2010 wage_bill_2010 fixed_assets tax_2010 current_liabilities_2010 current_assets_2010 fin_expenses_2010 int_paid_2010 solvency_ratio_2010 net_income_2010 revenue_2010 capital_intensity_2010 fin_cons_2010 ICR_failure_2010 interest_diff_2010 NEG_VA_2010 real_SA_2010 profitability_2010 misallocated_fixed_2010 financial_sustainability_2010 liquidity_return_2010 int_fixed_assets_2010 
-rlassologit dummy_alive_2013  control consdummy area dummy_alive_patents dummy_alive_trademark tfp_acf_2010 shareholders_funds_2010 added_value_2010 cash_flow_2010 ebitda_2010 fin_rev_2010 liquidity_ratio_2010 total_assets_2010 depr_2010 long_term_debt_2010 employees_2010 materials_2010 loans_2010 wage_bill_2010 fixed_assets tax_2010 current_liabilities_2010 current_assets_2010 fin_expenses_2010 int_paid_2010 solvency_ratio_2010 net_income_2010 revenue_2010 capital_intensity_2010 fin_cons_2010 ICR_failure_2010 interest_diff_2010 NEG_VA_2010 real_SA_2010 profitability_2010 misallocated_fixed_2010 financial_sustainability_2010 liquidity_return_2010 int_fixed_assets_2010 
+lassologit dummy_alive_2013  control consdummy area dummy_patents dummy_trademark tfp_acf_2010 shareholders_funds_2010 added_value_2010 cash_flow_2010 ebitda_2010 fin_rev_2010 liquidity_ratio_2010 total_assets_2010 depr_2010 long_term_debt_2010 employees_2010 materials_2010 loans_2010 wage_bill_2010 fixed_assets tax_2010 current_liabilities_2010 current_assets_2010 fin_expenses_2010 int_paid_2010 solvency_ratio_2010 net_income_2010 revenue_2010 capital_intensity_2010 fin_cons_2010 ICR_failure_2010 interest_diff_2010 NEG_VA_2010 real_SA_2010 profitability_2010 misallocated_fixed_2010 financial_sustainability_2010 liquidity_return_2010 int_fixed_assets_2010 
+rlassologit dummy_alive_2013  control consdummy area dummy_patents dummy_trademark tfp_acf_2010 shareholders_funds_2010 added_value_2010 cash_flow_2010 ebitda_2010 fin_rev_2010 liquidity_ratio_2010 total_assets_2010 depr_2010 long_term_debt_2010 employees_2010 materials_2010 loans_2010 wage_bill_2010 fixed_assets tax_2010 current_liabilities_2010 current_assets_2010 fin_expenses_2010 int_paid_2010 solvency_ratio_2010 net_income_2010 revenue_2010 capital_intensity_2010 fin_cons_2010 ICR_failure_2010 interest_diff_2010 NEG_VA_2010 real_SA_2010 profitability_2010 misallocated_fixed_2010 financial_sustainability_2010 liquidity_return_2010 int_fixed_assets_2010 
 
 /* 
+  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
+------+---------------------------------------------------------+----------------
+     1|   1 6805.80304     0     1.63107  36718.29587   0.0000  | Added control _cons.
+     2|   7 3872.41075     2     2.38962  30717.87403   0.1634  | Added fin_cons_2010.
+     3|   8 3525.04845     3     2.34651  29461.60465   0.1977  | Added real_SA_2010.
+     4|  14 2005.70534     4     5.08862  24394.32782   0.3357  | Added liquidity_return_2010.
+     5|  20 1141.21947     5     9.90243  21793.41981   0.4065  | Added ICR_failure_2010.
+     6|  24  783.61703     7    12.71965  20802.11890   0.4336  | Added dummy_patents misallocated_fixed_2010.
+     7|  27  591.09173     9    14.69541  20222.32786   0.4494  | Added tfp_acf_2010 interest_diff_2010.
+     8|  28  538.06973    10    15.34594  20045.44967   0.4542  | Added NEG_VA_2010.
+     9|  30  445.86759    11    16.59152  19752.21459   0.4622  | Added area.
+    10|  33  336.32328    13    18.37455  19419.65941   0.4713  | Added dummy_trademark solvency_ratio_2010.
+    11|  34  306.15447    14    18.91866  19330.04357   0.4737  | Added financial_sustainability_2010.
+    12|  42  144.34774    16    22.41142  18918.94488   0.4849  | Added loans_2010 net_income_2010.
+    13|  49   74.76455    18    24.65629  18765.51142   0.4891  | Added fin_expenses_2010 capital_intensity_2010.
+
+
+---------------------------------------------------
+         Selected |       Logistic       Post
+                  |       Lasso          logit
+------------------+--------------------------------
+          control |      -3.9577056     -5.0308732
+             area |      -0.0494967     -0.1335599
+    dummy_patents |      -0.5099206     -0.9369363
+  dummy_trademark |      -0.0938173     -0.4566943
+     tfp_acf_2010 |      -0.0112173     -0.0229742
+solvency_rat~2010 |      -0.0007007     -0.0027033
+    fin_cons_2010 |       1.5712858      1.6265845
+ ICR_failure_2010 |       0.4523979      0.6921655
+interest_dif~2010 |       0.2088970      0.4336088
+      NEG_VA_2010 |       0.4472207      0.7472407
+     real_SA_2010 |       0.7372835      0.8918584
+misallocated~2010 |       0.2718036      0.3137414
+financial_su~2010 |       0.0561906      4.8188848
+liquidity_re~2010 |      -4.1608414     -5.5123091
+            _cons |       7.2214366      9.2709249
+---------------------------------------------------
 */ 
 
 * Logit Regression
@@ -265,10 +342,47 @@ restore
 
 *Zombies 2010/2012
 *LASSO REGRESSION
-lassologit dummy_alive_2012 control consdummy area dummy_alive_patents dummy_alive_trademark tfp_acf_2009 shareholders_funds_2009 added_value_2009 cash_flow_2009 ebitda_2009 fin_rev_2009 liquidity_ratio_2009 total_assets_2009 depr_2009 long_term_debt_2009 employees_2009 materials_2009 loans_2009 wage_bill_2009 fixed_assets tax_2009 current_liabilities_2009 current_assets_2009 fin_expenses_2009 int_paid_2009 solvency_ratio_2009 net_income_2009 revenue_2009 capital_intensity_2009 fin_cons_2009 ICR_failure_2009 interest_diff_2009 NEG_VA_2009 real_SA_2009 profitability_2009 misallocated_fixed_2009 financial_sustainability_2009 liquidity_return_2009 int_fixed_assets_2009 
-rlassologit dummy_alive_2012 control consdummy area dummy_alive_patents dummy_alive_trademark tfp_acf_2009 shareholders_funds_2009 added_value_2009 cash_flow_2009 ebitda_2009 fin_rev_2009 liquidity_ratio_2009 total_assets_2009 depr_2009 long_term_debt_2009 employees_2009 materials_2009 loans_2009 wage_bill_2009 fixed_assets tax_2009 current_liabilities_2009 current_assets_2009 fin_expenses_2009 int_paid_2009 solvency_ratio_2009 net_income_2009 revenue_2009 capital_intensity_2009 fin_cons_2009 ICR_failure_2009 interest_diff_2009 NEG_VA_2009 real_SA_2009 profitability_2009 misallocated_fixed_2009 financial_sustainability_2009 liquidity_return_2009 int_fixed_assets_2009 
+lassologit dummy_alive_2012 control consdummy area dummy_patents dummy_trademark tfp_acf_2009 shareholders_funds_2009 added_value_2009 cash_flow_2009 ebitda_2009 fin_rev_2009 liquidity_ratio_2009 total_assets_2009 depr_2009 long_term_debt_2009 employees_2009 materials_2009 loans_2009 wage_bill_2009 fixed_assets tax_2009 current_liabilities_2009 current_assets_2009 fin_expenses_2009 int_paid_2009 solvency_ratio_2009 net_income_2009 revenue_2009 capital_intensity_2009 fin_cons_2009 ICR_failure_2009 interest_diff_2009 NEG_VA_2009 real_SA_2009 profitability_2009 misallocated_fixed_2009 financial_sustainability_2009 liquidity_return_2009 int_fixed_assets_2009 
+rlassologit dummy_alive_2012 control consdummy area dummy_patents dummy_trademark tfp_acf_2009 shareholders_funds_2009 added_value_2009 cash_flow_2009 ebitda_2009 fin_rev_2009 liquidity_ratio_2009 total_assets_2009 depr_2009 long_term_debt_2009 employees_2009 materials_2009 loans_2009 wage_bill_2009 fixed_assets tax_2009 current_liabilities_2009 current_assets_2009 fin_expenses_2009 int_paid_2009 solvency_ratio_2009 net_income_2009 revenue_2009 capital_intensity_2009 fin_cons_2009 ICR_failure_2009 interest_diff_2009 NEG_VA_2009 real_SA_2009 profitability_2009 misallocated_fixed_2009 financial_sustainability_2009 liquidity_return_2009 int_fixed_assets_2009 
 
 /*
+  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
+------+---------------------------------------------------------+----------------
+     1|   1 7416.10922     0     1.67217  42111.83510   0.0000  | Added control _cons.
+     2|   7 4219.66679     2     2.33928  35957.75032   0.1462  | Added fin_cons_2009.
+     3|   9 3496.59639     3     2.87696  34055.75850   0.1913  | Added real_SA_2009.
+     4|  12 2637.52464     4     2.75175  31291.82941   0.2570  | Added liquidity_return_2009.
+     5|  15 1989.51650     5     4.61927  29369.40822   0.3026  | Added solvency_ratio_2009.
+     6|  19 1366.09921     6     6.91112  27658.45689   0.3433  | Added NEG_VA_2009.
+     7|  22 1030.46503     7     8.48232  26806.52687   0.3635  | Added dummy_trademark.
+     8|  23  938.03044     8     8.99190  26550.88073   0.3696  | Added dummy_patents.
+     9|  26  707.56763    12    10.47090  25899.85231   0.3851  | Added area tfp_acf_2009 interest_diff_2009
+      |                                                         | profitability_2009.
+    10|  28  586.32080    14    11.51304  25499.37435   0.3946  | Added ICR_failure_2009 misallocated_fixed_2009.
+    11|  33  366.48286    15    13.77738  24853.98397   0.4099  | Added capital_intensity_2009.
+    12|  36  276.44242    15    14.91543  24616.31929   0.4156  | Added net_income_2009.
+    13|  44  130.33891    17    17.07733  24332.74202   0.4223  | Added financial_sustainability_2009.
+
+---------------------------------------------------
+         Selected |       Logistic       Post
+                  |       Lasso          logit
+------------------+--------------------------------
+          control |      -3.5476078     -4.2956091
+             area |      -0.0886016     -0.1594198
+    dummy_patents |      -0.4829100     -0.8492095
+  dummy_trademark |      -0.6276682     -1.1322944
+     tfp_acf_2009 |      -0.0136167     -0.0248085
+solvency_rat~2009 |      -0.0092202     -0.0116110
+    fin_cons_2009 |       1.4844180      1.5546607
+ ICR_failure_2009 |       0.1575920      0.3155842
+interest_dif~2009 |       0.2251271      0.3977553
+      NEG_VA_2009 |       1.1763233      1.7091737
+     real_SA_2009 |       0.4690116      0.5503758
+profitabilit~2009 |       0.0855716      0.1569282
+misallocated~2009 |       0.1061850      0.2097658
+liquidity_re~2009 |      -1.9248668     -2.4052470
+            _cons |       4.3463373      5.5437178
+---------------------------------------------------
 */ 
 
 * Logit Regression
@@ -291,7 +405,42 @@ lassologit dummy_alive_2011 control consdummy area dummy_alive_patents dummy_ali
 rlassologit dummy_alive_2011 control consdummy area dummy_alive_patents dummy_alive_trademark tfp_acf_2008 shareholders_funds_2008 added_value_2008 cash_flow_2008 ebitda_2008 fin_rev_2008 liquidity_ratio_2008 total_assets_2008 depr_2008 long_term_debt_2008 employees_2008 materials_2008 loans_2008 wage_bill_2008 fixed_assets tax_2008 current_liabilities_2008 current_assets_2008 fin_expenses_2008 int_paid_2008 solvency_ratio_2008 net_income_2008 revenue_2008 capital_intensity_2008 fin_cons_2008 ICR_failure_2008 NEG_VA_2008 real_SA_2008 profitability_2008 misallocated_fixed_2008 financial_sustainability_2008 liquidity_return_2008 int_fixed_assets_2008 
 
 /*
+  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
+------+---------------------------------------------------------+----------------
+     1|   1 8927.29601     0     1.54509  51268.23278   0.0000  | Added _cons.
+     2|   2 8126.50129     1     1.64471  49559.79654   0.0333  | Added control.
+     3|   6 5580.05272     2     2.24768  44429.72952   0.1334  | Added fin_cons_2008.
+     4|   9 4209.10077     3     2.81302  40480.06260   0.2104  | Added real_SA_2008.
+     5|  12 3174.97524     4     3.14651  37049.85099   0.2773  | Added solvency_ratio_2008.
+     6|  16 2180.09308     5     5.55868  33945.59739   0.3379  | Added liquidity_return_2008.
+     7|  21 1362.67850     7     8.70739  31617.26384   0.3833  | Added dummy_trademark ICR_failure_2008.
+     8|  23 1129.17369     8     9.88548  30924.05581   0.3968  | Added NEG_VA_2008.
+     9|  26  851.74927     9    11.60034  30122.38432   0.4125  | Added dummy_patents.
+    10|  28  705.79588    10    12.71392  29704.83680   0.4206  | Added area.
+    11|  38  275.75021    11    17.16472  28680.21432   0.4406  | Added net_income_2008.
+    12|  39  251.01491    12    17.48659  28622.76091   0.4417  | Added capital_intensity_2008.
+    13|  40  228.49842    13    17.79980  28576.04146   0.4426  | Added misallocated_fixed_2008.
+    14|  42  189.34356    14    18.37368  28506.44322   0.4440  | Added tfp_acf_2008.
+    15|  44  156.89818    15    18.87764  28456.42598   0.4450  | Added profitability_2008.
+    16|  45  142.82412    16    19.10220  28436.51503   0.4454  | Added liquidity_ratio_2008.
 
+
+---------------------------------------------------
+         Selected |       Logistic       Post
+                  |       Lasso          logit
+------------------+--------------------------------
+          control |      -3.5550213     -4.1943230
+             area |      -0.0774210     -0.1395619
+    dummy_patents |      -0.3892508     -0.7116926
+  dummy_trademark |      -0.8937260     -1.4252446
+solvency_rat~2008 |      -0.0146810     -0.0178276
+    fin_cons_2008 |       2.1195787      2.3300612
+ ICR_failure_2008 |       0.3205984      0.4682769
+      NEG_VA_2008 |       0.8528173      1.4275460
+     real_SA_2008 |       0.6180549      0.7270571
+liquidity_re~2008 |      -1.9477380     -2.5620320
+            _cons |       5.9695024      7.4238360
+---------------------------------------------------
 */ 
 
 * Logit Regression
