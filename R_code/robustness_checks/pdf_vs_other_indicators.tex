@@ -1,0 +1,368 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdftitle={Why not just using a single indicator?},
+            pdfauthor={Falco J. Bargagli Stoffi},
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+
+% Create subtitle command for use in maketitle
+\providecommand{\subtitle}[1]{
+  \posttitle{
+    \begin{center}\large#1\end{center}
+    }
+}
+
+\setlength{\droptitle}{-2em}
+
+  \title{Why not just using a single indicator?}
+    \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+    \author{Falco J. Bargagli Stoffi}
+    \preauthor{\centering\large\emph}
+  \postauthor{\par}
+      \predate{\centering\large\emph}
+  \postdate{\par}
+    \date{29/02/2020}
+
+
+\begin{document}
+\maketitle
+
+\hypertarget{introduction}{%
+\section{Introduction}\label{introduction}}
+
+In this section of the Appendix we check what is the comparative
+advantage of using our Machine-Learning-based definition of Persistently
+Distressed Firms (PDF) rather than other commonly used deterministic
+indicators (i.e., Interest Covarage Ratio {[}ICR{]}, negative added
+value, etc.).
+
+\par
+
+The first and more obvious advantage is that the PDF indicator can be
+constructed even in the presence of missing data. As we show in the
+Section of the paper about missing data, there are significant
+missingness patterns in the two variables that compose the ICR indicator
+(EBIT and Interest Paid).
+
+\par
+
+The second advantage is that, while ICR and the other indicators are
+based on a deterministic definition of zombies, PDF is based on a
+probabilistic definition that can be tuned to embody different
+``likelihoods'' of being zombie.
+
+\par
+
+The third advantage is that our PDF indicator can be constructed using
+the information coming from multiple indicators and not just using the
+information on a single one.
+
+\par
+
+Beside these clear advantages, there are more subtle benefits that can
+be obtained by using PDF instead of ICR. To highlight these advantages
+we focus on a particular dimension of our PDF definition. To be a PDF a
+firm needs to be at high risk of failure (but not failing) for three
+consecutive years. Our PDF definition focuses on those firms that ``are
+predicted to fail, but are surviving'' (following the ML literature we
+could call them \textit{false positives}). Hence, a good indicator of
+``\textit{zombieness}'' should be able to discriminate between
+\textit{false positives} and \textit{true positives}.
+
+\par
+
+In this spirit, we develop a two stage algorithm to highlight which are
+the best predictors of \textit{false positives}. In the first stage, we
+train a Logit model to predict the probability of failure:
+\begin{equation}
+ f_{LOGIT}(x) = \hat{p}_i(Y_i = 1 | X_i = x),
+\end{equation} and to obtain the fitted values \(\hat{y}_i\). In the
+second stage, we fit a LASSO just on those observations with
+\(\hat{y}_i=1\) (\textit{positives}) to get the most important
+predictors (namely, those with non-zero coefficient) for the
+\textit{false positives}.
+
+\par
+
+In the following code chuncks the implementation of this ``two-stage''
+algorithm.
+
+\hypertarget{load-packages-and-data}{%
+\subsection{Load Packages and Data}\label{load-packages-and-data}}
+
+In this chunk we load the packages and the data used for the analysis,
+and we split the overall sample in a \textit{training} and a
+\textit{test} set.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{options}\NormalTok{(}\DataTypeTok{java.parameters =} \StringTok{"-Xmx50g"}\NormalTok{)}
+\KeywordTok{library}\NormalTok{(rJava)}
+\KeywordTok{library}\NormalTok{(bartMachine)}
+\KeywordTok{library}\NormalTok{(haven)}
+\KeywordTok{library}\NormalTok{(plyr)}
+\KeywordTok{library}\NormalTok{(dplyr)}
+\KeywordTok{library}\NormalTok{(PRROC)}
+\KeywordTok{library}\NormalTok{(caret)}
+\KeywordTok{library}\NormalTok{(glmnet)}
+
+\CommentTok{# Load Data}
+\NormalTok{data <-}\StringTok{ }\KeywordTok{read_dta}\NormalTok{(}\StringTok{"analysis_data_indicators.dta"}\NormalTok{)}
+
+\CommentTok{# Initialize Data}
+\KeywordTok{names}\NormalTok{(data)[}\KeywordTok{names}\NormalTok{(data) }\OperatorTok{==}\StringTok{ 'GUO___BvD_ID_number'}\NormalTok{] <-}\StringTok{ 'guo'}
+\NormalTok{data}\OperatorTok{$}\NormalTok{control <-}\StringTok{ }\KeywordTok{ifelse}\NormalTok{(data}\OperatorTok{$}\NormalTok{guo}\OperatorTok{==}\StringTok{""}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{)}
+\NormalTok{data}\OperatorTok{$}\NormalTok{nace <-}\StringTok{ }\KeywordTok{as.factor}\NormalTok{(data}\OperatorTok{$}\NormalTok{nace)}
+\NormalTok{data}\OperatorTok{$}\NormalTok{area <-}\StringTok{ }\KeywordTok{as.factor}\NormalTok{(data}\OperatorTok{$}\NormalTok{area)}
+\KeywordTok{levels}\NormalTok{(data}\OperatorTok{$}\NormalTok{nace) <-}\StringTok{ }\KeywordTok{floor}\NormalTok{(}\KeywordTok{as.numeric}\NormalTok{(}\KeywordTok{levels}\NormalTok{(data}\OperatorTok{$}\NormalTok{nace))}\OperatorTok{/}\DecValTok{100}\NormalTok{) }
+
+\CommentTok{#OMIITED DATA}
+\NormalTok{lagged_variables <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"failure"}\NormalTok{, }\StringTok{"iso"}\NormalTok{, }\StringTok{"control"}\NormalTok{, }\StringTok{"nace"}\NormalTok{,}
+                      \StringTok{"shareholders_funds"}\NormalTok{, }\StringTok{"added_value"}\NormalTok{,}
+                      \StringTok{"cash_flow"}\NormalTok{, }\StringTok{"ebitda"}\NormalTok{, }\StringTok{"fin_rev"}\NormalTok{,}
+                      \StringTok{"liquidity_ratio"}\NormalTok{, }\StringTok{"total_assets"}\NormalTok{,}
+                      \StringTok{"depr"}\NormalTok{, }\StringTok{"long_term_debt"}\NormalTok{, }\StringTok{"employees"}\NormalTok{,}
+                      \StringTok{"materials"}\NormalTok{, }\StringTok{"loans"}\NormalTok{, }\StringTok{"wage_bill"}\NormalTok{,}
+                      \StringTok{"tfp_acf"}\NormalTok{, }\StringTok{"fixed_assets"}\NormalTok{, }\StringTok{"tax"}\NormalTok{,}
+                      \StringTok{"current_liabilities"}\NormalTok{, }\StringTok{"current_assets"}\NormalTok{,}
+                      \StringTok{"fin_expenses"}\NormalTok{, }\StringTok{"int_paid"}\NormalTok{,}
+                      \StringTok{"solvency_ratio"}\NormalTok{, }\StringTok{"net_income"}\NormalTok{,}
+                      \StringTok{"revenue"}\NormalTok{, }\StringTok{"consdummy"}\NormalTok{, }\StringTok{"capital_intensity"}\NormalTok{,}
+                      \StringTok{"fin_cons100"}\NormalTok{, }\StringTok{"inv"}\NormalTok{, }\StringTok{"ICR_failure"}\NormalTok{,}
+                      \StringTok{"interest_diff"}\NormalTok{, }\StringTok{"NEG_VA"}\NormalTok{, }\StringTok{"real_SA"}\NormalTok{,}
+                      \StringTok{"Z_score"}\NormalTok{, }\StringTok{"misallocated_fixed"}\NormalTok{,}
+                      \StringTok{"profitability"}\NormalTok{, }\StringTok{"area"}\NormalTok{, }\StringTok{"dummy_patents"}\NormalTok{,}
+                      \StringTok{"dummy_trademark"}\NormalTok{,}\StringTok{"financial_sustainability"}\NormalTok{,}
+                      \StringTok{"liquidity_return"}\NormalTok{, }\StringTok{"int_fixed_assets"}\NormalTok{)}
+\NormalTok{omitted <-}\StringTok{ }\KeywordTok{na.omit}\NormalTok{(data[lagged_variables])}
+\NormalTok{predictors <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"control"}\NormalTok{, }\StringTok{"nace"}\NormalTok{, }\StringTok{"shareholders_funds"}\NormalTok{,}
+                \StringTok{"added_value"}\NormalTok{, }\StringTok{"cash_flow"}\NormalTok{, }\StringTok{"ebitda"}\NormalTok{,}
+                \StringTok{"fin_rev"}\NormalTok{, }\StringTok{"liquidity_ratio"}\NormalTok{, }\StringTok{"total_assets"}\NormalTok{,}
+                \StringTok{"depr"}\NormalTok{, }\StringTok{"long_term_debt"}\NormalTok{, }\StringTok{"employees"}\NormalTok{,}
+                \StringTok{"materials"}\NormalTok{, }\StringTok{"loans"}\NormalTok{, }\StringTok{"wage_bill"}\NormalTok{, }\StringTok{"tfp_acf"}\NormalTok{,}
+                \StringTok{"fixed_assets"}\NormalTok{, }\StringTok{"tax"}\NormalTok{, }\StringTok{"current_liabilities"}\NormalTok{,}
+                \StringTok{"current_assets"}\NormalTok{, }\StringTok{"fin_expenses"}\NormalTok{, }\StringTok{"int_paid"}\NormalTok{,}
+                \StringTok{"solvency_ratio"}\NormalTok{, }\StringTok{"net_income"}\NormalTok{, }\StringTok{"revenue"}\NormalTok{,}
+                \StringTok{"consdummy"}\NormalTok{, }\StringTok{"capital_intensity"}\NormalTok{, }\StringTok{"fin_cons100"}\NormalTok{,}
+                \StringTok{"inv"}\NormalTok{, }\StringTok{"ICR_failure"}\NormalTok{, }\StringTok{"interest_diff"}\NormalTok{, }\StringTok{"NEG_VA"}\NormalTok{,}
+                \StringTok{"real_SA"}\NormalTok{, }\StringTok{"misallocated_fixed"}\NormalTok{, }\StringTok{"profitability"}\NormalTok{,}
+                \StringTok{"area"}\NormalTok{, }\StringTok{"dummy_patents"}\NormalTok{, }\StringTok{"dummy_trademark"}\NormalTok{,}
+                \StringTok{"financial_sustainability"}\NormalTok{, }\StringTok{"liquidity_return"}\NormalTok{,}
+                \StringTok{"int_fixed_assets"}\NormalTok{)}
+\NormalTok{formula <-}\StringTok{ }\KeywordTok{as.formula}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\StringTok{"as.factor(failure) ~"}\NormalTok{,}
+                            \KeywordTok{paste}\NormalTok{(predictors, }\DataTypeTok{collapse=}\StringTok{"+"}\NormalTok{)))}
+
+\NormalTok{### Define samples}
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{123}\NormalTok{)}
+\NormalTok{train_sample <-}\StringTok{ }\KeywordTok{sample}\NormalTok{(}\KeywordTok{seq_len}\NormalTok{(}\KeywordTok{nrow}\NormalTok{(omitted)), }\DataTypeTok{size =} \KeywordTok{nrow}\NormalTok{(omitted)}\OperatorTok{*}\FloatTok{0.5}\NormalTok{) }
+\NormalTok{train <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(omitted[train_sample,])}
+\NormalTok{test <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(omitted[}\OperatorTok{-}\NormalTok{train_sample,])}
+\end{Highlighting}
+\end{Shaded}
+
+In this chunck we contruct the LOGIT model, we get the predicted
+probabilities and the confusion matrix. We use as a threshold 0.3
+(namely, \(\hat{p}_i(Y_i = 1 | X_i = x)>0.3 \rightarrow \hat{y}_i=1\)),
+however this threshold can be moved up to 0.5 without any meaninful
+change.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{log <-}\StringTok{ }\KeywordTok{glm}\NormalTok{(formula, }\DataTypeTok{family =}\NormalTok{ binomial, }\DataTypeTok{data =}\NormalTok{ train)}
+\NormalTok{prob_pred <-}\StringTok{ }\KeywordTok{predict}\NormalTok{(log, }\DataTypeTok{type =} \StringTok{'response'}\NormalTok{, }\DataTypeTok{newdata =}\NormalTok{ test)}
+\NormalTok{prediction <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(prob_pred }\OperatorTok{>}\StringTok{ }\FloatTok{0.3}\NormalTok{) }\CommentTok{# change up to 0.5}
+\NormalTok{cmlog=}\KeywordTok{table}\NormalTok{(test}\OperatorTok{$}\NormalTok{failure,prediction)}
+\NormalTok{cmlog}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##    prediction
+##         0     1
+##   0 43951   605
+##   1  1381   473
+\end{verbatim}
+
+In this chunck we use a LASSO model to select the variables with the
+highest predictive power for \textit{false positives}.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{test}\OperatorTok{$}\NormalTok{prediction <-}\StringTok{ }\NormalTok{prediction}
+\NormalTok{positive <-}\StringTok{ }\NormalTok{test[}\KeywordTok{which}\NormalTok{(test}\OperatorTok{$}\NormalTok{prediction}\OperatorTok{==}\DecValTok{1}\NormalTok{),]}
+\NormalTok{positive}\OperatorTok{$}\NormalTok{iso <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(}\KeywordTok{as.factor}\NormalTok{(positive}\OperatorTok{$}\NormalTok{iso))}
+\NormalTok{positive}\OperatorTok{$}\NormalTok{control <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(}\KeywordTok{as.factor}\NormalTok{(positive}\OperatorTok{$}\NormalTok{control))}
+\NormalTok{x <-}\StringTok{ }\KeywordTok{as.matrix}\NormalTok{(}\KeywordTok{as.data.frame}\NormalTok{(}\KeywordTok{lapply}\NormalTok{(positive[predictors], as.numeric)))}
+\NormalTok{y <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(positive}\OperatorTok{$}\NormalTok{prediction}\OperatorTok{==}\DecValTok{1} \OperatorTok{&}\StringTok{ }\NormalTok{positive}\OperatorTok{$}\NormalTok{failure}\OperatorTok{==}\DecValTok{0}\NormalTok{)}
+
+\NormalTok{mod <-}\StringTok{ }\KeywordTok{cv.glmnet}\NormalTok{(x , y, }\DataTypeTok{alpha=}\DecValTok{1}\NormalTok{)}
+\KeywordTok{as.matrix}\NormalTok{(}\KeywordTok{coef}\NormalTok{(mod, mod}\OperatorTok{$}\NormalTok{lambda}\FloatTok{.1}\NormalTok{se))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                                     1
+## (Intercept)               0.495101483
+## control                   0.084239097
+## nace                      0.000000000
+## shareholders_funds        0.000000000
+## added_value               0.000000000
+## cash_flow                 0.000000000
+## ebitda                    0.000000000
+## fin_rev                   0.000000000
+## liquidity_ratio           0.000000000
+## total_assets              0.000000000
+## depr                      0.000000000
+## long_term_debt            0.000000000
+## employees                 0.000000000
+## materials                 0.000000000
+## loans                     0.000000000
+## wage_bill                 0.000000000
+## tfp_acf                   0.000000000
+## fixed_assets              0.000000000
+## tax                       0.000000000
+## current_liabilities       0.000000000
+## current_assets            0.000000000
+## fin_expenses              0.000000000
+## int_paid                  0.000000000
+## solvency_ratio            0.001577534
+## net_income                0.000000000
+## revenue                   0.000000000
+## consdummy                 0.000000000
+## capital_intensity         0.000000000
+## fin_cons100               0.000000000
+## inv                       0.000000000
+## ICR_failure               0.000000000
+## interest_diff             0.052601540
+## NEG_VA                   -0.045676512
+## real_SA                   0.000000000
+## misallocated_fixed        0.000000000
+## profitability            -0.005923519
+## area                      0.005088934
+## dummy_patents             0.000000000
+## dummy_trademark           0.000000000
+## financial_sustainability  0.000000000
+## liquidity_return          0.436828513
+## int_fixed_assets          0.000000000
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{row.names}\NormalTok{(}\KeywordTok{as.matrix}\NormalTok{(}\KeywordTok{coef}\NormalTok{(mod, mod}\OperatorTok{$}\NormalTok{lambda}\FloatTok{.1}\NormalTok{se)))[}\KeywordTok{which}\NormalTok{(}\KeywordTok{as.matrix}\NormalTok{(}\KeywordTok{coef}\NormalTok{(mod, mod}\OperatorTok{$}\NormalTok{lambda}\FloatTok{.1}\NormalTok{se))}\OperatorTok{!=}\DecValTok{0}\NormalTok{)]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "(Intercept)"      "control"          "solvency_ratio"  
+## [4] "interest_diff"    "NEG_VA"           "profitability"   
+## [7] "area"             "liquidity_return"
+\end{verbatim}
+
+The indicator that seems to have the best disciminative power are:
+\textit{control, solvency ratio, BID, negative AV, profitability, area, liquidity}.
+Hence, these indicators are the best to capture the component of
+``resistence'' among highly distressed firms that makes them zombies.
+
+
+\end{document}

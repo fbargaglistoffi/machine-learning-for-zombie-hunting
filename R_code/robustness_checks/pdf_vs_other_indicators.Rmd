@@ -16,7 +16,8 @@ knitr::opts_knit$set(root.dir = 'G:\\Il mio Drive\\Research\\Italian Firms\\Zomb
 
 In this section of the Appendix we check what is the comparative advantage of using our Machine-Learning-based definition of Persistently Distressed Firms (PDF) rather than other commonly used deterministic indicators (i.e., Interest Covarage Ratio [ICR], negative added value, etc.). 
 \par The first and more obvious advantage is that the PDF indicator can be constructed even in the presence of missing data. As we show in the Section of the paper about missing data, there are significant missingness patterns in the two variables that compose the ICR indicator (EBIT and Interest Paid).
-\par The second advantage is that, while ICR entails a deterministic definition of zombies, PDF represents a probabilistic based definition that can be tuned to embody different "likelihoods" of being zombie.
+\par The second advantage is that, while ICR and the other indicators are based on a deterministic definition of zombies, PDF is based on a probabilistic definition that can be tuned to embody different "likelihoods" of being zombie.
+\par The third advantage is that our PDF indicator can be constructed using the information coming from multiple indicators and not just using the information on a single one.
 \par Beside these clear advantages, there are more subtle benefits that can be obtained by using PDF instead of ICR.
 To highlight these advantages we focus on a particular dimension of our PDF definition. To be a PDF a firm needs to be at high risk of failure (but not failing) for three consecutive years. 
 Our PDF definition focuses on those firms that "are predicted to fail, but are surviving" (following the ML literature we could call them \textit{false positives}). 
@@ -73,7 +74,7 @@ lagged_variables <- c("failure", "iso", "control", "nace",
                       "profitability", "area", "dummy_patents",
                       "dummy_trademark","financial_sustainability",
                       "liquidity_return", "int_fixed_assets")
-omitted <- na.omit(data[legged_variables])
+omitted <- na.omit(data[lagged_variables])
 predictors <- c("control", "nace", "shareholders_funds",
                 "added_value", "cash_flow", "ebitda",
                 "fin_rev", "liquidity_ratio", "total_assets",
@@ -116,7 +117,7 @@ test$prediction <- prediction
 positive <- test[which(test$prediction==1),]
 positive$iso <- as.numeric(as.factor(positive$iso))
 positive$control <- as.numeric(as.factor(positive$control))
-x<-as.matrix(positive[predictors])
+x <- as.matrix(as.data.frame(lapply(positive[predictors], as.numeric)))
 y <- as.numeric(positive$prediction==1 & positive$failure==0)
 
 mod <- cv.glmnet(x , y, alpha=1)
@@ -124,146 +125,4 @@ as.matrix(coef(mod, mod$lambda.1se))
 row.names(as.matrix(coef(mod, mod$lambda.1se)))[which(as.matrix(coef(mod, mod$lambda.1se))!=0)]
 ```
 
-The indicator that seems to have the best disciminative power are the productivity level, the consolidated variable and the zombie indicator from Schivardi, Sette and Tabellini (2017) (\textit{misallocated\_fixed}). Hence, ICR is not among these indicators meaning that ICR alone can't catch the component of "resistence" among highly distressed firms that makes them zombies.
-
-```{r}
-indicators = glm(formula = y ~ positive$iso + positive$misallocated_fixed
-                 + as.factor(positive$control) + positive$tfp_acf + positive$consdummy,
-                 family = binomial, data = positive)
-summary(indicators)
-```
-
-## Analysis on Italian Firms
-
-In this chunck we contruct the LOGIT model, we get the predicted probabilities and the confusion matrix.
-We use as a threshold 0.3 (namely,  $\hat{p}_i(Y_i = 1 | X_i = x)>0.3 \rightarrow \hat{y}_i=1$), however this threshold can be moved up to 0.5 without any meaninful change. 
-
-```{r include = TRUE, message = FALSE, warning = FALSE}
-### Define samples
-italy <- omitted[which(data$iso=="IT"),] 
-
-set.seed(123)
-train_sample <- sample(seq_len(nrow(italy)), size = nrow(italy)*0.5) 
-train <- as.data.frame(italy[train_sample,])
-test <- as.data.frame(italy[-train_sample,])
-
-
-log = glm(formula, family = binomial, data = train)
-prob_pred = predict(log, type = 'response', newdata = test)
-prediction <- as.numeric(prob_pred > 0.3) # change up to 0.5
-cmlog=table(test$failure,prediction)
-cmlog
-```
-
-In this chunck we use a LASSO model to select the variables with the highest predictive power for \textit{false positives}.
-
-```{r}
-test$prediction <- prediction
-positive <- test[which(test$prediction==1),]
-positive$control <- as.numeric(as.factor(positive$control))
-x<-as.matrix(positive[predictors])
-y <- as.numeric(positive$prediction==1 & positive$failure==0)
-
-mod <- cv.glmnet(x , y, alpha=1)
-as.matrix(coef(mod, mod$lambda.1se))
-row.names(as.matrix(coef(mod, mod$lambda.1se)))[which(as.matrix(coef(mod, mod$lambda.1se))!=0)]
-```
-
-```{r}
-indicators = glm(formula = y ~ positive$misallocated_fixed +  positive$NEG_VA
-                 + as.factor(positive$control) + positive$tfp_acf,
-                 family = binomial, data = positive)
-summary(indicators)
-```
-
-# Exclusion of ICR from the predictors
-
-A second central check, to understand how important is the contribute of ICR to the predicted failure probability, is to evaluate the performance of the model when we rule out its contribute as a predictor.
-This is particularly interesting if we focus just on the subsample of observations that have an ICR bigger than one (namely, are not defined as zombie firms).
-\par In the following chunks we subset the data in a way that our favourite ML algorithm (BART) is trained on samples where the number of units with $Y_i=1$ and $Y_i=0$ is the same. This trick is used to improve the predicive power of the model.
-
-```{r}
-attach(dati)
-predictors <- dati[predictors]
-output <- as.numeric(failure == 1)
-detach(dati)
-
-model1<-data.frame(predictors, output)
-colnames(model1)[length(model1)]<-"output"
-model1_0<-subset(model1,model1$output==0) 
-model1_1<-subset(model1,model1$output==1)
-```
-
-In this chunck we define a function for the BART algorithm.
-
-```{r}
-### Define functions
-bart <- function(train1, test1, output){
-  train1 <- as.data.frame(train1)
-  test1 <- as.data.frame(test1)
-  train1$predictors <- train1[predictors]
-  test1$predictors <- test1[predictors]
-  bart_machine<-bartMachine(train1$predictors,as.factor(train1$output)) 
-  fitted.results.bart <- 1- round(predict(bart_machine, test1$predictors,
-                                          type='prob'), 6)
-  #fitted.results.bart <-predict(bart_machine, test1$predictors,  type='class')
-  prediction <- as.numeric(fitted.results.bart > 0.5)
-  cmsl=table(test1$output,prediction)
-  res_all<-(cmsl[1,1]+cmsl[2,2])/(length(test1$output))
-  res_1<-cmsl[2,2]/(cmsl[2,1]+cmsl[2,2])
-  res_0<-cmsl[1,1]/(cmsl[1,1]+cmsl[1,2])
-  res<-cbind(res_all,res_1,res_0)
-}
-```
-
-And in this last chunck we fit the models (namely, one with all predictors and one just on the subset of observations where ICR is more than one [\textit{ICR\_failure}==0]) on two bootstraped samples from the data.
-
-```{r results = 'hide', include = TRUE, message = FALSE, warning = FALSE}
-### Create matrix to save bootstrapped results (N = B)
-B=2
-number_of_models=3
-results<-matrix(data=NA, nrow = B, ncol = number_of_models*2)
-
-system.time({
-  for (i in (1:B)) {
-    ### Start loop
-    set.seed(123 + i) #setting seed for reproducible results
-    
-    # Repeatedly (B) draw subsamples
-    model1_0sub <- model1_0[sample(seq_len(nrow(model1_0)), 
-                                   size = nrow(model1_1),
-                                   replace = TRUE),]
-    model1_full <- rbind(model1_0sub,model1_1)
-    
-    # split into training and test (easier to handle)
-    train_ind <- sample(seq_len(nrow(model1_full)), 
-                        size = nrow(model1_full)*0.5) 
-    
-    train1 <- model1_full[train_ind,]
-    test1 <- model1_full[-train_ind,]
-    
-    #BART ALL
-    results[i,1:3]<-bart(train1,test1, output)
-    
-    #BART ICR = 0
-    model1_full <- model1_full[which(model1_full$ICR_failure==0),]
-    train_ind <- sample(seq_len(nrow(model1_full)), 
-                        size = nrow(model1_full)*0.5) 
-    
-    train1 <- model1_full[train_ind,]
-    test1 <- model1_full[-train_ind,]
-    
-    results[i,4:6]<-bart(train1,test1, output)
-    
-    # LOADING STATUS
-    print(i/B)
-  }
-})
-```
-
-As we can see from the outcome of this chunck the overall predictions for the two models are not signficantly different at a significance level of 0.95.
-
-```{r}
-summary(results)
-t.test(results[,1], results[,4])
-```
+The indicator that seems to have the best disciminative power are: \textit{control, solvency ratio, BID, negative AV, profitability, area, liquidity}. Hence, these indicators are the best to capture the component of "resistence" among highly distressed firms that makes them zombies.
