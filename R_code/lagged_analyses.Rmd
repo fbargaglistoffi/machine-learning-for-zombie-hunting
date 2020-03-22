@@ -38,6 +38,7 @@ library(dplyr)
 library(PRROC)
 library(rpart)
 library(party)
+library(finalfit)
 library(caret)
 library(Amelia)
 library(PresenceAbsence)
@@ -46,6 +47,7 @@ library(SuperLearner)
 library(Metrics)
 library(pROC)
 library(Hmisc)
+library(GGally)
 source('functions.R')
 ```
 
@@ -112,7 +114,8 @@ Run the following chunks of code to produce Table 9 in the paper.
 icr_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
                    data_italy$year_of_incorporation<=2016),]$ICR_failure_2016)
 prop.table(icr_italy)
-icr_spain <- table(data_spain[which(data_sapin$year_of_status>=2016 &
+length(which(is.na(data_italy$ICR_failure)))/nrow(data_italy)
+icr_spain <- table(data_spain[which(data_spain$year_of_status>=2016 &
                    data_spain$year_of_incorporation<=2016),]$ICR_failure)
 prop.table(icr_spain)
 icr_portugal <- table(data_portugal[which(data_portugal$year_of_status>=2016 &
@@ -127,6 +130,7 @@ prop.table(icr_france)
 neg_va_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
                       data_italy$year_of_incorporation<=2016),]$NEG_VA)
 prop.table(neg_va_italy)
+length(which(is.na(data_italy$NEG_VA)))/nrow(data_italy)
 neg_va_spain <- table(data_spain[which(data_spain$year_of_status>=2016 &
                    data_spain$year_of_incorporation<=2016),]$NEG_VA)
 prop.table(neg_va_spain)
@@ -142,6 +146,7 @@ prop.table(neg_va_france)
 interest_diff_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
                        data_italy$year_of_incorporation<=2016),]$interest_diff)
 prop.table(interest_diff_italy)
+length(which(is.na(data_italy$interest_diff)))/nrow(data_italy)
 interest_diff_spain <- table(data_spain[which(data_spain$year_of_status>=2016 &
                    data_spain$year_of_incorporation<=2016),]$interest_diff)
 prop.table(interest_diff_spain)
@@ -157,6 +162,7 @@ prop.table(interest_diff_france)
 profitability_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
                        data_italy$year_of_incorporation<=2016),]$profitability)
 prop.table(profitability_italy)
+length(which(is.na(data_italy$profitability)))/nrow(data_italy)
 profitability_spain <- table(data_spain[which(data_spain$year_of_status>=2016 &
                    data_spain$year_of_incorporation<=2016),]$profitability)
 prop.table(profitability_spain)
@@ -223,6 +229,18 @@ missmap(indicators_missing[sample_10000,],
         main = "Missing values vs Observed",
         margins = c(8,5), x.cex = 0.8)
 ```
+
+```{r warning=FALSE}
+miss_icr <- ifelse(is.na(data_italy$ICR_failure), 1, 0)
+chisq.test(miss_icr, data_italy$failure)
+miss_neg_va <- ifelse(is.na(data_italy$NEG_VA), 1, 0)
+chisq.test(miss_neg_va, data_italy$failure)
+miss_fin_cons <- ifelse(is.na(data_italy$fin_cons), 1, 0)
+chisq.test(miss_fin_cons, data_italy$failure)
+miss_bid <- ifelse(is.na(data_italy$interest_diff), 1, 0)
+chisq.test(miss_bid, data_italy$failure)
+```
+
 
 # Machine Learning Analysis
 

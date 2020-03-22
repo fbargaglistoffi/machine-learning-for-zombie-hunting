@@ -44,7 +44,7 @@ twoord.plot(years, pdf,
             do.first="plot_bg();grid(col=\"white\",lty=1)")
 
 
-# Plot Zombie (9th-percentile)
+# Plot Zombie (9th-decile)
 
 
 pdf <- c(3.85, 3.93, 4.43, 4.47, 4.33, 3.53, 2.73)
@@ -58,7 +58,7 @@ twoord.plot(years, pdf,
             xlab = "Year",
             ylab = "PDFs rate",
             rylab = "GDP growth rate",
-            main = "Share of Persistently Distressed Firms (8th decile) and GDP growth",
+            main = "Share of Persistently Distressed Firms and GDP growth",
             do.first="plot_bg();grid(col=\"white\",lty=1)")
 
 twoord.plot(years, pdf,
@@ -72,5 +72,5 @@ twoord.plot(years, pdf,
             xlab = "Year",
             ylab = "PDFs rate",
             rylab = "Unemployment rate rate",
-            main = "Share of Persistently Distressed Firms (8th decile) and Unemployment Rate",
+            main = "Share of Persistently Distressed Firms and Unemployment Rate",
             do.first="plot_bg();grid(col=\"white\",lty=1)")
