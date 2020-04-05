@@ -41,6 +41,7 @@ library(party)
 library(finalfit)
 library(caret)
 library(Amelia)
+library(Hmisc)
 library(PresenceAbsence)
 library(devtools)
 library(SuperLearner)
@@ -230,15 +231,70 @@ missmap(indicators_missing[sample_10000,],
         margins = c(8,5), x.cex = 0.8)
 ```
 
+In the chunk below, we run a series of Pearson tests to assess the degree of dependence between the missing values of each variable and the dependent variable.
+
 ```{r warning=FALSE}
+# ICR
 miss_icr <- ifelse(is.na(data_italy$ICR_failure), 1, 0)
 chisq.test(miss_icr, data_italy$failure)
+
+# Negative AV
 miss_neg_va <- ifelse(is.na(data_italy$NEG_VA), 1, 0)
 chisq.test(miss_neg_va, data_italy$failure)
+
+# FCI
 miss_fin_cons <- ifelse(is.na(data_italy$fin_cons), 1, 0)
 chisq.test(miss_fin_cons, data_italy$failure)
+
+# BID
 miss_bid <- ifelse(is.na(data_italy$interest_diff), 1, 0)
 chisq.test(miss_bid, data_italy$failure)
+
+# Misallocation
+misallocated <- ifelse(is.na(data_italy$misallocated_fixed), 1, 0)
+chisq.test(misallocated, data_italy$failure)
+
+# TFP
+tfp <- ifelse(is.na(data_italy$tfp_acf), 1, 0)
+chisq.test(tfp, data_italy$failure)
+
+# Profitability
+prof <- ifelse(is.na(data_italy$profitability), 1, 0)
+chisq.test(prof, data_italy$failure)
+
+# Liquidity return
+LR <- ifelse(is.na(data_italy$liquidity_return), 1, 0)
+chisq.test(LR, data_italy$failure)
+
+# Solvency
+solvency <- ifelse(is.na(data_italy$solvency_ratio), 1, 0)
+chisq.test(solvency, data_italy$failure)
+
+# Capital intensity
+cap_int <- ifelse(is.na(data_italy$capital_intensity), 1, 0)
+chisq.test(cap_int, data_italy$failure)
+
+# Labour productivity
+lab_prod <- ifelse(is.na(data_italy$labour_product), 1, 0)
+chisq.test(lab_prod, data_italy$failure)
+
+# Size-Age
+size_age <- ifelse(is.na(data_italy$real_SA), 1, 0)
+chisq.test(size_age, data_italy$failure)
+
+# Financial sustainability
+fin_sust <- ifelse(is.na(data_italy$financial_sustainability), 1, 0)
+chisq.test(fin_sust, data_italy$failure)
+
+# Liquidity
+liquidity <- ifelse(is.na(data_italy$liquidity_ratio), 1, 0)
+chisq.test(liquidity, data_italy$failure)
+
+
+# Uncomment for latex table
+#latex(summary(failure ~ liquidity,
+#              data=data_italy,
+#              method="reverse" ,test=TRUE), exclude1=FALSE)
 ```
 
 
