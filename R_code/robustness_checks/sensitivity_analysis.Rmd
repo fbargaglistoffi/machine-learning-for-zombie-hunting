@@ -64,7 +64,7 @@ The stability of predictions is checked with respect to the unit level predicted
 
 \par The "robustness" of the predictions is tested with respect to the inclusion of new predictors uncorrelated with varying correlations with the outcome.
 
-\par In particular, this check is performed by generating a new predictor, a "confounder" $R_i$, orthogonal to the set of predictors $\mathbf{X}$ and with a correlation with the outcome that varies between 0.1 and 0.4, and checking how the inclusion of this additional predictor affects on the original model.
+\par In particular, this check is performed by generating a new predictor, a "confounder" $R_i$, orthogonal to the set of predictors $\mathbf{X}$ and with a correlation with the outcome of 0.2 (higher correlation than the one of the best predictor), and checking how the inclusion of this additional predictor affects on the original model.
 The new model is the following:
 \begin{equation}
  f_(x,r) = \hat{Y}(X_i=x, R_i=r).
@@ -129,6 +129,10 @@ train_bart$X <- as.data.frame(train_bart[predictors])
 test_bart$X <- as.data.frame(test_bart[predictors])
 y_train <- train_bart$failure
 ```
+
+# Orthogonal Syntehtic Predictor
+
+In the following, we generate a synthetic predictor that is highly correlated with the outcome but is orthogonal to the predictors used in the model.
 
 The standard deviation for the failure probabilities is computed as in Hanson and Schuermann (2006).
 
@@ -211,7 +215,7 @@ require(bayestestR)
     
 ``` 
 
-# Standardized Difference in Means
+## Standardized Difference in Means
 
 Moreover, the standardized difference in the means between $\hat{p}(Y_i =1 |X_i = x)$ and $\hat{p}(Y_i = 1|X_i = x, R_i = r)$ is not significant in all the cases.
 
@@ -264,3 +268,141 @@ legend("right",
        cex = 1)
 ```
 
+# Not-Orthogonal Syntehtic Predictor
+
+In the following, we generate a synthetic predictor that is highly correlated with the outcome, is correlated with the best predictor (control) and is orthogonal to all the other predictors used in the model.
+
+The standard deviation for the failure probabilities is computed as in Hanson and Schuermann (2006).
+
+```{r include=FALSE}
+require(bayestestR)
+# Run BART model (Original Model)
+  bart <- wbart(x.train=train_bart$X,
+                      y.train=y_train,
+                      x.test=test_bart$X,
+                      nskip=500,
+                      ndpost=1000)
+  
+    # Get Draws from the Posterior Distribution
+    ppd <- t(apply(bart$yhat.train,
+                 1, function(x) rnorm(n = length(x),
+                                      mean=x,sd=bart$sigma)))
+    ppd_mean <- apply(ppd,2,mean)
+    ppd_sd <- sqrt(abs((ppd_mean)*(1-ppd_mean)))
+    
+    # Get Credibility intervals for Each Unit Level PPD
+    conf.int <- as.data.frame(matrix(NA, ncol = 2, nrow = ncol(ppd)))
+    for (k in (1:ncol(ppd))){
+      conf.int[k, 1:2] <- as.data.frame(ci(ppd[,k], method = "HDI", ci = 0.90))[2:3]
+    }
+    names(conf.int) <- c("low", "high")
+
+    # Build a Correlated New Predictor
+    # Generate x1, make sure y is first column, and X is the last
+    xy <- cbind(y_train, x1 = rnorm(length(y_train)), data.matrix(train_bart$X))
+    
+    # Center and scale
+    mns <- apply(xy, 2, mean)
+    sds <- apply(xy, 2, sd)
+    
+    xy2 <- sweep(xy, 2, mns, FUN="-")
+    xy2 <- sweep(xy2, 2, sds, FUN="/")
+    
+    # Find existing correlations
+    v.obs <- cor(xy2)
+    
+    # Remove correlation
+    xy3 <- xy2 %*% solve(chol(v.obs))
+    
+    # New correlation
+    r <- v.obs
+    r[2,] <- r[,2] <- 0
+    r[1,2] <- r[2,1] <- 0.2 # correlation of best predictors (i.e., control, ICR)
+    r[2,3] <- r[3,2] <- 0.5
+    diag(r) <- 1
+    
+    # Use Cholesky decomposition to generate the new matrix
+    xy4 <- xy3 %*% chol(r)
+    
+    # Undo center and scale
+    xy4 <- sweep(xy4, 2, sds, FUN="*")
+    xy4 <- sweep(xy4, 2, mns, FUN="+")
+    
+    # Extract x
+    x <- as.vector(xy4[,2])
+    
+    # Run BART model with New Predictor (Synthetic model)
+    x_train_new <- cbind(train_bart$X, x)
+    x_test_new <- cbind(test_bart$X, rep(0, nrow(test_bart$X)))
+    new_bart <- wbart(x.train=x_train_new,
+                            y.train=y_train,
+                            x.test=x_test_new,
+                            nskip=500,
+                            ndpost=1000)
+    
+    # Get Draws from the Posterior Distribution
+    
+    # For Training Sample
+    new_ppd <- t(apply(new_bart$yhat.train,
+                       1, function(x) rnorm(n=length(x),
+                                            mean = x, sd = new_bart$sigma)))
+    new_ppd_mean <- apply(new_ppd,2,mean)
+    new_ppd_sd <- sqrt(abs((new_ppd_mean)*(1-new_ppd_mean)))
+    
+    length(which(new_ppd_mean >= conf.int[1] | new_ppd_mean <= conf.int[2]))/nrow(train_bart)
+    
+    
+``` 
+
+## Standardized Difference in Means
+
+Moreover, the standardized difference in the means between $\hat{p}(Y_i =1 |X_i = x)$ and $\hat{p}(Y_i = 1|X_i = x, R_i = r)$ is not significant in all the cases.
+
+Standardized differences in mean and their standard deviations from Cohen (1988, p.44).
+
+```{r}
+# Standardized difference in means
+diff.means <- ppd_mean - new_ppd_mean
+standard.diff.means <-  (diff.means)/sqrt((ppd_sd^2 + new_ppd_sd^2)/2)
+
+# 99% CI (t-student distribution)
+x0 <- standard.diff.means - 2.58 * 
+  sqrt((ppd_sd^2 + new_ppd_sd^2)/2)
+x1 <-standard.diff.means  + 2.58 * 
+  sqrt((ppd_sd^2 + new_ppd_sd^2)/2)
+```
+
+This can be seen from the plot of the Standardized difference in means for the probabilities predicted by the two models.
+
+
+```{r echo = FALSE}
+set.seed(2020)
+sample <- sample(length(standard.diff.means), size= 50, replace=FALSE)
+par(mfrow=c(1,1))
+par(mar=c(2,5,2,5), xpd=FALSE)
+plot(standard.diff.means[sample], 1:50, col="blue", xlab=NA, ylab=NA, yaxt="n",
+     arrows(y0 = c(1:50), 
+            x0 = x0[sample], 
+            x1 = x1[sample], 
+            col = 'blue',
+            code=3,
+            length=0,
+            lwd=2),
+    xlim=c(min(c(x0[sample]))-1,
+            max(c(x1[sample]))+1
+     ),
+     pch=15,
+     main="Standardized difference in means for Predicted Probabilities")
+
+
+axis(2, at=1:50, las=1)
+abline(h=1:50, lty="dotted")
+abline(v=0, lwd=2)
+par(xpd=TRUE)
+legend("right",
+       inset = c(0,0),
+       legend = c("SDM"),
+       pch = 15,
+       col = c("blue"),
+       cex = 1)
+```
