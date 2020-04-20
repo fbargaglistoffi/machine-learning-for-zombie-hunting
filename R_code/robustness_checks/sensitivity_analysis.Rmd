@@ -139,6 +139,7 @@ The standard deviation for the failure probabilities is computed as in Hanson an
 ```{r include=FALSE}
 require(bayestestR)
 # Run BART model (Original Model)
+  set.seed(2020)
   bart <- wbart(x.train=train_bart$X,
                       y.train=y_train,
                       x.test=test_bart$X,
@@ -158,7 +159,9 @@ require(bayestestR)
       conf.int[k, 1:2] <- as.data.frame(ci(ppd[,k], method = "HDI", ci = 0.90))[2:3]
     }
     names(conf.int) <- c("low", "high")
+```
 
+```{r include=FALSE}
     # Build a Correlated New Predictor
     # Generate x1, make sure y is first column, and X is the last
     xy <- cbind(y_train, x1 = rnorm(length(y_train)), data.matrix(train_bart$X))
@@ -172,16 +175,19 @@ require(bayestestR)
     
     # Find existing correlations
     v.obs <- cor(xy2)
-    
     # Remove correlation
     xy3 <- xy2 %*% solve(chol(v.obs))
-    
+```
+
+```{r include=FALSE}
     # New correlation
     r <- v.obs
     r[2,] <- r[,2] <- 0
     r[1,2] <- r[2,1] <- 0.2 # correlation of best predictors (i.e., ICR)
     diag(r) <- 1
-    
+```
+
+```{r include=FALSE}
     # Use Cholesky decomposition to generate the new matrix
     xy4 <- xy3 %*% chol(r)
     
@@ -193,6 +199,7 @@ require(bayestestR)
     x <- as.vector(xy4[,2])
     
     # Run BART model with New Predictor (Synthetic model)
+    set.seed(2020)
     x_train_new <- cbind(train_bart$X, x)
     x_test_new <- cbind(test_bart$X, rep(0, nrow(test_bart$X)))
     new_bart <- wbart(x.train=x_train_new,
@@ -210,9 +217,7 @@ require(bayestestR)
     new_ppd_mean <- apply(new_ppd,2,mean)
     new_ppd_sd <- sqrt(abs((new_ppd_mean)*(1-new_ppd_mean)))
     
-    length(which(new_ppd_mean >= conf.int[1] | new_ppd_mean <= conf.int[2]))/nrow(train_bart)
-    
-    
+    length(which(new_ppd_mean >= conf.int$high | new_ppd_mean <= conf.int$low))/nrow(train_bart)
 ``` 
 
 ## Standardized Difference in Means
@@ -274,29 +279,8 @@ In the following, we generate a synthetic predictor that is highly correlated wi
 
 The standard deviation for the failure probabilities is computed as in Hanson and Schuermann (2006).
 
-```{r include=FALSE}
-require(bayestestR)
-# Run BART model (Original Model)
-  bart <- wbart(x.train=train_bart$X,
-                      y.train=y_train,
-                      x.test=test_bart$X,
-                      nskip=500,
-                      ndpost=1000)
-  
-    # Get Draws from the Posterior Distribution
-    ppd <- t(apply(bart$yhat.train,
-                 1, function(x) rnorm(n = length(x),
-                                      mean=x,sd=bart$sigma)))
-    ppd_mean <- apply(ppd,2,mean)
-    ppd_sd <- sqrt(abs((ppd_mean)*(1-ppd_mean)))
-    
-    # Get Credibility intervals for Each Unit Level PPD
-    conf.int <- as.data.frame(matrix(NA, ncol = 2, nrow = ncol(ppd)))
-    for (k in (1:ncol(ppd))){
-      conf.int[k, 1:2] <- as.data.frame(ci(ppd[,k], method = "HDI", ci = 0.90))[2:3]
-    }
-    names(conf.int) <- c("low", "high")
 
+```{r include=FALSE}
     # Build a Correlated New Predictor
     # Generate x1, make sure y is first column, and X is the last
     xy <- cbind(y_train, x1 = rnorm(length(y_train)), data.matrix(train_bart$X))
@@ -310,7 +294,9 @@ require(bayestestR)
     
     # Find existing correlations
     v.obs <- cor(xy2)
-    
+```
+
+```{r include=FALSE}
     # Remove correlation
     xy3 <- xy2 %*% solve(chol(v.obs))
     
@@ -318,9 +304,11 @@ require(bayestestR)
     r <- v.obs
     r[2,] <- r[,2] <- 0
     r[1,2] <- r[2,1] <- 0.2 # correlation of best predictors (i.e., control, ICR)
-    r[2,3] <- r[3,2] <- 0.5
+    r[2,3] <- r[3,2] <- 0.3
     diag(r) <- 1
-    
+```
+
+```{r include=FALSE}
     # Use Cholesky decomposition to generate the new matrix
     xy4 <- xy3 %*% chol(r)
     
@@ -332,6 +320,7 @@ require(bayestestR)
     x <- as.vector(xy4[,2])
     
     # Run BART model with New Predictor (Synthetic model)
+    set.seed(2020)
     x_train_new <- cbind(train_bart$X, x)
     x_test_new <- cbind(test_bart$X, rep(0, nrow(test_bart$X)))
     new_bart <- wbart(x.train=x_train_new,
@@ -349,9 +338,7 @@ require(bayestestR)
     new_ppd_mean <- apply(new_ppd,2,mean)
     new_ppd_sd <- sqrt(abs((new_ppd_mean)*(1-new_ppd_mean)))
     
-    length(which(new_ppd_mean >= conf.int[1] | new_ppd_mean <= conf.int[2]))/nrow(train_bart)
-    
-    
+    length(which(new_ppd_mean >= conf.int$high | new_ppd_mean <= conf.int$low))/nrow(train_bart)
 ``` 
 
 ## Standardized Difference in Means
@@ -380,11 +367,11 @@ set.seed(2020)
 sample <- sample(length(standard.diff.means), size= 50, replace=FALSE)
 par(mfrow=c(1,1))
 par(mar=c(2,5,2,5), xpd=FALSE)
-plot(standard.diff.means[sample], 1:50, col="blue", xlab=NA, ylab=NA, yaxt="n",
+plot(standard.diff.means[sample], 1:50, col="forestgreen", xlab=NA, ylab=NA, yaxt="n",
      arrows(y0 = c(1:50), 
             x0 = x0[sample], 
             x1 = x1[sample], 
-            col = 'blue',
+            col = 'forestgreen',
             code=3,
             length=0,
             lwd=2),
@@ -403,6 +390,6 @@ legend("right",
        inset = c(0,0),
        legend = c("SDM"),
        pch = 15,
-       col = c("blue"),
+       col = c("forestgreen"),
        cex = 1)
 ```
