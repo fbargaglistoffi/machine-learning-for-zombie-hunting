@@ -1,5 +1,9 @@
 ********************************************************************************
-*Zombie prediction with LASSO
+*                                                                              *
+*     Logit-Lasso Analyses for "Machine Learning for Zombie Hunting" paper     *
+*                                                                              *
+********************************************************************************
+
 clear all 
 cd "G:\Il mio Drive\Research\Italian Firms\Zombie Hunting New Data"  
 

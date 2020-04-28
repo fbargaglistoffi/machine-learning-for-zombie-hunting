@@ -1,4 +1,9 @@
-* Zombie Descriptives 
+********************************************************************************
+*                                                                              *
+*Descriptives Zombie Indicator for "Machine Learning for Zombie Hunting" paper *
+*                                                                              *
+********************************************************************************
+
 clear all 
 cd "G:\Il mio Drive\Research\Italian Firms\Zombie Hunting New Data"
 
@@ -82,3 +87,44 @@ su sum_employees_l /* 9.7373494 per firm */
 
 egen sum_employees_no = sum(employees_2011) if zombie_2011=="No Zombie"
 su sum_employees_no /* 16.913281 per firm */
+
+********************************************************************************
+* Code for Results in Figure 4
+
+* 2011
+tab dummy_hrz_2011
+count if dummy_hrz_2011==1 & (failure_2012==1 | failure_2013==1 | failure_2014==1 | failure_2015==1 | failure_2016==1 | failure_2017==1)
+count if dummy_hrz_2011==1 & (dummy_hrz_2012==1 | dummy_hrz_2013==1 | dummy_hrz_2014==1 | dummy_hrz_2015==1 | dummy_hrz_2016==1 | dummy_hrz_2017==1) & (failure_2012!=1 & failure_2013!=1 & failure_2014!=1 & failure_2015!=1 & failure_2016!=1 & failure_2017!=1)
+count if dummy_hrz_2011==1 & (cat_2012!=0 | cat_2013!=0 | cat_2014!=0 | cat_2015!=0 | cat_2016!=0 | cat_2017!=0) & (failure_2012!=1 & failure_2013!=1 & failure_2014!=1 & failure_2015!=1 & failure_2016!=1 & failure_2017!=1) & (dummy_hrz_2012!=1 & dummy_hrz_2013!=1 & dummy_hrz_2014!=1 & dummy_hrz_2015!=1 & dummy_hrz_2016!=1 & dummy_hrz_2017!=1)
+
+* 2012
+tab dummy_hrz_2012
+count if dummy_hrz_2012==1 & (failure_2013==1 | failure_2014==1 | failure_2015==1 | failure_2016==1 | failure_2017==1)
+count if dummy_hrz_2012==1 & (dummy_hrz_2013==1 | dummy_hrz_2014==1 | dummy_hrz_2015==1 | dummy_hrz_2016==1 | dummy_hrz_2017==1) & (failure_2013!=1 & failure_2014!=1 & failure_2015!=1 & failure_2016!=1 & failure_2017!=1)
+count if dummy_hrz_2012==1 & (cat_2013!=0 | cat_2014!=0 | cat_2015!=0 | cat_2016!=0 | cat_2017!=0) & (failure_2013!=1 & failure_2014!=1 & failure_2015!=1 & failure_2016!=1 & failure_2017!=1) & (dummy_hrz_2013!=1 & dummy_hrz_2014!=1 & dummy_hrz_2015!=1 & dummy_hrz_2016!=1 & dummy_hrz_2017!=1)
+
+* 2013 
+tab dummy_hrz_2013
+count if dummy_hrz_2013==1 & (failure_2014==1 | failure_2015==1 | failure_2016==1 | failure_2017==1)
+count if dummy_hrz_2013==1 & (dummy_hrz_2014==1 | dummy_hrz_2015==1 | dummy_hrz_2016==1 | dummy_hrz_2017==1) & (failure_2014!=1 & failure_2015!=1 & failure_2016!=1 & failure_2017!=1)
+count if dummy_hrz_2013==1 & (cat_2014!=0 | cat_2015!=0 | cat_2016!=0 | cat_2017!=0) & (failure_2014!=1 & failure_2015!=1 & failure_2016!=1 & failure_2017!=1) & (dummy_hrz_2014!=1 & dummy_hrz_2015!=1 & dummy_hrz_2016!=1 & dummy_hrz_2017!=1)
+
+* 2014
+tab dummy_hrz_2014
+count if dummy_hrz_2014==1 & (failure_2015==1 | failure_2016==1 | failure_2017==1)
+count if dummy_hrz_2014==1 & (dummy_hrz_2015==1 | dummy_hrz_2016==1 | dummy_hrz_2017==1) & (failure_2015!=1 & failure_2016!=1 & failure_2017!=1)
+count if dummy_hrz_2014==1 & (cat_2015!=0 | cat_2016!=0 | cat_2017!=0) & (failure_2015!=1 & failure_2016!=1 & failure_2017!=1) & (dummy_hrz_2015!=1 & dummy_hrz_2016!=1 & dummy_hrz_2017!=1)
+
+* 2015
+tab dummy_hrz_2015
+count if dummy_hrz_2015==1 & (failure_2016==1 | failure_2017==1)
+count if dummy_hrz_2015==1 & (dummy_hrz_2016==1 | dummy_hrz_2017==1) & (failure_2016!=1 & failure_2017!=1)
+count if dummy_hrz_2015==1 & (cat_2016!=0 | cat_2017!=0) & (failure_2016!=1 & failure_2017!=1) & (dummy_hrz_2016!=1 & dummy_hrz_2017!=1)
+
+* 2016
+tab dummy_hrz_2016
+count if dummy_hrz_2016==1 & (failure_2017==1)
+count if dummy_hrz_2016==1 & (dummy_hrz_2017==1) & (failure_2017!=1)
+count if dummy_hrz_2016==1 & (cat_2017!=0) & (failure_2017!=1) & (dummy_hrz_2017!=1)
+
+
