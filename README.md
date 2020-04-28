@@ -65,7 +65,7 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 * <tt>`Z_score`</tt>: Altman Z-score by [Altman, 2000](http://pages.stern.nyu.edu/~ealtman/Zscores.pdf);
 * <tt>`misallocated`</tt>: misallocated capital indicator by [Schivardi et al, 2017](https://www.bis.org/publ/work669.pdf);
 * <tt>`profitability`</tt>: profitability indicator by [Schivardi et al, 2017](https://www.bis.org/publ/work669.pdf);
-* <tt>`area`</tt>: area of Italy (north, center, south, island);
+* <tt>`area`</tt>: area of Italy (North, Center, South, Islands);
 * <tt>`dummy_patents`</tt>: dummy variable assuming value 1 if the enterprise issued at leas one patent and 0 otherwise;
 * <tt>`dummy_trademark`</tt>: dummy variable assuming value 1 if the enterprise issued at leas one trademark and 0 otherwise;
 * <tt>`financial_sustainability`</tt>: ratio of financial expenses over revenues;
