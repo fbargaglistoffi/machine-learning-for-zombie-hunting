@@ -1,9 +1,16 @@
+######################################################################################
+##                                                                                  ##
+##        Code for Plots for the "Machine Learning for Zombie Hunting" paper        ##
+##                           Falco J. Bargagli-Stoffi                               ##
+##                                                                                  ##
+##                                                                                  ##
+######################################################################################
+
 # Bar plot for zombies over years
 rm(list=ls())
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-
 
 
 # Create the input vectors.
