@@ -75,7 +75,7 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 
 # Stata Code
 
-The <tt>`Stata`</tt> code files can be found </b>[<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are devided in three folders:
+The <tt>`Stata`</tt> code files can be found </b>[<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are devided in four folders:
 * <tt>`generating_and_merging_data`</tt>;
 * <tt>`creating_indicators_and_cleaning_data`</tt>;
 * <tt>`descriptives`</tt>;
@@ -100,26 +100,40 @@ N.B.1 The lagged variables were created to run a series of machine learning mode
 N.B.2 The data cleaning is performed in multiple do files and not just in one specific file.
 
 Within the <tt>`descriptives`</tt> folder you can find the following files:
-* <tt>`zombie_descriptives`</tt>: code to create general descriptive statistics (the results are used for Figures 3 and 4).
+* <tt>`zombie_descriptives`</tt>: code to create general descriptive statistics (the results are used for Figures 4 and 5).
 
 Within the <tt>`lasso_analyses`</tt> folder you can find the following files:
 * <tt>`logitlasso_analyses_9th_decile`</tt>: code to run logitlasso on zombie firms above the 9th decile of failure probability(the results are used for Table 5);
-* <tt>`logitlasso_analyses_8th_decile`</tt>: code to run logitlasso on zombie firms above the 9th decile of failure probability(the results are used for robustness checks).
+* <tt>`logitlasso_analyses_8th_decile`</tt>: code to run logitlasso on zombie firms above the 8th decile of failure probability(the results are used for robustness checks).
 
 # R code
 
-The <tt>`R`</tt> code files can be found </b> [<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/R_code">here</a>]. The files are devided in four folders:
+The <tt>`R`</tt> code files can be found </b> [<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/R_code">here</a>]. The files are devided in five folders:
+* <tt>`functions`</tt>;
 * <tt>`lagged_analysis`</tt>;
-* <tt>`year_by_year_analysis`</tt>;
-* <tt>`robustness_checks`</tt>.
+* <tt>`plots`</tt>;
+* <tt>`robustness_checks`</tt>;
+* <tt>`year_by_year_analyses`</tt>.
+
+Within the <tt>`functions`</tt> folder you can find the following files:
+* <tt>`function.R`</tt>: R code for the main function used in the analyses (Distance-to-Default, F1-Score, Balanced Accuracy, Models Conparisons);
 
 Within the <tt>`lagged_analysis`</tt> folder you can find the following files:
-* <tt>`lagged_analyses.R`</tt>: R code to reproduce the lagged machine learning analyses;
-* <tt>`functions.R`</tt>: R functions built to perform the <tt>`lagged_analyses.R`</tt>;
-* <tt>`lagged_analyses.pdf`</tt> pdf generated using *R markdown* with the commented code and the results from <tt>`lagged_analyses.R`</tt>.
+* <tt>`lagged_analyses.Rmd`</tt>: <tt>`R markdown`</tt> code to reproduce the lagged machine learning analyses (Tables 1, 3, 4, A2; Figures 3, A1);
 
-Within the <tt>`year_by_year_analysis`</tt> folder you can find the following files:
-* <tt>`year_by_year.R`</tt>: R code to reproduce the yearly machine learning analysis for Italy, Spain, Portugal and France.
+Within the <tt>`plots`</tt> folder you can find the following files:
+* <tt>`figure_4.r`</tt>: R code to reproduce Figure 4; 
+* <tt>`figure_5.r`</tt>: R code to reproduce Figure 5.
+
+Within the <tt>`robustness_checks`</tt> folder you can find the following subfolders:
+* <tt>`lagged_analysis_with_imputation`</tt>: containing the R code to reproduce the lagged analysis imputing the predictors' missing values;
+* <tt>`sensitivity_analysis`</tt>: containing the <tt>`R markdown`</tt> code to reproduce the sensitivity analysis and Figure A2.
+
+Within the <tt>`year_by_year_analyses`</tt> folder you can find the following files:
+* <tt>`year_by_year.R`</tt>: R code to reproduce the yearly machine learning analysis;
+* <tt>`generate_categories.R`</tt>: R code to generate the failure categories used for the zombie analyses.
+
+
 
 
 
