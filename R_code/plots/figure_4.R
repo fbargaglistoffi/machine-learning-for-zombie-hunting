@@ -6,35 +6,71 @@
 ##                                                                                  ##
 ######################################################################################
 
-# Bar plot for zombies over years
-rm(list=ls())
-library(ggplot2)
-library(dplyr)
-library(tidyr)
+library(plotrix)
+
+# Plot Zombie (8th-percentile)
+
+pdf <- c(11.44, 11.31, 12.28, 12.26, 11.70, 10.51, 8.94)
+gdp_growth <- c(0.707, -2.981, -1.841, -0.005, 0.778, 1.280, 1.716) # Data from World Bank (https://data.worldbank.org/indicator/NY.GDP.MKTP.KD.ZG?end=2018&locations=IT&start=2011)
+unemployment <- c(8.4, 10.7, 12.1, 12.7, 11.9, 11.7, 11.2) # Data from Statista (https://www.statista.com/statistics/531010/unemployment-rate-italy/)
+years <- c(seq(2011,2017,1))
 
 
-# Create the input vectors.
-colors = c("red","brown","grey", "gray88")
-years <- c("2011","2012","2013","2014","2015", "2016")
-status <- c("Failed","Zombie","Distressed", "Not distressed")
+twoord.plot(years, pdf,
+            years, gdp_growth,
+            type= c("l", "l"),
+            lwd = 3,
+            xaxt = 'n', yaxt = 'n',
+            lylim=range(pdf)+c(-0.5,0.5),rylim=range(gdp_growth)+c(-0.5,0.5),
+            lcol=4,
+            xlab = "Year",
+            ylab = "PDFs rate",
+            rylab = "GDP growth rate",
+            main = "Share of Persistently Distressed Firms and GDP growth",
+            do.first="plot_bg();grid(col=\"white\",lty=1)")
 
-# Create the matrix of the values.
-Values <- matrix(c(2927,3209,3639,3718,3336,2056,
-                   3368,3675,4133,3766,3932,4029,
-                   977,923,1007,1340, 1251, 794,
-                   6, 3, 3, 3, 2, 0),
-                 nrow = 4, ncol = 6, byrow = TRUE)
-
-# Plot layout
-layout(matrix(c(1,2), ncol=1, nrow=2, byrow=TRUE), heights=c(2.5, 1))
-
-# Create the bar chart
-par(mar=c(5.1, 4.1, 4.1, 5.1), xpd=TRUE)
-barplot(prop.table(Values,2), names.arg = years, xlab = "Year", ylab = "% share", col = colors)
-
-# Add the legend to the chart
-par(mai=c(0,0,0,0))
-plot.new()
-legend("center", status, cex = 1.3, fill = colors)
+twoord.plot(years, pdf,
+            years, unemployment,
+            type= c("l", "l"),
+            lwd = 3, 
+            xaxt = 'n', yaxt = 'n',
+            lylim=range(pdf)+c(-0.5,0.5),rylim=range(unemployment)+c(-0.5,0.5),
+            lcol = 4,
+            rcol="coral4",
+            xlab = "Year",
+            ylab = "PDFs rate",
+            rylab = "Unemployment rate rate",
+            main = "Share of Persistently Distressed Firms and Unemployment Rate",
+            do.first="plot_bg();grid(col=\"white\",lty=1)")
 
 
+# Plot Zombie (9th-decile)
+
+
+pdf <- c(3.85, 3.93, 4.43, 4.47, 4.33, 3.53, 2.73)
+twoord.plot(years, pdf,
+            years, gdp_growth,
+            type= c("l", "l"),
+            lwd = 3,
+            xaxt = 'n', yaxt = 'n',
+            lylim=range(pdf)+c(-0.5,0.5),rylim=range(gdp_growth)+c(-0.5,0.5),
+            lcol=4,
+            xlab = "Year",
+            ylab = "PDFs rate",
+            rylab = "GDP growth rate",
+            main = "Share of Persistently Distressed Firms and GDP growth",
+            do.first="plot_bg();grid(col=\"white\",lty=1)")
+
+twoord.plot(years, pdf,
+            years, unemployment,
+            type= c("l", "l"),
+            lwd = 3, 
+            xaxt = 'n', yaxt = 'n',
+            lylim=range(pdf)+c(-0.5,0.5),rylim=range(unemployment)+c(-0.5,0.5),
+            lcol = 4,
+            rcol="coral4",
+            xlab = "Year",
+            ylab = "PDFs rate",
+            rylab = "Unemployment rate rate",
+            main = "Share of Persistently Distressed Firms and Unemployment Rate",
+            do.first="plot_bg();grid(col=\"white\",lty=1)")
