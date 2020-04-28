@@ -1,13 +1,13 @@
-# Code for the paper "Machine learning for zombie hunting"
+# Code for the paper "Machine Learning for Zombie Hunting"
 
-In this repository we provide the code for the data analysis part of the paper _"Machine learning for zombie hunting. Firms' failures, financial constraints, and misallocation"_ by F.J. Bargagli-Stoffi, M. Riccaboni and A. Rungi. <br />
-The code is written both in <tt>`Stata`</tt> and <tt>`R`</tt>. The data cleaning and the creation of the indicators were performed in <tt>`Stata`</tt>. <tt>`R`</tt> was used for the machine learning analysis.
+In this repository we provide the code for the data analysis part of the paper [_"Machine learning for Zombie Hunting. Firms' Failures and Financial Constraints"_](https://drive.google.com/drive/u/1/folders/1Ujc51bX9Do27huOL__s_cd5l6NIP7_IL) by F.J. Bargagli-Stoffi, M. Riccaboni and A. Rungi. <br />
+The code is written both in <tt>`Stata`</tt> and <tt>`R`</tt>. The data cleaning, the creation of the indicators, and the logit-lasso analyses were performed in <tt>`Stata`</tt>. <tt>`R`</tt> was used for the machine learning analyses.
 
 Below a brief legend of the Data and the <tt>`Stata`</tt> and <tt>`R`</tt> code files. 
 
 # Data
 
-First, we downloaded data on firm level characteristics and financial accounts for 803,227 enterprises in Italy, Germany, Spain, France, Great Britain, Poland, Portugal, Romania and Sweden from the ORBIS database (Bureau Van Dijk). The status data (e.g., active firms, bankrupted firms, etc.) are available for the years 2008 - 2018, while financial account data are available for the year 2008-2016.
+First, we downloaded data on firm level characteristics and financial accounts for 304,906 enterprises in Italy from the ORBIS database (Bureau Van Dijk). The status data (e.g., active firms, bankrupted firms, etc.) are available for the years 2008 - 2018 (first four months), while financial account data are available for the year 2008-2016.
 The variables that we downloaded are the following: 
 
 * <tt>`id`</tt>: firm's id;
@@ -65,7 +65,7 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 * <tt>`Z_score`</tt>: Altman Z-score by [Altman, 2000](http://pages.stern.nyu.edu/~ealtman/Zscores.pdf);
 * <tt>`misallocated`</tt>: misallocated capital indicator by [Schivardi et al, 2017](https://www.bis.org/publ/work669.pdf);
 * <tt>`profitability`</tt>: profitability indicator by [Schivardi et al, 2017](https://www.bis.org/publ/work669.pdf);
-* <tt>`area`</tt>: area of Italy (north, center, south, island);
+* <tt>`area`</tt>: area of Italy (North, Center, South, Islands);
 * <tt>`dummy_patents`</tt>: dummy variable assuming value 1 if the enterprise issued at leas one patent and 0 otherwise;
 * <tt>`dummy_trademark`</tt>: dummy variable assuming value 1 if the enterprise issued at leas one trademark and 0 otherwise;
 * <tt>`financial_sustainability`</tt>: ratio of financial expenses over revenues;
@@ -75,10 +75,11 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 
 # Stata Code
 
-The <tt>`Stata`</tt> code files can be found </b> [<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are devided in three folders:
+The <tt>`Stata`</tt> code files can be found </b>[<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are devided in three folders:
 * <tt>`generating_and_merging_data`</tt>;
 * <tt>`creating_indicators_and_cleaning_data`</tt>;
-* <tt>`descriptives`</tt>.
+* <tt>`descriptives`</tt>;
+* <tt>`lasso_analyses`</tt>
 The files in the the first two folder can be run following their numbering to create the dataset used for the ML analysis.
 
 Within the <tt>`generating_and_merging_data`</tt> folder you can find the following files:
@@ -88,7 +89,7 @@ Within the <tt>`generating_and_merging_data`</tt> folder you can find the follow
 * <tt>`01_appending_data`</tt>: code to append the data;
 * <tt>`02_variables_renaming`</tt>: code to rename variable. <br />
 As the data come in 201 different <tt>`.dta`</tt> files, the first two code files are used to correct the corrupted data files and append them to get the initial dataset.  <br />
-N.B.1 The <tt>`02_variables_renaming`</tt> file is used also to exclude countries that have scarce representativity (i.e., Great Britain, Poland, Germany, Romania, Sweden) and duplicate observations.  <br />
+N.B.1 The <tt>`02_variables_renaming`</tt> file is used also to exclude not Italian firms and duplicate observations.  <br />
 N.B.2 The output of the <tt>`generating_and_merging_data`</tt> files is the <tt>`analysis_data.dta`</tt> file.
 
 Within the <tt>`creating_indicators_and_cleaning_data`</tt> folder you can find the following files:
@@ -99,10 +100,11 @@ N.B.1 The lagged variables were created to run a series of machine learning mode
 N.B.2 The data cleaning is performed in multiple do files and not just in one specific file.
 
 Within the <tt>`descriptives`</tt> folder you can find the following files:
-* <tt>`descriptives`</tt>: code to create general descriptive statistics (later I will add more detailed references to the papers tables);
-* <tt>`eurostat_vs_orbis`</tt>: code to compare orbis data with Eurostat;
-* <tt>`eurostat_vs_orbis_MSE`</tt>: code to compare orbis data with Eurostat with the proposed MSE methodology;
-* <tt>`zombies_descriptives`</tt>: code to create general descriptive statistics for the zombie firms (after the ML analysis).
+* <tt>`zombie_descriptives`</tt>: code to create general descriptive statistics (the results are used for Figures 3 and 4).
+
+Within the <tt>`lasso_analyses`</tt> folder you can find the following files:
+* <tt>`logitlasso_analyses_9th_decile`</tt>: code to run logitlasso on zombie firms above the 9th decile of failure probability(the results are used for Table 5);
+* <tt>`logitlasso_analyses_8th_decile`</tt>: code to run logitlasso on zombie firms above the 9th decile of failure probability(the results are used for robustness checks).
 
 # R code
 
