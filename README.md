@@ -78,7 +78,8 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 The <tt>`Stata`</tt> code files can be found </b>[<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are devided in three folders:
 * <tt>`generating_and_merging_data`</tt>;
 * <tt>`creating_indicators_and_cleaning_data`</tt>;
-* <tt>`descriptives`</tt>.
+* <tt>`descriptives`</tt>;
+* <tt>`lasso_analyses`</tt>
 The files in the the first two folder can be run following their numbering to create the dataset used for the ML analysis.
 
 Within the <tt>`generating_and_merging_data`</tt> folder you can find the following files:
@@ -99,10 +100,11 @@ N.B.1 The lagged variables were created to run a series of machine learning mode
 N.B.2 The data cleaning is performed in multiple do files and not just in one specific file.
 
 Within the <tt>`descriptives`</tt> folder you can find the following files:
-* <tt>`descriptives`</tt>: code to create general descriptive statistics (later I will add more detailed references to the papers tables);
-* <tt>`eurostat_vs_orbis`</tt>: code to compare orbis data with Eurostat;
-* <tt>`eurostat_vs_orbis_MSE`</tt>: code to compare orbis data with Eurostat with the proposed MSE methodology;
-* <tt>`zombies_descriptives`</tt>: code to create general descriptive statistics for the zombie firms (after the ML analysis).
+* <tt>`zombie_descriptives`</tt>: code to create general descriptive statistics (the results are used for Figures 3 and 4).
+
+Within the <tt>`lasso_analyses`</tt> folder you can find the following files:
+* <tt>`logitlasso_analyses_9th_decile`</tt>: code to run logitlasso on zombie firms above the 9th decile of failure probability(the results are used for Table 5);
+* <tt>`logitlasso_analyses_8th_decile`</tt>: code to run logitlasso on zombie firms above the 9th decile of failure probability(the results are used for robustness checks).
 
 # R code
 
