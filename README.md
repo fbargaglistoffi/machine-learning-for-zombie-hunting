@@ -75,7 +75,7 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 
 # Stata Code
 
-The <tt>`Stata`</tt> code files can be found </b> [<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are devided in three folders:
+The <tt>`Stata`</tt> code files can be found </b>[<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are devided in three folders:
 * <tt>`generating_and_merging_data`</tt>;
 * <tt>`creating_indicators_and_cleaning_data`</tt>;
 * <tt>`descriptives`</tt>.
