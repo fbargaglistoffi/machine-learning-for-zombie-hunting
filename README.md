@@ -51,7 +51,7 @@ The variables that we downloaded are the following:
 * <tt>`payables`</tt>: tax and pension payables in Euro (2009-2016).
 
 After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> folder we add the following additional indicators to the dataset:
-* <tt>`tfp_acf`</tt>: total factor productivity computed as in [Ackerberg, Caves and Frazer, 2006](https://mpra.ub.uni-muenchen.de/38349/)
+* <tt>`tfp_acf`</tt>: total factor productivity computed as in [Ackerberg, Caves and Frazer, 2006](https://mpra.ub.uni-muenchen.de/38349/);
 * <tt>`consdummy`</tt>: dummy variable assuming value 1 if the financial account is consolidated and 0 otherwise;
 * <tt>`capital_intensity`</tt>: ratio of fixed assets over employees;
 * <tt>`labour_productivity`</tt>: ratio of added value over employees;
@@ -119,21 +119,19 @@ Within the <tt>`functions`</tt> folder you can find the following files:
 * <tt>`function.R`</tt>: R code for the main function used in the analyses (Distance-to-Default, F1-Score, Balanced Accuracy, Models Conparisons);
 
 Within the <tt>`lagged_analysis`</tt> folder you can find the following files:
-* <tt>`lagged_analyses.Rmd`</tt>: <tt>`R markdown`</tt> code to reproduce the lagged machine learning analyses (Tables 1, 3, 4, A2; Figures 3, A1);
+* <tt>`lagged_analyses.Rmd`</tt>: Rmarkdown code to reproduce the lagged machine learning analyses (Tables 1, 3, 4, A2; Figures 3, A1);
 
 Within the <tt>`plots`</tt> folder you can find the following files:
-* <tt>`figure_4.r`</tt>: R code to reproduce Figure 4; 
-* <tt>`figure_5.r`</tt>: R code to reproduce Figure 5.
+* <tt>`figure_4.R`</tt>: R code to reproduce Figure 4; 
+* <tt>`figure_5.R`</tt>: R code to reproduce Figure 5.
 
 Within the <tt>`robustness_checks`</tt> folder you can find the following subfolders:
 * <tt>`lagged_analysis_with_imputation`</tt>: containing the R code to reproduce the lagged analysis imputing the predictors' missing values;
-* <tt>`sensitivity_analysis`</tt>: containing the <tt>`R markdown`</tt> code to reproduce the sensitivity analysis and Figure A2.
+* <tt>`sensitivity_analysis`</tt>: containing the Rmarkdown code to reproduce the sensitivity analysis and Figure A2.
 
 Within the <tt>`year_by_year_analyses`</tt> folder you can find the following files:
 * <tt>`year_by_year.R`</tt>: R code to reproduce the yearly machine learning analysis;
 * <tt>`generate_categories.R`</tt>: R code to generate the failure categories used for the zombie analyses.
-
-
 
 
 
