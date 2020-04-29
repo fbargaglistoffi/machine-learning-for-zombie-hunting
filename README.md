@@ -103,8 +103,8 @@ Within the <tt>`descriptives`</tt> folder you can find the following files:
 * <tt>`zombie_descriptives`</tt>: code to create general descriptive statistics (the results are used for Figures 4 and 5).
 
 Within the <tt>`lasso_analyses`</tt> folder you can find the following files:
-* <tt>`logitlasso_analyses_9th_decile`</tt>: code to run logitlasso on zombie firms above the 9th decile of failure probability(the results are used for Table 5);
-* <tt>`logitlasso_analyses_8th_decile`</tt>: code to run logitlasso on zombie firms above the 8th decile of failure probability(the results are used for robustness checks).
+* <tt>`logitlasso_analyses_9th_decile`</tt>: code to run logitlasso on zombie firms above the 9th decile of failure probability (the results are used for Table 5);
+* <tt>`logitlasso_analyses_8th_decile`</tt>: code to run logitlasso on zombie firms above the 8th decile of failure probability (the results are used for robustness checks).
 
 # R code
 
