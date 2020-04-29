@@ -75,10 +75,11 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 
 # Stata Code
 
-The <tt>`Stata`</tt> code files can be found </b>[<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are divided in four folders:
+The <tt>`Stata`</tt> code files can be found </b>[<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are divided in five folders:
 * <tt>`generating_and_merging_data`</tt>;
 * <tt>`creating_indicators_and_cleaning_data`</tt>;
 * <tt>`descriptives`</tt>;
+* <tt>`zombie_indicator`</tt>;
 * <tt>`lasso_analyses`</tt>. <br />
 The files in the the first two folder can be run following their numbering to create the dataset used for the ML analysis.
 
@@ -101,6 +102,9 @@ N.B.2 The data cleaning is performed in multiple do files and not just in one sp
 
 Within the <tt>`descriptives`</tt> folder you can find the following files:
 * <tt>`zombie_descriptives`</tt>: code to create general descriptive statistics (the results are used for Figures 4 and 5).
+
+Within the <tt>`zombie_indicator`</tt> folder you can find the following files:
+* <tt>`zombie_indicator`</tt>: code to create general zombie indicator (to be run after the R code <tt>`year_by_year.R`</tt>).
 
 Within the <tt>`lasso_analyses`</tt> folder you can find the following files:
 * <tt>`logitlasso_analyses_9th_decile`</tt>: code to run logitlasso on zombie firms above the 9th decile of failure probability (the results are used for Table 5);
