@@ -7,7 +7,7 @@ Below a brief legend of the Data and the <tt>`Stata`</tt> and <tt>`R`</tt> code 
 
 # Data
 
-First, we downloaded data on firm level characteristics and financial accounts for 304,906 enterprises in Italy from the ORBIS database (Bureau Van Dijk). The status data (e.g., active firms, bankrupted firms, etc.) are available for the years 2008 - 2018 (first four months), while financial account data are available for the year 2008-2016.
+First, we downloaded data on firm level characteristics and financial accounts for 304,906 enterprises in Italy from the ORBIS database (Bureau Van Dijk). The status data (e.g., active firms, bankrupted firms, etc.) are available for the years 2008-2018 (first four months), while financial account data are available for the year 2008-2016.
 The variables that we downloaded are the following: 
 
 * <tt>`id`</tt>: firm's id;
@@ -51,13 +51,13 @@ The variables that we downloaded are the following:
 * <tt>`payables`</tt>: tax and pension payables in Euro (2009-2016).
 
 After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> folder we add the following additional indicators to the dataset:
-* <tt>`tfp_acf`</tt>: total factor productivity computed as in [Ackerberg, Caves and Frazer, 2006](https://mpra.ub.uni-muenchen.de/38349/)
+* <tt>`tfp_acf`</tt>: total factor productivity computed as in [Ackerberg, Caves and Frazer, 2006](https://mpra.ub.uni-muenchen.de/38349/);
 * <tt>`consdummy`</tt>: dummy variable assuming value 1 if the financial account is consolidated and 0 otherwise;
 * <tt>`capital_intensity`</tt>: ratio of fixed assets over employees;
 * <tt>`labour_productivity`</tt>: ratio of added value over employees;
 * <tt>`fin_cons`</tt>: financial constraint indicator by [Nickell and Nicolitsas, 1999](https://econpapers.repec.org/article/eeeeecrev/v_3a43_3ay_3a1999_3ai_3a8_3ap_3a1435-1456.html);
 * <tt>`inv`</tt>: investments indicator computed as the sum between depreciation at time t and the difference between fixed assets at time t and t-1 ;
-* <tt>`ICR`</tt>: interest coverage ratio computed as the ratio between EBIT and interest paid;
+* <tt>`ICR`</tt>: interest coverage ratio computed as the ratio between EBIT and interests paid;
 * <tt>`ICR_failure`</tt>: indicator variable equal to 1 if <tt>`ICR`</tt><= 1 by [Bank of England, 2013](https://www.bankofengland.co.uk/inflation-report/2013/august-2013);
 * <tt>`interest_diff`</tt>: benchmark interest difference indicator by [Caballero, 2008](https://www.aeaweb.org/articles?id=10.1257/aer.98.5.1943);
 * <tt>`NEG_VA`</tt>: negative added value indicator by Bank of Korea, 2013;
@@ -75,11 +75,13 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 
 # Stata Code
 
-The <tt>`Stata`</tt> code files can be found </b>[<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are devided in three folders:
+The <tt>`Stata`</tt> code files can be found </b>[<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are divided in six folders:
 * <tt>`generating_and_merging_data`</tt>;
 * <tt>`creating_indicators_and_cleaning_data`</tt>;
 * <tt>`descriptives`</tt>;
-* <tt>`lasso_analyses`</tt>
+* <tt>`logit_missingness_analyses`</tt>;
+* <tt>`zombie_indicator`</tt>;
+* <tt>`lasso_analyses`</tt>. <br />
 The files in the the first two folder can be run following their numbering to create the dataset used for the ML analysis.
 
 Within the <tt>`generating_and_merging_data`</tt> folder you can find the following files:
@@ -100,26 +102,44 @@ N.B.1 The lagged variables were created to run a series of machine learning mode
 N.B.2 The data cleaning is performed in multiple do files and not just in one specific file.
 
 Within the <tt>`descriptives`</tt> folder you can find the following files:
-* <tt>`zombie_descriptives`</tt>: code to create general descriptive statistics (the results are used for Figures 3 and 4).
+* <tt>`zombie_descriptives`</tt>: code to create general descriptive statistics (the results are used for Figures 4 and 5).
+
+Within the <tt>`logit_missingness_analyses`</tt> folder you can find the following files:
+* <tt>`logit_missingness_analyses`</tt>: code for the logit missingess analyses (the results are depicted in Table 2).
+
+Within the <tt>`zombie_indicator`</tt> folder you can find the following files:
+* <tt>`zombie_indicator`</tt>: code to create general zombie indicator (to be run after the R code <tt>`year_by_year.R`</tt>).
 
 Within the <tt>`lasso_analyses`</tt> folder you can find the following files:
-* <tt>`logitlasso_analyses_9th_decile`</tt>: code to run logitlasso on zombie firms above the 9th decile of failure probability(the results are used for Table 5);
-* <tt>`logitlasso_analyses_8th_decile`</tt>: code to run logitlasso on zombie firms above the 9th decile of failure probability(the results are used for robustness checks).
+* <tt>`logitlasso_analyses_9th_decile`</tt>: code to run logitlasso on zombie firms above the 9th decile of failure probability (the results are used for Table 5);
+* <tt>`logitlasso_analyses_8th_decile`</tt>: code to run logitlasso on zombie firms above the 8th decile of failure probability (the results are used for robustness checks).
 
 # R code
 
-The <tt>`R`</tt> code files can be found </b> [<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/R_code">here</a>]. The files are devided in four folders:
+The <tt>`R`</tt> code files can be found </b> [<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/R_code">here</a>]. The files are devided in five folders:
+* <tt>`functions`</tt>;
 * <tt>`lagged_analysis`</tt>;
-* <tt>`year_by_year_analysis`</tt>;
-* <tt>`robustness_checks`</tt>.
+* <tt>`plots`</tt>;
+* <tt>`robustness_checks`</tt>;
+* <tt>`year_by_year_analyses`</tt>.
+
+Within the <tt>`functions`</tt> folder you can find the following files:
+* <tt>`function.R`</tt>: R code for the main function used in the analyses (Distance-to-Default, F1-Score, Balanced Accuracy, Models Conparisons);
 
 Within the <tt>`lagged_analysis`</tt> folder you can find the following files:
-* <tt>`lagged_analyses.R`</tt>: R code to reproduce the lagged machine learning analyses;
-* <tt>`functions.R`</tt>: R functions built to perform the <tt>`lagged_analyses.R`</tt>;
-* <tt>`lagged_analyses.pdf`</tt> pdf generated using *R markdown* with the commented code and the results from <tt>`lagged_analyses.R`</tt>.
+* <tt>`lagged_analyses.Rmd`</tt>: Rmarkdown code to reproduce the lagged machine learning analyses (Tables 1, 3, 4, A2; Figures 3, A1);
 
-Within the <tt>`year_by_year_analysis`</tt> folder you can find the following files:
-* <tt>`year_by_year.R`</tt>: R code to reproduce the yearly machine learning analysis for Italy, Spain, Portugal and France.
+Within the <tt>`plots`</tt> folder you can find the following files:
+* <tt>`figure_4.R`</tt>: R code to reproduce Figure 4; 
+* <tt>`figure_5.R`</tt>: R code to reproduce Figure 5.
+
+Within the <tt>`robustness_checks`</tt> folder you can find the following subfolders:
+* <tt>`lagged_analysis_with_imputation`</tt>: containing the R code to reproduce the lagged analysis imputing the predictors' missing values;
+* <tt>`sensitivity_analysis`</tt>: containing the Rmarkdown code to reproduce the sensitivity analysis and Figure A2.
+
+Within the <tt>`year_by_year_analyses`</tt> folder you can find the following files:
+* <tt>`year_by_year.R`</tt>: R code to reproduce the yearly machine learning analysis;
+* <tt>`generate_categories.R`</tt>: R code to generate the failure categories used for the zombie analyses.
 
 
 
