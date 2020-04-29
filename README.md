@@ -7,7 +7,7 @@ Below a brief legend of the Data and the <tt>`Stata`</tt> and <tt>`R`</tt> code 
 
 # Data
 
-First, we downloaded data on firm level characteristics and financial accounts for 304,906 enterprises in Italy from the ORBIS database (Bureau Van Dijk). The status data (e.g., active firms, bankrupted firms, etc.) are available for the years 2008 - 2018 (first four months), while financial account data are available for the year 2008-2016.
+First, we downloaded data on firm level characteristics and financial accounts for 304,906 enterprises in Italy from the ORBIS database (Bureau Van Dijk). The status data (e.g., active firms, bankrupted firms, etc.) are available for the years 2008-2018 (first four months), while financial account data are available for the year 2008-2016.
 The variables that we downloaded are the following: 
 
 * <tt>`id`</tt>: firm's id;
@@ -57,7 +57,7 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 * <tt>`labour_productivity`</tt>: ratio of added value over employees;
 * <tt>`fin_cons`</tt>: financial constraint indicator by [Nickell and Nicolitsas, 1999](https://econpapers.repec.org/article/eeeeecrev/v_3a43_3ay_3a1999_3ai_3a8_3ap_3a1435-1456.html);
 * <tt>`inv`</tt>: investments indicator computed as the sum between depreciation at time t and the difference between fixed assets at time t and t-1 ;
-* <tt>`ICR`</tt>: interest coverage ratio computed as the ratio between EBIT and interest paid;
+* <tt>`ICR`</tt>: interest coverage ratio computed as the ratio between EBIT and interests paid;
 * <tt>`ICR_failure`</tt>: indicator variable equal to 1 if <tt>`ICR`</tt><= 1 by [Bank of England, 2013](https://www.bankofengland.co.uk/inflation-report/2013/august-2013);
 * <tt>`interest_diff`</tt>: benchmark interest difference indicator by [Caballero, 2008](https://www.aeaweb.org/articles?id=10.1257/aer.98.5.1943);
 * <tt>`NEG_VA`</tt>: negative added value indicator by Bank of Korea, 2013;
@@ -75,11 +75,11 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 
 # Stata Code
 
-The <tt>`Stata`</tt> code files can be found </b>[<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are devided in four folders:
+The <tt>`Stata`</tt> code files can be found </b>[<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/Stata_code">here</a>]. The files are divided in four folders:
 * <tt>`generating_and_merging_data`</tt>;
 * <tt>`creating_indicators_and_cleaning_data`</tt>;
 * <tt>`descriptives`</tt>;
-* <tt>`lasso_analyses`</tt>
+* <tt>`lasso_analyses`</tt>. <br />
 The files in the the first two folder can be run following their numbering to create the dataset used for the ML analysis.
 
 Within the <tt>`generating_and_merging_data`</tt> folder you can find the following files:
