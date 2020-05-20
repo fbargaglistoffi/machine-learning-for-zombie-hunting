@@ -7,14 +7,10 @@ setwd("G:\\Il mio Drive\\Research\\Italian Firms\\Zombie Hunting New Data")
 data <- read_dta("zombie_data.dta")
 data_italy <- data[which(data$iso=="IT"),] 
 
-
-
 data_italy$transition_2010 <- data_italy$cat_2010
 data_italy$transition_2010[which(data_italy$transition_2010==0)] <- 5
 data_italy$transition_2011 <- data_italy$cat_2011
 data_italy$transition_2011[which(data_italy$transition_2011==0)] <- 5
-data_italy$transition_2011[which(data_italy$transition_2011==5)][1:4537] <- 3
-
 
 trn_mtrx <-
   with(data,
