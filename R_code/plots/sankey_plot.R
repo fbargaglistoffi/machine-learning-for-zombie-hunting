@@ -70,7 +70,11 @@ trn_mtrx_2017 <-
              data_italy$transition_2017))
 
 trn_mtrx <- trn_mtrx_2010 + trn_mtrx_2011 + trn_mtrx_2012 + trn_mtrx_2013 + trn_mtrx_2014 + trn_mtrx_2015 + trn_mtrx_2016 + trn_mtrx_2017
-prop.table(trn_mtrx, 2)
+trn_mtrx
+prop.table(trn_mtrx, 1)
+transition_matrix <- round(prop.table(trn_mtrx, 1), 3)
+
+print(xtable(transition_matrix, type = "latex"), file = "transition_matrix.tex")
 
 # 9th decile: 0.62% remain in the same risk category
 # 8th decile: 0.39% remain in the same risk category
