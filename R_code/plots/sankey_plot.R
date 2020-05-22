@@ -10,8 +10,6 @@ data_italy <- data[which(data$iso=="IT"),]
 
 data_italy$transition_2009 <- data_italy$cat_2009
 data_italy$transition_2009[which(data_italy$transition_2009==0)] <- 5
-data_italy$transition_2009[which(data_italy$transition_2009==4)][1:2434] <- 3
-data_italy$transition_2009[which(data_italy$transition_2009==5)][1:6059] <- 3
 data_italy$transition_2010 <- data_italy$cat_2010
 data_italy$transition_2010[which(data_italy$transition_2010==0)] <- 5
 data_italy$transition_2011 <- data_italy$cat_2011
