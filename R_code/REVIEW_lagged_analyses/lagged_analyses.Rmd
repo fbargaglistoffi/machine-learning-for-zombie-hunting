@@ -1,0 +1,896 @@
+---
+title: "Machine Learning Analysis with Lagged Predictors"
+author: "Falco J. Bargagli-Stoffi, Massimo Riccaboni, Armando Rungi"
+date: "23/2/2020"
+output:
+  pdf_document:
+    keep_tex: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#knitr::opts_knit$set(root.dir = 'G:\\Il mio Drive\\Research\\Italian Firms\\Zombie Hunting New Data')
+knitr::opts_knit$set(root.dir = 'H:\\.shortcut-targets-by-id\\1keYb51HXkcQwzkU2kBgbnguQaqUy3umX\\Zombie Hunting New Data')
+```
+
+# Introduction
+
+This \texttt{R Markdown} file reproduces the lagged machine learning analysis for the paper \textit{"Machine learning for zombie hunting. Firms' failures, financial constraints, and misallocation"} by Falco J. Bargagli-Stoffi (IMT School for Advanced Studies/KU Leuven), Massimo Riccaboni (IMT School for Advanced Studies) and Armando Rungi (IMT School for Advanced Studies). 
+
+## R Markdown
+
+This is an \texttt{R Markdown} document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using \texttt{R Markdown} see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded \texttt{R} code chunks within the document. You can embed an R code chunks like the following.
+
+## Packages Upload
+
+The following packages and functions are the ones used for the analyses performed in the \texttt{R} code. The \texttt{functions.R} file contains the functions \texttt{F1\_score}, \texttt{balanced\_accuracy}, \texttt{model\_compare} and \texttt{DtD} that were developed to reproduce the following analyses. 
+
+```{r warning=FALSE, message = FALSE}
+rm(list=ls()) # to clean the memeory
+memory.limit(size=1000000)
+options(java.parameters = "-Xmx15000m")
+library(rJava)
+library(bartMachine)
+library(haven)
+library(plyr)
+library(dplyr)
+library(PRROC)
+library(rpart)
+library(party)
+library(finalfit)
+library(caret)
+library(Amelia)
+library(Hmisc)
+library(PresenceAbsence)
+#library(devtools)
+library(SuperLearner)
+library(Metrics)
+library(pROC)
+library(Hmisc)
+library(GGally)
+source('functions.R')
+```
+
+## Data Upload
+
+In the following chunks of code we upload the data, we initialize the main variables used in the analysis and we restrict the sample to the Italian firms.
+
+```{r}
+data <- read_dta("analysis_data_indicators.dta")
+```
+
+```{r}
+names(data)[names(data) == 'GUO___BvD_ID_number'] <- 'guo'
+data$control <- ifelse(data$guo=="", 0, 1)
+data$nace <- as.factor(data$nace)
+data$area <- as.factor(data$area)
+
+# Avoid this conversions: it provides zero-values to all firms 
+levels(data$nace) <- floor(as.numeric(levels(data$nace))/100) 
+
+data_italy <- data[which(data$iso=="IT"),] 
+```
+
+```{r include = FALSE}
+data_spain <- data[which(data$iso=="ES"),] 
+data_france <- data[which(data$iso=="FR"),] 
+data_portugal <- data[which(data$iso=="PT"),] 
+```
+
+## Explorative Data Analysis (EDA)
+
+Run the following chunks of code to produce Tables 1 in the paper.
+
+```{r include = FALSE}
+status_aggregated <- as.matrix(NA, nrow = nrow(data_italy), ncol = 1)
+status_aggregated[which(data_italy$Status=="Active")] <- "Active" 
+status_aggregated[which(data_italy$Status=="Active (default of payment)")] <- "Active" 
+status_aggregated[which(data_italy$Status=="Active (insolvency proceedings)")] <- "Active" 
+status_aggregated[which(data_italy$Status=="Active (rescue plan)")] <- "Active" 
+status_aggregated[which(data_italy$Status=="Bankruptcy")] <- "Bankruptcy" 
+status_aggregated[which(data_italy$Status=="Dissolved")] <- "Dissolved" 
+status_aggregated[which(data_italy$Status=="Dissolved (bankruptcy)")] <- "Dissolved" 
+status_aggregated[which(data_italy$Status=="Dissolved (demerged)")] <- "Dissolved" 
+status_aggregated[which(data_italy$Status=="Dissolved (liquidation)")] <- "Dissolved" 
+status_aggregated[which(data_italy$Status=="Dissolved (merger or take-over)")] <- "Dissolved" 
+status_aggregated[which(data_italy$Status=="In liquidation")] <- "In Liquidation" 
+```
+
+Remove firms in liquidation
+
+```{r}
+print("Number of italian firms in liquidation")
+nrow(data_italy[which(data_italy$Status == "In liquidation"), ])
+
+data_italy = data_italy[which(data_italy$Status != "In liquidation"), ]
+```
+
+```{r eval = FALSE}
+table_1 <- table(status_aggregated)
+table_1
+prop.table(table_1)
+```
+
+Run the following chunk of code to produce Table 8 in the paper.
+
+```{r eval = FALSE}
+table(data$iso)
+table_2 <- table(data$iso, data$failure)
+table_2
+prop.table(table_2, 1)
+```
+
+Run the following chunks of code to produce Table 9 in the paper. 
+
+```{r eval = FALSE}
+icr_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
+                   data_italy$year_of_incorporation<=2016),]$ICR_failure_2016)
+prop.table(icr_italy)
+length(which(is.na(data_italy$ICR_failure)))/nrow(data_italy)
+icr_spain <- table(data_spain[which(data_spain$year_of_status>=2016 &
+                   data_spain$year_of_incorporation<=2016),]$ICR_failure)
+prop.table(icr_spain)
+icr_portugal <- table(data_portugal[which(data_portugal$year_of_status>=2016 &
+                   data_portugal$year_of_incorporation<=2016),]$ICR_failure)
+prop.table(icr_portugal)
+icr_france <- table(data_france[which(data_france$year_of_status>=2016 &
+                   data_france$year_of_incorporation<=2016),]$ICR_failure)
+prop.table(icr_france)
+```
+
+```{r eval = FALSE}
+neg_va_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
+                      data_italy$year_of_incorporation<=2016),]$NEG_VA)
+prop.table(neg_va_italy)
+length(which(is.na(data_italy$NEG_VA)))/nrow(data_italy)
+neg_va_spain <- table(data_spain[which(data_spain$year_of_status>=2016 &
+                   data_spain$year_of_incorporation<=2016),]$NEG_VA)
+prop.table(neg_va_spain)
+neg_va_portugal <- table(data_portugal[which(data_portugal$year_of_status>=2016 &
+                   data_portugal$year_of_incorporation<=2016),]$NEG_VA)
+prop.table(neg_va_portugal)
+neg_va_france <- table(data_france[which(data_france$year_of_status>=2016 &
+                   data_france$year_of_incorporation<=2016),]$NEG_VA)
+prop.table(neg_va_france)
+```
+
+```{r eval = FALSE}
+interest_diff_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
+                       data_italy$year_of_incorporation<=2016),]$interest_diff)
+prop.table(interest_diff_italy)
+length(which(is.na(data_italy$interest_diff)))/nrow(data_italy)
+interest_diff_spain <- table(data_spain[which(data_spain$year_of_status>=2016 &
+                   data_spain$year_of_incorporation<=2016),]$interest_diff)
+prop.table(interest_diff_spain)
+interest_diff_portugal <- table(data_portugal[which(data_portugal$year_of_status>=2016 &
+                   data_portugal$year_of_incorporation<=2016),]$interest_diff)
+prop.table(interest_diff_portugal)
+interest_diff_france <- table(data_france[which(data_france$year_of_status>=2016 &
+                   data_france$year_of_incorporation<=2016),]$interest_diff)
+prop.table(interest_diff_france)
+```
+
+```{r eval = FALSE}
+profitability_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
+                       data_italy$year_of_incorporation<=2016),]$profitability)
+prop.table(profitability_italy)
+length(which(is.na(data_italy$profitability)))/nrow(data_italy)
+profitability_spain <- table(data_spain[which(data_spain$year_of_status>=2016 &
+                   data_spain$year_of_incorporation<=2016),]$profitability)
+prop.table(profitability_spain)
+profitability_portugal <- table(data_portugal[which(data_portugal$year_of_status>=2016 &
+                   data_portugal$year_of_incorporation<=2016),]$profitability)
+prop.table(profitability_portugal)
+profitability_france <- table(data_france[which(data_france$year_of_status>=2016 &
+                   data_france$year_of_incorporation<=2016),]$profitability)
+prop.table(profitability_france)
+```
+
+```{r eval = FALSE}
+misallocated_fixed_italy <- table(data_italy[which(data_italy$year_of_status>=2016 &
+                            data_italy$year_of_incorporation<=2016),]$misallocated_fixed)
+prop.table(misallocated_fixed_italy)
+misallocated_fixed_spain <- table(data_spain[which(data_spain$year_of_status>=2016 &
+                   data_spain$year_of_incorporation<=2016),]$misallocated_fixed)
+prop.table(misallocated_fixed_spain)
+misallocated_fixed_portugal <- table(data_portugal[which(data_portugal$year_of_status>=2016 &
+                   data_portugal$year_of_incorporation<=2016),]$misallocated_fixed)
+prop.table(misallocated_fixed_portugal)
+misallocated_fixed_france <- table(data_france[which(data_france$year_of_status>=2016 &
+                   data_france$year_of_incorporation<=2016),]$misallocated_fixed)
+prop.table(misallocated_fixed_france)
+```
+
+Run the following code to explore the missingness patterns in the variables.
+
+```{r eval=FALSE}
+# Missingness in the variables
+sapply(data_italy,function(x) sum(is.na(x)))
+```
+
+Exclude the highly missing variables:  \textit{labour\_product, retained\_earnings, firm\_value, tax\_payables, pension\_payables, pension\_tax\_debts} (above 200,000 missing: +65\% missing).
+
+Run the following code to reproduce the "missingness maps" in Figures 1 and 2 of the paper.
+
+```{r eval = FALSE}
+raw_variables <- c("failure", "iso", "control", "Number_of_patents",
+                   "Number_of_trademarks", "conscode", "nace",
+                   "wage_bill","shareholders_funds", "added_value",
+                   "cash_flow", "ebitda", "fin_rev", "liquidity_ratio",
+                   "total_assets", "depr", "long_term_debt", "employees",
+                   "materials", "loans", "fixed_assets", "tax",
+                   "current_liabilities", "current_assets", 
+                   "fin_expenses", "int_paid", "solvency_ratio",
+                   "net_income", "revenue", "int_fixed_assets") 
+raw_data_missing <- data_italy[raw_variables]
+set.seed(2020)
+sample_10000 <- sample(nrow(raw_data_missing), 10000, replace = FALSE)
+missmap(raw_data_missing[sample_10000,], main = "Missing values vs Observed",
+        margins = c(8,5), x.cex = 0.8) 
+```
+
+```{r eval = FALSE, warning=FALSE}
+indicators <- c("consdummy", "capital_intensity", "fin_cons100",
+                "inv", "ICR_failure", "interest_diff", "NEG_VA",
+                "real_SA", "Z_score", "misallocated_fixed",
+                "profitability", "area", "tfp_acf", "dummy_patents",
+                "dummy_trademark", "financial_sustainability",
+                "liquidity_return") 
+indicators_missing <- data_italy[indicators]
+missmap(indicators_missing[sample_10000,],
+        main = "Missing values vs Observed",
+        margins = c(8,5), x.cex = 0.8)
+```
+
+In the chunk below, we run a series of Pearson tests to assess the degree of dependence between the missing values of each variable and the dependent variable.
+
+```{r eval = FALSE, warning=FALSE}
+# ICR
+miss_icr <- ifelse(is.na(data_italy$ICR_failure), 1, 0)
+chisq.test(miss_icr, data_italy$failure)
+
+# Negative AV
+miss_neg_va <- ifelse(is.na(data_italy$NEG_VA), 1, 0)
+chisq.test(miss_neg_va, data_italy$failure)
+
+# FCI
+miss_fin_cons <- ifelse(is.na(data_italy$fin_cons), 1, 0)
+chisq.test(miss_fin_cons, data_italy$failure)
+
+# BID
+miss_bid <- ifelse(is.na(data_italy$interest_diff), 1, 0)
+chisq.test(miss_bid, data_italy$failure)
+
+# Misallocation
+misallocated <- ifelse(is.na(data_italy$misallocated_fixed), 1, 0)
+chisq.test(misallocated, data_italy$failure)
+
+# TFP
+tfp <- ifelse(is.na(data_italy$tfp_acf), 1, 0)
+chisq.test(tfp, data_italy$failure)
+
+# Profitability
+prof <- ifelse(is.na(data_italy$profitability), 1, 0)
+chisq.test(prof, data_italy$failure)
+
+# Liquidity return
+LR <- ifelse(is.na(data_italy$liquidity_return), 1, 0)
+chisq.test(LR, data_italy$failure)
+
+# Solvency
+solvency <- ifelse(is.na(data_italy$solvency_ratio), 1, 0)
+chisq.test(solvency, data_italy$failure)
+
+# Capital intensity
+cap_int <- ifelse(is.na(data_italy$capital_intensity), 1, 0)
+chisq.test(cap_int, data_italy$failure)
+
+# Labour productivity
+lab_prod <- ifelse(is.na(data_italy$labour_product), 1, 0)
+chisq.test(lab_prod, data_italy$failure)
+
+# Size-Age
+size_age <- ifelse(is.na(data_italy$real_SA), 1, 0)
+chisq.test(size_age, data_italy$failure)
+
+# Financial sustainability
+fin_sust <- ifelse(is.na(data_italy$financial_sustainability), 1, 0)
+chisq.test(fin_sust, data_italy$failure)
+
+# Liquidity
+liquidity <- ifelse(is.na(data_italy$liquidity_ratio), 1, 0)
+chisq.test(liquidity, data_italy$failure)
+
+
+# Uncomment for latex table
+#latex(summary(failure ~ liquidity,
+#              data=data_italy,
+#              method="reverse" ,test=TRUE), exclude1=FALSE)
+```
+
+
+# Machine Learning Analysis
+
+## Data Inizialization
+
+Select the lagged variables.
+
+```{r warning=FALSE}
+# Temporarily remove "nace" from predictors: it causes problem in logit
+
+lagged_variables <- c("failure", "iso", "control",
+                      "shareholders_funds", "added_value",
+                      "cash_flow", "ebitda", "fin_rev",
+                      "liquidity_ratio", "total_assets",
+                      "depr", "long_term_debt", "employees",
+                      "materials", "loans", "wage_bill",
+                      "tfp_acf", "fixed_assets", "tax",
+                      "current_liabilities", "current_assets",
+                      "fin_expenses", "int_paid",
+                      "solvency_ratio", "net_income",
+                      "revenue", "consdummy", "capital_intensity",
+                      "fin_cons100", "inv", "ICR_failure",
+                      "interest_diff", "NEG_VA", "real_SA",
+                      "Z_score", "misallocated_fixed",
+                      "profitability", "area", "dummy_patents",
+                      "dummy_trademark","financial_sustainability",
+                      "liquidity_return", "int_fixed_assets")
+data_lagged <- data_italy[lagged_variables]
+```
+
+Select the predictors.
+
+```{r}
+predictors <- c("control", "shareholders_funds", "nace",
+                "added_value", "cash_flow", "ebitda",
+                "fin_rev", "liquidity_ratio", "total_assets",
+                "depr", "long_term_debt", "employees",
+                "materials", "loans", "wage_bill", "tfp_acf",
+                "fixed_assets", "tax", "current_liabilities",
+                "current_assets", "fin_expenses", "int_paid",
+                "solvency_ratio", "net_income", "revenue",
+                "consdummy", "capital_intensity", "fin_cons100",
+                "inv", "ICR_failure", "interest_diff", "NEG_VA",
+                "real_SA", "misallocated_fixed", "profitability",
+                "area", "dummy_patents", "dummy_trademark",
+                "financial_sustainability", "liquidity_return",
+                "int_fixed_assets")
+formula <- as.formula(paste("as.factor(failure) ~",
+                            paste(predictors, collapse="+")))
+```
+
+## Encoding missingness
+```{r}
+data_encoded = data_italy[c("failure", predictors)]
+
+# Create the dataframe of missing values indicators (only for variables with NaN)
+# missing = data.frame(ifelse(is.na(data_encoded[ , which(colSums(is.na(data_encoded)) != 0)]) == TRUE, 1, 0))
+
+prova = c("shareholders_funds", "nace", "added_value", "cash_flow", "ebitda",
+          "fin_rev", "liquidity_ratio", "total_assets",
+          "depr", "long_term_debt", "employees",
+          "materials", "loans", "wage_bill", "tfp_acf",
+          "fixed_assets", "tax", "current_liabilities",
+          "current_assets", "fin_expenses", "int_paid",
+          "solvency_ratio", "net_income", "revenue", 
+           "capital_intensity", "fin_cons100",
+          "financial_sustainability", "liquidity_return",
+          "ICR_failure", "control", "consdummy", "interest_diff",
+          "NEG_VA" , "inv", "real_SA", "misallocated_fixed", "profitability",
+          "area", "dummy_patents", "dummy_trademark", "int_fixed_assets")
+
+# Variabili problematiche con le dummies: int_fixed_assets
+
+missing = data.frame(ifelse(is.na(data_encoded[ , prova]) == TRUE, 1, 0))
+colnames(missing) = paste(colnames(missing), sep = "_", "nan_dummy")
+
+# Replace NaN with out-of-range values
+data_encoded[is.na(data_encoded)] = 10^20
+
+# Merge the dataframes
+#data_encoded = cbind(data_encoded, missing)
+
+# Define the new model formula based on the encoded data
+formula = as.formula(paste("as.factor(failure) ~", paste(colnames(data_encoded[2:length(data_encoded)]), collapse="+")))
+
+
+# dats = data_encoded[1:80000, ]
+# test <- dats[index, ]
+# train <- dats[-index, ]
+# logit_cv <- glm(formula, data = train, family=binomial("logit"))
+# 
+# 
+# # Out-of-sample prediction (i.e. the i-th fold)
+# fitted.prob.logit <- predict(logit_cv, newdata = test, type = 'response')
+# fitted.logit <- as.numeric(fitted.prob.logit)
+# hist(fitted.logit)
+
+```
+
+
+Logit performances based on 5-folds cross-validation
+```{r}
+dats = data_encoded
+n.folds = 5
+
+folds <- list() # flexible object for storing folds
+
+fold.size <- nrow(dats)/n.folds
+remain <- 1:nrow(dats) # all obs are in at the beginning
+
+for (i in 1:n.folds){
+  
+    set.seed(3052)
+    select <- sample(remain, fold.size, replace = FALSE)   #randomly sample “fold_size” from the ‘remaining observations’
+    
+    folds[[i]] <- select # store indices
+    
+    #write a special statement for the last fold — if there are ‘leftover points’
+    
+    if (i == n.folds){
+      folds[[i]] <- remain
+    }
+    
+    #update remaining indices to reflect what was taken out
+    remain <- setdiff(remain, select)
+    remain
+  }
+
+
+
+
+
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- dats[index, ]
+    train <- dats[-index, ]
+    
+    set.seed(3052)
+    logit_cv <- glm(formula, data = train, family=binomial(link='logit'))
+
+    
+     # Out-of-sample prediction (i.e. the i-th fold)
+     fitted.prob.logit <- predict(logit_cv, newdata = test, type = 'response')
+     fitted.logit <- as.numeric(fitted.prob.logit)
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.logit <- fitted.logit[ test$failure == 1]
+     bg.logit <- fitted.logit[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di performance del classificatore
+     # sono THRESHOLD-FREE: misurano la performance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_logit <- roc.curve(scores.class0 = fg.logit,
+                            scores.class1 = bg.logit,
+                            curve = T)
+     #(roc_logit)
+     
+     pr_logit <- pr.curve(scores.class0 = fg.logit,
+                          scores.class1 = bg.logit,
+                          curve = T)
+     #plot(pr_logit)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.logit.integer <- ifelse(fitted.prob.logit > quantile(fitted.logit, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.logit.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_logit <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_logit <- f1_score(fitted.logit.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_logit <- as.data.frame(rbind(postResample(as.double(fitted.logit), test$failure )))
+
+
+    if(i==1) {
+     logit_fit <- as.data.frame(cbind(i, roc_logit$auc, pr_logit$auc.integral, f1_logit,
+                                      balanced_accuracy_logit, accuracy_logit$Rsquared))
+     
+    } else {
+     logit_fit <- rbind(logit_fit, cbind(i, roc_logit$auc, pr_logit$auc.integral, f1_logit, 
+                            balanced_accuracy_logit, accuracy_logit$Rsquared))
+      
+    }
+    
+    
+}
+
+colnames(logit_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared")
+rownames(logit_fit) <- NULL
+logit_fit = rbind(logit_fit, c("Overall", mean(logit_fit$`Area under the ROC`), mean(logit_fit$`Area under the PR`), mean(logit_fit$`F1-Score`), mean(logit_fit$BACC), mean(logit_fit$`R squared`) ))
+
+# Logit fit across the 5-folds and on average
+logit_fit
+```
+
+
+
+
+
+
+
+
+## Classification Tree
+
+Run a classification tree analysis.
+
+```{r}
+set.seed(2020)
+system.time({
+c.tree <- ctree(formula, data=train,
+               control = ctree_control(testtype = "MonteCarlo",
+               mincriterion = 0.90, nresample = 1000))
+})
+```
+
+Depict the performance measures by running the following chunks.
+
+```{r}
+fitted.results.tree <- as.matrix(unlist(predict(c.tree,
+                                 newdata = test, type='prob')))
+fitted.prob.tree <- fitted.results.tree[seq_along(fitted.results.tree) %%2 == 0]
+```
+
+```{r}
+#Roc
+fg.tree<-fitted.prob.tree[test$failure==1]
+bg.tree<-fitted.prob.tree[test$failure==0]
+```
+
+```{r}
+roc_ctree <- roc.curve(scores.class0 = fg.tree,
+                       scores.class1 = bg.tree,
+                       curve = T)
+plot(roc_ctree) 
+```
+
+```{r}
+pr_ctree <- pr.curve(scores.class0 = fg.tree,
+                     scores.class1 = bg.tree,
+                     curve = T)
+plot(pr_ctree) 
+```
+
+```{r}
+fitted.ctree <- predict(c.tree,
+                        newdata = test,
+                        type='response')
+f1_ctree <- f1_score(fitted.ctree,
+                     test$failure,
+                     positive.class="1")
+```
+
+```{r}
+balanced_accuracy_ctree <- balanced_accuracy(fitted.ctree, test$failure)
+accuracy_ctree <- as.data.frame(rbind(postResample(as.double(fitted.ctree), test$failure)))
+```
+
+```{r}
+ctree_fit <- as.data.frame(cbind(roc_ctree$auc,
+                                 pr_ctree$auc.integral,
+                                 f1_ctree,
+                                 balanced_accuracy_ctree,
+                                 accuracy_ctree$Rsquared))
+colnames(ctree_fit) <- c("AUC", "PR", "f1-score", "BACC", "Rsquared")
+ctree_fit
+```
+
+## Random Forest
+
+Run a Random Forest analysis.
+
+```{r}
+set.seed(2020)
+
+system.time({
+rf <- randomForest(formula, data=train,
+                   importance = FALSE,
+                   ntree=200)
+})
+```
+
+Depict the performance measures by running the following chunks.
+
+```{r}
+# Fitted results Random Forest
+fitted.prob.rf <- predict(rf, newdata=test, type='prob') 
+fitted.prob.rf <- fitted.prob.rf[,2]
+```
+
+```{r}
+#Roc
+fg.rf<-fitted.prob.rf[test$failure==1]
+bg.rf<-fitted.prob.rf[test$failure==0]
+```
+
+```{r}
+roc_rf <- roc.curve(scores.class0 = fg.rf,
+                    scores.class1 = bg.rf,
+                    curve = T)
+plot(roc_rf)
+```
+
+```{r}
+pr_rf<-pr.curve(scores.class0 = fg.rf,
+                scores.class1 = bg.rf,
+                curve = T)
+plot(pr_rf)
+```
+
+```{r}
+fitted.rf <- ifelse(fitted.prob.rf > 0.5, 1, 0)
+f1_rf <- f1_score(fitted.rf,
+                  test$failure,
+                  positive.class="1")
+```
+
+```{r}
+balanced_accuracy_rf <- balanced_accuracy(fitted.rf, test$failure)
+accuracy_rf <- as.data.frame(rbind(postResample(as.double(fitted.rf),
+                                                      test$failure)))
+```
+
+```{r}
+rf_fit <- as.data.frame(cbind(roc_rf$auc,
+                              pr_rf$auc.integral,
+                              f1_rf, balanced_accuracy_rf,
+                              accuracy_rf$Rsquared))
+colnames(rf_fit) <- c("AUC", "PR", "f1-score", "BACC", "Rsquared")
+rf_fit
+```
+
+## Super Learner
+
+Run a super learner analysis, by using an ensemble method with three learners: a logistic regression, a classification tree and a random forest.
+
+```{r}
+SL.library <- c("SL.glm",  "SL.randomForest", "SL.rpartPrune") 
+```
+
+```{r warning=FALSE}
+train$X <-(train[predictors])
+set.seed(123)
+system.time({
+  SL <- SuperLearner(Y=train$failure, X=train$X,
+                     SL.library = SL.library,
+                     verbose = FALSE,
+                     method = "method.NNLS",
+                     family = binomial())
+})
+coef(SL)
+```
+
+Depict the performance measures by running the following chunks.
+
+```{r}
+test$X <-(test[predictors])
+sl.fitted <- predict.SuperLearner(SL, test$X,
+                                  X = train$X,
+                                  Y = train$failure,
+                                  onlySL = TRUE)
+```
+
+```{r}
+#Roc
+fg.sl<-sl.fitted$pred[test$failure==1] 
+bg.sl<-sl.fitted$pred[test$failure==0]
+```
+
+```{r}
+roc_sl<-roc.curve(scores.class0 = fg.sl,
+                  scores.class1 = bg.sl,
+                  curve = T)
+plot(roc_sl) 
+```
+
+```{r}
+pr_sl<-pr.curve(scores.class0 = fg.sl,
+                scores.class1 = bg.sl,
+                curve = T)
+plot(pr_sl)
+```
+
+```{r}
+fitted.sl <- ifelse(sl.fitted$pred > 0.5, 1, 0)
+f1_sl <- f1_score(fitted.sl,
+                  test$failure,
+                  positive.class="1")
+```
+
+```{r}
+balanced_accuracy_sl <- balanced_accuracy(fitted.sl, test$failure)
+accuracy_sl <- as.data.frame(rbind(postResample(as.double(fitted.sl),
+                                                      test$failure)))
+```
+
+```{r}
+sl_fit <- as.data.frame(cbind(roc_sl$auc,
+                              pr_sl$auc.integral,
+                              f1_sl,
+                              balanced_accuracy_sl,
+                              accuracy_sl$Rsquared))
+colnames(sl_fit) <- c("AUC", "PR", "f1-score", "BACC", "Rsquared")
+sl_fit
+```
+
+## BART-mia
+
+Run a Bayesian Additive Regression Tree analysis by using the overall data sample (no need to omit the observations with missing values).
+
+```{r eval=FALSE}
+set.seed(2020)
+sample <- sample(seq_len(nrow(data_italy)),
+                 size = nrow(omitted),
+                 replace=FALSE) 
+data_italy_bart <- data_italy[sample,]
+```
+
+Select the same number of observations as in the previous models for the training and testing samples.
+
+```{r eval=FALSE}
+set.seed(2020)
+train_sample <- sample(seq_len(nrow(data_italy_bart)),
+                       size = nrow(data_italy_bart )*0.9, replace=FALSE) 
+train_bart <- data_italy_bart[train_sample,]
+test_bart <- data_italy_bart[-train_sample,]
+train_bart$X <- as.data.frame(train_bart[predictors])
+test_bart$X <- as.data.frame(test_bart[predictors])
+```
+
+Run the analysis.
+
+```{r eval=FALSE}
+system.time({
+bart_machine<-bartMachine(train_bart$X,
+                          as.factor(train_bart$failure),
+                          use_missing_data=TRUE) 
+})
+```
+
+Depict the performance measures by running the following chunks.
+
+```{r eval=FALSE}
+fitted.results.bart <- 1- round(predict(bart_machine,
+                                        test_bart$X,
+                                        type='prob'), 6)
+```
+
+```{r eval=FALSE}
+#Roc
+fg.bart<-fitted.results.bart[test_bart$failure==1] 
+bg.bart<-fitted.results.bart[test_bart$failure==0]
+```
+
+![Area under the ROC curve, BART](G:/Il mio Drive/Research/Italian Firms/Zombie Hunting New Data/roc_bart.jpg)
+
+```{r eval=FALSE}
+roc_bart<-roc.curve(scores.class0 = fg.bart,
+                    scores.class1 = bg.bart,
+                    curve = T)
+plot(roc_bart)
+```
+
+![Area under the PR curve, BART](G:/Il mio Drive/Research/Italian Firms/Zombie Hunting New Data/pr_bart.jpg)
+
+```{r eval=FALSE}
+pr_bart<-pr.curve(scores.class0 = fg.bart,
+                  scores.class1 = bg.bart,
+                  curve = T)
+plot(pr_bart)
+```
+
+```{r eval=FALSE}
+#Get Accurancy
+fitted.bart <- ifelse(fitted.results.bart> 0.5, 1, 0)
+f1_bart <- f1_score(fitted.bart,
+                    test_bart$failure,
+                    positive.class="1")
+```
+
+```{r eval=FALSE}
+balanced_accuracy_bart <- balanced_accuracy(fitted.bart, test_bart$failure)
+accuracy_bart <- as.data.frame(rbind(postResample(as.double(fitted.bart),
+                                                    test_bart$failure)))
+```
+
+```{r eval=FALSE}
+bart_fit <- as.data.frame(cbind(roc_bart$auc,
+                                pr_bart$auc.integral,
+                                f1_bart,
+                                balanced_accuracy_bart,
+                                accuracy_bart$Rsquared))
+colnames(bart_fit) <- c("AUC", "PR", "f1-score", "BACC", "Rsquared")
+```
+
+## Save Results
+
+```{r eval=FALSE}
+model_results <- rbind(logit_fit, ctree_fit, rf_fit, sl_fit, bart_fit)
+write.csv(model_results, file = "model_results.csv")
+```
+
+# Model Comparison
+
+Here, we run an empirical horse race where we define two competitors (benchmark or "usual methods") and we compare them with our preferred BART methodology. Natural candidates are "default probability predictors" (credit-ratings type of measures) such as:
+\begin{enumerate}
+\item  Altman Z-score;
+\item  Distance-to-Default.
+\end{enumerate}
+
+As these measures do not provide direct predictions for failed firms, we create a series of dummy variables in the following way:
+\begin{equation}
+		Z-dummy_i=\begin{cases}
+		1 &	 \text{if $Z-score_i \leq q$}, \nonumber \\
+		0 &	  \text{otherwise}
+		\end{cases}
+\end{equation}
+and
+\begin{equation}
+		DtD-dummy_i=\begin{cases}
+		1 &	 \text{if $DtD_i \leq q$}, \nonumber \\
+		0 &	  \text{otherwise}
+		\end{cases}
+\end{equation}
+where $q$ is the 1st to 10th percentile distribution of the Z-score and the DtD measures, respectively. 
+
+By doing so, we assume to be predicted as "failed", those observations with values on the left tails of the Z and DtD measures.
+
+We create these variables on the testing set and then we compare their performance, in terms of precision and false discovery rate (FDR), with the one of BART.
+
+## Z-score
+
+```{r eval=FALSE}
+precision_bart <- as.data.frame(t(model_compare(fitted.bart,
+                                  test_bart$failure, "1")))
+colnames(precision_bart) <- c("Precision BART", "FDR BART")
+write.csv(precision_bart, "precision_and_fdr_bart.csv")
+```
+
+```{r eval=FALSE}
+seq <- seq(1, 10, 1)
+precision_zscore <- matrix(NA, ncol = 2, nrow = length(seq))
+for(i in seq) {
+  failed_zscore <- ifelse(test$Z_score <= quantile(test$Z_score, i/100),
+                                                                  1, 0)
+  precision_zscore[i, c(1:2)] <- t(model_compare(failed_zscore,
+                                                 test$failure, "1"))
+}
+```
+
+## Merton's Distance-to-Default (DtD)
+
+The average equity volatility in the considered time series is 27.9120 (Bank of Italy), while for the average risk free interest rate we use the long term government bond yields" EMU (Eurostat) that has a value of 4.2937.
+
+```{r warning=FALSE, eval=FALSE}
+dtd_score <- DtD(mcap = test$shareholders_funds, debt = test$long_term_debt,
+                 vol = 27.9120, r = 4.2937)
+```
+
+```{r eval=FALSE}
+seq <- seq(1, 10, 1)
+precision_dtd_score <- matrix(NA, ncol = 2, nrow = length(seq))
+for(i in seq) {
+  failed_dtd_score <- ifelse(dtd_score <= quantile(dtd_score, i/100), 1, 0)
+  precision_dtd_score[i, c(1:2)] <- t(model_compare(failed_dtd_score,
+                                                    test$failure, "1"))
+}
+```
+
+```{r eval=FALSE}
+precision_models <- as.data.frame(cbind(precision_dtd_score, precision_zscore))
+colnames(precision_models) <- c("Precision DtD",
+                                "FDR DtD",
+                                "Precision Z-score",
+                                "FDR Z-score")
+write.csv(precision_models, "precision_and_fdr_scores.csv")
+```
