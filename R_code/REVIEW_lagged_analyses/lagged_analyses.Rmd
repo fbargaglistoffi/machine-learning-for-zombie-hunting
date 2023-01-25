@@ -54,6 +54,10 @@ library(GGally)
 library(xgboost)
 library(tictoc)
 library(corrplot)
+library(dbarts)
+library(tmle)
+library(mice)
+library(DMwR2)
 source('functions.R')
 ```
 
@@ -347,7 +351,9 @@ data_lagged <- data_italy[lagged_variables]
 Select the predictors.
 
 ```{r}
-predictors <- c("control", "shareholders_funds", "nace",
+#nace, area
+
+predictors <- c("control", "shareholders_funds","nace",
                 "added_value", "cash_flow", "ebitda",
                 "fin_rev", "liquidity_ratio", "total_assets",
                 "depr", "long_term_debt", "employees",
@@ -373,7 +379,7 @@ data_encoded = data_italy[c("failure", predictors)]
 
 # missing = data.frame(ifelse(is.na(data_encoded[ , which(colSums(is.na(data_encoded)) != 0)]) == TRUE, 1, 0))
 
-prova = c("control", "shareholders_funds", "nace",
+prova = c("control", "shareholders_funds",
                 "added_value", "cash_flow", "ebitda",
                 "consdummy", "capital_intensity", "fin_cons100",
                 "inv", "ICR_failure", "interest_diff", "NEG_VA")
@@ -432,7 +438,6 @@ In particular, if NaN are replace with 10^20 multicollineariy explodes while whe
 ```{r}
 corr_simple(data = data_encoded, sig = 0.7)
 ```
-
 
 ```{r}
 time <- list()
@@ -509,6 +514,7 @@ logit_fit
 
 write.csv(logit_fit, file = "logit_fit.csv")
 ```
+
 
 ## Classification Tree (CTree)
 ```{r}
@@ -752,6 +758,94 @@ write.csv(xgboost_fit, file = "xgboost_fit.csv")
 ```
 
 
+Moving PR
+```{r}
+time = list()
+thresholds = seq.default(from = 0.5, to = 0.95, by = 0.05)
+
+for (j in thresholds) {
+  
+    print(paste("Iteration number ", which(thresholds == j), "/", length(thresholds)))
+
+    for (i in 1:n.folds){
+        
+        # Segment the data  
+        index <- folds[[i]]
+        test <- dats[index, ]
+        train <- dats[-index, ]
+        train <- matrix(unlist(train), ncol = length(train), nrow = nrow(train))
+        test <- matrix(unlist(test), ncol = length(test), nrow = nrow(test))
+        
+        set.seed(3052)
+        #tic()
+        xgboost_cv <- xgboost(data = train[, 2:ncol(train)], label = train[,1], objective = "binary:logistic", nrounds = 5, verbose = 0)
+        #time[[i]]  <- toc()
+         
+         # Prediction out-of-sample
+         fitted.prob.xgboost <- predict(xgboost_cv, newdata = test[, 2:ncol(train)] ) 
+    
+         
+         # Separating the predictions of firms who actually failed from those who don't
+         fg.xgboost <- fitted.prob.xgboost[ test[,1] == 1]
+         bg.xgboost <- fitted.prob.xgboost[ test[,1] == 0]
+         
+         
+         
+         fitted.xgboost.integer <- ifelse(fitted.prob.xgboost > quantile(fitted.prob.xgboost, probs = j, na.rm =TRUE), 1, 0)
+         
+         # Performance metrics
+         conf_matrix <- confusionMatrix(data = as.factor(fitted.xgboost.integer), 
+                                        reference = as.factor(test[,1]), 
+                                        mode = "everything",
+                                        positive = "1") 
+         
+         balanced_accuracy_xgboost <- conf_matrix[[4]][["Balanced Accuracy"]]
+         f1_xgboost <- f1_score(fitted.xgboost.integer, test[,1], positive.class = "1")
+         precision_xgboost <- conf_matrix[[4]][["Precision"]]
+         recall_xgboost <- conf_matrix[[4]][["Recall"]]
+    
+    
+    
+        if(i==1) {
+         xgboost_fit <- as.data.frame(cbind(i, precision_xgboost, recall_xgboost, f1_xgboost, balanced_accuracy_xgboost))
+         
+        } else {
+         xgboost_fit <- rbind(xgboost_fit, cbind(i, precision_xgboost, recall_xgboost, f1_xgboost, balanced_accuracy_xgboost))
+          
+        }
+        
+        
+    }
+  
+  
+
+    colnames(xgboost_fit) <- c("Fold", "Precision", "Recall", "F1-Score", "BACC")
+    rownames(xgboost_fit) <- NULL
+    
+    
+    if(which(thresholds == j) ==1) {
+         xgboost_thresh_fit <- as.data.frame(cbind(j,  mean(xgboost_fit$`Precision`), mean(xgboost_fit$`Recall`), 
+                                                mean(xgboost_fit$`F1-Score`), mean(xgboost_fit$BACC) ))
+         
+    } else {
+         xgboost_thresh_fit <- rbind(xgboost_thresh_fit, (cbind(j,  mean(xgboost_fit$`Precision`), mean(xgboost_fit$`Recall`),
+                                                      mean(xgboost_fit$`F1-Score`), mean(xgboost_fit$BACC) )) )
+          
+    }
+
+}
+
+colnames(xgboost_thresh_fit) = c("Threshold", "Precision", "Recall", "F1-Score", "BACC")
+xgboost_thresh_fit
+
+write.csv(xgboost_thresh_fit, file = "xgboost_thresh_fit.csv")
+```
+
+
+
+
+
+
 ## BART - without MIA -
 ```{r}
 time <- list()
@@ -843,10 +937,9 @@ write.csv(bart_fit, file = "bart_fit.csv")
 
 
 ## Super Learner
-
-```{r warning = FALSE}
+```{r}
 time <- list()
-#c("SL.glm", "SL.rpartPrune", "SL.randomForest", "SL.xgboost", "SL.bartMachine")
+coef <- list()
 
 for (i in 1:n.folds){
     
@@ -865,20 +958,21 @@ for (i in 1:n.folds){
       M <- as.data.frame(test[, 2:length(test)])
       
       tic()
+    
+      # V = 2 is the number of folds that the Super Learner (SL) uses to estimate the risk on future data. 
+      # By default the SL uses V = 10. However, but since we do not use this measure, we reduce the computational burden setting V=2. 
+      # For more information see: https://cran.r-project.org/web/packages/SuperLearner/vignettes/Guide-to-SuperLearner.html
       SL_cv <- SuperLearner(Y = Y, 
                             X = X, 
-                            newX = M,
-                            SL.library = c("SL.bartMachine.better") , 
+                            SL.library = c("SL.glm", "SL.rpartPrune", "SL.randomForest", "SL.xgboost", "tmle.SL.dbarts2"), 
                             verbose = FALSE, 
                             method = "method.NNLS", 
                             family = binomial(link='logit'), 
                             cvControl = list(V = 2) )
       
-  #  prova = SL.bartMachine.better(Y = y, X = X, newX = M)
+
       
       time[[i]] <- toc() 
-
-      SL_cv
     
 
      # Get fitted values  
@@ -923,10 +1017,12 @@ for (i in 1:n.folds){
     if(i==1) {
      sl_fit <- as.data.frame(cbind(i, roc_sl$auc, pr_sl$auc.integral, f1_sl,
                                       balanced_accuracy_sl, accuracy_sl$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     coef[[i]] = c(i,  unname(SL_cv$coef))
      
     } else {
      sl_fit <- rbind(sl_fit, cbind(i, roc_sl$auc, pr_sl$auc.integral, f1_sl, 
                             balanced_accuracy_sl, accuracy_sl$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     coef[[i]] = c(i,  unname(SL_cv$coef))
       
     }
     
@@ -939,85 +1035,316 @@ sl_fit = rbind(sl_fit, c("Overall", mean(sl_fit$`Area under the ROC`), mean(sl_f
 
 # sl fit across the 5-folds and on average
 sl_fit
+
+# Save weights given to each model, in each fold and on average
+tot_coef = as.data.frame(rbind(coef[[1]], coef[[2]], coef[[3]], coef[[4]], coef[[5]]))
+colnames(tot_coef) = c("Fold", "Logit", "CART", "Random Forest", "XGBoost", "BART")
+tot_coef = rbind(tot_coef, c("Mean", mean(tot_coef$`Logit`), mean(tot_coef$`CART`),  mean(tot_coef$`Random Forest`),  mean(tot_coef$`XGBoost`),  mean(tot_coef$`BART`)) ) 
+
+tot_coef
+
+write.csv(sl_fit, file = "sl_fit.csv")
+write.csv(tot_coef, file = "sl_coef.csv")
+
 ```
 
 
+## BART-MIA on non-encoded missing data
+```{r}
+data_missing = data_italy[c("failure", predictors)]
+
+time <- list()
+for (i in 1:n.folds){
+    
+      # Segment the data  
+      index <- folds[[i]]
+      test <- data_missing[index, ]
+      train <- data_missing[-index, ]
+      
+      
+      # Get TRAINING predictors matrix
+      X <- as.data.frame(train[, 2:length(train)])
+      
+      # Get TRAINING outcome Vector
+      y <- as.vector(train[,1])
+      y <- as.factor(unlist(y, use.names = FALSE))
+    
+      # Train the machine 
+      set.seed(3052)
+      options(java.parameters = "-Xmx1000g") 
+      tic()
+      bart_cv<-bartMachine(X, y, use_missing_data = TRUE)
+      time[[i]] <- toc() 
+      
+      # Get TEST predictors matrix 
+      M <- as.data.frame(test[, 2:length(test)])
+    
+      # Get fitted values: "0" is considered the target level, for this reason we use (1 - predict)
+      fitted.prob.bart <-  1 - round(predict(bart_cv, M, type='prob'), 6)    
+      
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.bart <- fitted.prob.bart[ test$failure == 1]
+     bg.bart <- fitted.prob.bart[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di pebartormance del classificatore
+     # sono THRESHOLD-FREE: misurano la pebartormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_bart <- roc.curve(scores.class0 = fg.bart,
+                            scores.class1 = bg.bart,
+                            curve = T)
+     #(roc_bart)
+     
+     pr_bart <- pr.curve(scores.class0 = fg.bart,
+                          scores.class1 = bg.bart,
+                          curve = T)
+     #plot(pr_bart)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.bart.integer <- ifelse(fitted.prob.bart > quantile(fitted.prob.bart, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.bart.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_bart <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_bart <- f1_score(fitted.bart.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_bart <- as.data.frame(rbind(postResample(as.double(fitted.prob.bart), test$failure )))
 
 
-
-
-# Model Comparison
-
-Here, we run an empirical horse race where we define two competitors (benchmark or "usual methods") and we compare them with our preferred BART methodology. Natural candidates are "default probability predictors" (credit-ratings type of measures) such as:
-\begin{enumerate}
-\item  Altman Z-score;
-\item  Distance-to-Default.
-\end{enumerate}
-
-As these measures do not provide direct predictions for failed firms, we create a series of dummy variables in the following way:
-\begin{equation}
-		Z-dummy_i=\begin{cases}
-		1 &	 \text{if $Z-score_i \leq q$}, \nonumber \\
-		0 &	  \text{otherwise}
-		\end{cases}
-\end{equation}
-and
-\begin{equation}
-		DtD-dummy_i=\begin{cases}
-		1 &	 \text{if $DtD_i \leq q$}, \nonumber \\
-		0 &	  \text{otherwise}
-		\end{cases}
-\end{equation}
-where $q$ is the 1st to 10th percentile distribution of the Z-score and the DtD measures, respectively. 
-
-By doing so, we assume to be predicted as "failed", those observations with values on the left tails of the Z and DtD measures.
-
-We create these variables on the testing set and then we compare their performance, in terms of precision and false discovery rate (FDR), with the one of BART.
-
-## Z-score
-
-```{r eval=FALSE}
-precision_bart <- as.data.frame(t(model_compare(fitted.bart,
-                                  test_bart$failure, "1")))
-colnames(precision_bart) <- c("Precision BART", "FDR BART")
-write.csv(precision_bart, "precision_and_fdr_bart.csv")
-```
-
-```{r eval=FALSE}
-seq <- seq(1, 10, 1)
-precision_zscore <- matrix(NA, ncol = 2, nrow = length(seq))
-for(i in seq) {
-  failed_zscore <- ifelse(test$Z_score <= quantile(test$Z_score, i/100),
-                                                                  1, 0)
-  precision_zscore[i, c(1:2)] <- t(model_compare(failed_zscore,
-                                                 test$failure, "1"))
+    if(i==1) {
+     bart_missing_fit <- as.data.frame(cbind(i, roc_bart$auc, pr_bart$auc.integral, f1_bart,
+                                      balanced_accuracy_bart, accuracy_bart$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     bart_missing_fit <- rbind(bart_missing_fit, cbind(i, roc_bart$auc, pr_bart$auc.integral, f1_bart, 
+                            balanced_accuracy_bart, accuracy_bart$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
 }
+
+colnames(bart_missing_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(bart_missing_fit) <- NULL
+bart_missing_fit = rbind(bart_missing_fit, c("Overall", mean(bart_missing_fit$`Area under the ROC`), mean(bart_missing_fit$`Area under the PR`), mean(bart_missing_fit$`F1-Score`), mean(bart_missing_fit$BACC), mean(bart_missing_fit$`R squared`), round(mean(bart_missing_fit$`Training time (sec.)`), digits = 4) ))
+
+# bart fit across the 5-folds and on average
+bart_missing_fit
+
+write.csv(bart_missing_fit, file = "bart_missing_fit.csv")
 ```
 
-## Merton's Distance-to-Default (DtD)
 
-The average equity volatility in the considered time series is 27.9120 (Bank of Italy), while for the average risk free interest rate we use the long term government bond yields" EMU (Eurostat) that has a value of 4.2937.
 
-```{r warning=FALSE, eval=FALSE}
-dtd_score <- DtD(mcap = test$shareholders_funds, debt = test$long_term_debt,
-                 vol = 27.9120, r = 4.2937)
+
+## Missing values imputation with unconditional mean imputation
+```{r}
+data_missing = data_italy[c("failure", predictors)]
+
+# Imputation with CART
+temp = mice(data_missing, method = "mean", m = 1, remove.collinear = FALSE)
+
+# Get imputed data
+data_imputed_mean = complete(temp)
 ```
+BART - without MIA - on imputed data with mean imputation
+```{r}
+time <- list()
+for (i in 1:n.folds){
+    
+      # Segment the data  
+      index <- folds[[i]]
+      test <- data_imputed_mean[index, ]
+      train <- data_imputed_mean[-index, ]
+      
+      
+      # Get TRAINING predictors matrix
+      X <- as.data.frame(train[, 2:length(train)])
+      
+      # Get TRAINING outcome Vector
+      y <- as.vector(train[,1])
+      y <- as.factor(unlist(y, use.names = FALSE))
+    
+      # Train the machine 
+      set.seed(3052)
+      options(java.parameters = "-Xmx1000g") 
+      tic()
+      bart_cv<-bartMachine(X, y, use_missing_data = FALSE)
+      time[[i]] <- toc() 
+      
+      # Get TEST predictors matrix 
+      M <- as.data.frame(test[, 2:length(test)])
+    
+      # Get fitted values: "0" is considered the target level, for this reason we use (1 - predict)
+      fitted.prob.bart <-  1 - round(predict(bart_cv, M, type='prob'), 6)    
+      
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.bart <- fitted.prob.bart[ test$failure == 1]
+     bg.bart <- fitted.prob.bart[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di pebartormance del classificatore
+     # sono THRESHOLD-FREE: misurano la pebartormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_bart <- roc.curve(scores.class0 = fg.bart,
+                            scores.class1 = bg.bart,
+                            curve = T)
+     #(roc_bart)
+     
+     pr_bart <- pr.curve(scores.class0 = fg.bart,
+                          scores.class1 = bg.bart,
+                          curve = T)
+     #plot(pr_bart)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.bart.integer <- ifelse(fitted.prob.bart > quantile(fitted.prob.bart, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.bart.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_bart <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_bart <- f1_score(fitted.bart.integer, test$failure, positive.class = "1")
 
-```{r eval=FALSE}
-seq <- seq(1, 10, 1)
-precision_dtd_score <- matrix(NA, ncol = 2, nrow = length(seq))
-for(i in seq) {
-  failed_dtd_score <- ifelse(dtd_score <= quantile(dtd_score, i/100), 1, 0)
-  precision_dtd_score[i, c(1:2)] <- t(model_compare(failed_dtd_score,
-                                                    test$failure, "1"))
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_bart <- as.data.frame(rbind(postResample(as.double(fitted.prob.bart), test$failure )))
+
+
+    if(i==1) {
+     bart_fit <- as.data.frame(cbind(i, roc_bart$auc, pr_bart$auc.integral, f1_bart,
+                                      balanced_accuracy_bart, accuracy_bart$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     bart_fit <- rbind(bart_fit, cbind(i, roc_bart$auc, pr_bart$auc.integral, f1_bart, 
+                            balanced_accuracy_bart, accuracy_bart$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
 }
+
+colnames(bart_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(bart_fit) <- NULL
+bart_fit = rbind(bart_fit, c("Overall", mean(bart_fit$`Area under the ROC`), mean(bart_fit$`Area under the PR`), mean(bart_fit$`F1-Score`), mean(bart_fit$BACC), mean(bart_fit$`R squared`), round(mean(bart_fit$`Training time (sec.)`), digits = 4) ))
+
+# bart fit across the 5-folds and on average
+bart_fit
+
+write.csv(bart_fit, file = "bart_mean_imputation_fit.csv")
 ```
 
-```{r eval=FALSE}
-precision_models <- as.data.frame(cbind(precision_dtd_score, precision_zscore))
-colnames(precision_models) <- c("Precision DtD",
-                                "FDR DtD",
-                                "Precision Z-score",
-                                "FDR Z-score")
-write.csv(precision_models, "precision_and_fdr_scores.csv")
+
+
+
+## Missing values imputation with CART
+```{r}
+data_missing = data_italy[c("failure", predictors)]
+
+# Imputation with KNN
+# temp = knnImputation(data_missing, k = 3, scale = TRUE, meth = "weighAvg")
+
+# Imputation with CART
+temp = mice(data_missing, method = "cart", m = 1)
+
+# Get imputed data
+data_imputed_cart = complete(temp)
 ```
+BART - without MIA - on imputed data with CART
+```{r}
+time <- list()
+for (i in 1:n.folds){
+    
+      # Segment the data  
+      index <- folds[[i]]
+      test <- data_imputed_cart[index, ]
+      train <- data_imputed_cart[-index, ]
+      
+      
+      # Get TRAINING predictors matrix
+      X <- as.data.frame(train[, 2:length(train)])
+      
+      # Get TRAINING outcome Vector
+      y <- as.vector(train[,1])
+      y <- as.factor(unlist(y, use.names = FALSE))
+    
+      # Train the machine 
+      set.seed(3052)
+      options(java.parameters = "-Xmx1000g") 
+      tic()
+      bart_cv<-bartMachine(X, y, use_missing_data = FALSE)
+      time[[i]] <- toc() 
+      
+      # Get TEST predictors matrix 
+      M <- as.data.frame(test[, 2:length(test)])
+    
+      # Get fitted values: "0" is considered the target level, for this reason we use (1 - predict)
+      fitted.prob.bart <-  1 - round(predict(bart_cv, M, type='prob'), 6)    
+      
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.bart <- fitted.prob.bart[ test$failure == 1]
+     bg.bart <- fitted.prob.bart[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di pebartormance del classificatore
+     # sono THRESHOLD-FREE: misurano la pebartormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_bart <- roc.curve(scores.class0 = fg.bart,
+                            scores.class1 = bg.bart,
+                            curve = T)
+     #(roc_bart)
+     
+     pr_bart <- pr.curve(scores.class0 = fg.bart,
+                          scores.class1 = bg.bart,
+                          curve = T)
+     #plot(pr_bart)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.bart.integer <- ifelse(fitted.prob.bart > quantile(fitted.prob.bart, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.bart.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_bart <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_bart <- f1_score(fitted.bart.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_bart <- as.data.frame(rbind(postResample(as.double(fitted.prob.bart), test$failure )))
+
+
+    if(i==1) {
+     bart_fit <- as.data.frame(cbind(i, roc_bart$auc, pr_bart$auc.integral, f1_bart,
+                                      balanced_accuracy_bart, accuracy_bart$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     bart_fit <- rbind(bart_fit, cbind(i, roc_bart$auc, pr_bart$auc.integral, f1_bart, 
+                            balanced_accuracy_bart, accuracy_bart$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(bart_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(bart_fit) <- NULL
+bart_fit = rbind(bart_fit, c("Overall", mean(bart_fit$`Area under the ROC`), mean(bart_fit$`Area under the PR`), mean(bart_fit$`F1-Score`), mean(bart_fit$BACC), mean(bart_fit$`R squared`), round(mean(bart_fit$`Training time (sec.)`), digits = 4) ))
+
+# bart fit across the 5-folds and on average
+bart_fit
+
+write.csv(bart_fit, file = "bart_cart_fit.csv")
+```
+
+
