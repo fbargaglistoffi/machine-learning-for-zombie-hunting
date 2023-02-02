@@ -45,11 +45,11 @@ balanced_accuracy <- function(predicted, expected) {
   # Generate Confusion Matrix
   c.matrix = as.matrix(table(predicted, expected))
   
-  # First Row Generation
-  first.row <- c.matrix[1,1] / (c.matrix[1,1] + c.matrix[1,2])  
+  # First Row Generation: Specificity
+  first.row <- c.matrix[1,1] / (c.matrix[1,1] + c.matrix[2,1])   
   
-  # Second Row Generation
-  second.row <- c.matrix[2,2] / (c.matrix[2,1] + c.matrix[2,2])  
+  # Second Row Generation: Sensitivity
+  second.row <- c.matrix[2,2] / (c.matrix[1,2] + c.matrix[2,2])  
   
   # # "Balanced" proportion correct (you can use different weighting if needed)
   acc <- (first.row + second.row)/2 
@@ -160,45 +160,8 @@ corr_simple <- function(data, sig){
   mtx_corr <- reshape2::acast(corr, Var1~Var2, value.var="Freq")
   
   #plot correlations visually
-  corrplot(mtx_corr, is.corr=FALSE, tl.col="black", na.label=" ")
+  #corrplot(mtx_corr, is.corr=FALSE, tl.col="black", na.label=" ")
 }
 
 
 
-
-
-############################
-SL.bartMachine.better <- function(Y, X, newX, family, obsWeights, id,
-                           num_trees = 50, num_burn_in = 250, verbose = TRUE,
-                           alpha = 0.95, beta = 2, k = 2, q = 0.9, nu = 3,
-                           num_iterations_after_burn_in = 1000, ...) {
-#.SL.require("bartMachine")
-  model = bartMachine::bartMachine(X, Y, num_trees = 50,
-                                   num_burn_in = 250, verbose = TRUE,
-                                   alpha = 0.95, beta = 2, k = 2, q = 0.9, nu = 3,
-                                   num_iterations_after_burn_in = 1000)
-  # pred returns predicted responses (on the scale of the outcome)
-  pred <- predict(model, newX)
-  # fit returns all objects needed for predict.SL.template
-  fit <- list(object = model)
-  #fit <- vector("list", length=0)
-  class(fit) <- c("SL.bartMachine")
-  out <- list(pred = pred, fit = fit)
-  return(out)
-}
-
-#' bartMachine prediction
-#' @param object SuperLearner object
-#' @param newdata Dataframe to predict the outcome
-#' @param family "gaussian" for regression, "binomial" for binary
-#'   classification. (Not used)
-#' @param Y Outcome variable (not used)
-#' @param X Covariate dataframe (not used)
-#' @param ... Additional arguments (not used)
-#'
-#' @export
-predict.SL.bartMachine <- function(object, newdata, family, X = NULL, Y = NULL,...) {
-  .SL.require("bartMachine")
-  pred <- predict(object$object, newdata)
-  return(pred)
-}
