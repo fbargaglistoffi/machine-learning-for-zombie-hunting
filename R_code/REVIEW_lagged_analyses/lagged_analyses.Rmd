@@ -9,9 +9,9 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-# knitr::opts_knit$set(root.dir = 'G:\\Il mio Drive\\Research\\Italian Firms\\Zombie Hunting New Data')
-# knitr::opts_knit$set(root.dir = 'H:\\.shortcut-targets-by-id\\1keYb51HXkcQwzkU2kBgbnguQaqUy3umX\\Zombie Hunting New Data')
-knitr::opts_knit$set(root.dir = '/home/fabio.incerti/Desktop/Review Falco')
+#knitr::opts_knit$set(root.dir = 'G:\\Il mio Drive\\Research\\Italian Firms\\Zombie Hunting New Data')
+knitr::opts_knit$set(root.dir = 'H:\\.shortcut-targets-by-id\\1keYb51HXkcQwzkU2kBgbnguQaqUy3umX\\Zombie Hunting New Data')
+#knitr::opts_knit$set(root.dir = '/home/fabio.incerti/Desktop/Review Falco')
 rm(list=ls()) # to clean the memeory
 ```
 
@@ -56,8 +56,17 @@ library(tictoc)
 library(corrplot)
 library(dbarts)
 library(tmle)
+library(stats)
 library(mice)
 library(DMwR2)
+library(missMethods)
+library(reshape2)
+library(ggplot2)
+library(performanceEstimation)
+library(mlr)
+library(data.table)
+library(parallel)
+library(parallelMap) 
 source('functions.R')
 ```
 
@@ -107,7 +116,6 @@ status_aggregated[which(data_italy$Status=="In liquidation")] <- "In Liquidation
 ```
 
 Remove firms in liquidation
-
 ```{r}
 print("Number of italian firms in liquidation")
 nrow(data_italy[which(data_italy$Status == "In liquidation"), ])
@@ -325,7 +333,7 @@ chisq.test(liquidity, data_italy$failure)
 
 Select the lagged variables.
 
-```{r warning=FALSE}
+```{r eval = FALSE, warning=FALSE}
 # Temporarily remove "nace" from predictors: it causes problem in logit
 
 lagged_variables <- c("failure", "iso", "control",
@@ -351,8 +359,6 @@ data_lagged <- data_italy[lagged_variables]
 Select the predictors.
 
 ```{r}
-#nace, area
-
 predictors <- c("control", "shareholders_funds","nace",
                 "added_value", "cash_flow", "ebitda",
                 "fin_rev", "liquidity_ratio", "total_assets",
@@ -367,42 +373,584 @@ predictors <- c("control", "shareholders_funds","nace",
                 "area", "dummy_patents", "dummy_trademark",
                 "financial_sustainability", "liquidity_return",
                 "int_fixed_assets")
-formula <- as.formula(paste("as.factor(failure) ~",
-                            paste(predictors, collapse="+")))
 ```
 
-## Encoding missingness
+## Complete-case analysis
 ```{r}
-data_encoded = data_italy[c("failure", predictors)]
-
-# Create the dataframe of missing values indicators (only for variables with NaN)
-
-# missing = data.frame(ifelse(is.na(data_encoded[ , which(colSums(is.na(data_encoded)) != 0)]) == TRUE, 1, 0))
-
-prova = c("control", "shareholders_funds",
-                "added_value", "cash_flow", "ebitda",
-                "consdummy", "capital_intensity", "fin_cons100",
-                "inv", "ICR_failure", "interest_diff", "NEG_VA")
-
-
-# Variabili problematiche con le dummies: int_fixed_assets
-
-missing = data.frame(ifelse(is.na(data_encoded[ , prova]) == TRUE, 1, 0))
-colnames(missing) = paste(colnames(missing), sep = "_", "nan_dummy")
-
-# Replace NaN with out-of-range values
-data_encoded[is.na(data_encoded)] = 10^20
-
-# Merge the dataframes
-# data_encoded = cbind(data_encoded, missing)
-
-# Define the new model formula based on the encoded data
-formula = as.formula(paste("as.factor(failure) ~", paste(colnames(data_encoded[2:length(data_encoded)]), collapse="+")))
+data = data_italy[c("failure", predictors)]
+data_comp = na.omit(data_italy[c("failure", predictors)])
+x = sum(data$failure) - sum(data_comp$failure)
+paste("Number of sample failures (liquidations excluded): ", sum(data$failure))
+paste("Number of dropped failures for complete-case analysis: ", x)
+paste("Residual failures available for training: ", sum(data_comp$failure))
+paste("Relative loss:", format(x/sum(data$failure)*100, digits = 4), "%")
 ```
 
-Create k-fold cross-validation 
+
+Create k-fold cross-validation and set up the formula 
 ```{r}
-dats = data_encoded
+dats_0 = data_comp
+n.folds = 5
+
+folds_0 <- list() # flexible object for storing folds_0
+
+fold.size <- nrow(dats_0)/n.folds
+remain <- 1:nrow(dats_0) # all obs are in at the beginning
+
+for (i in 1:n.folds){
+  
+    set.seed(3052)
+    select <- sample(remain, fold.size, replace = FALSE)   #randomly sample “fold_size” from the ‘remaining observations’
+    
+    folds_0[[i]] <- select # store indices
+    
+    #write a special statement for the last fold — if there are ‘leftover points’
+    if (i == n.folds){
+      folds_0[[i]] <- remain
+    }
+    
+    #update remaining indices to reflect what was taken out
+    remain <- setdiff(remain, select)
+    remain
+}
+
+formula = as.formula(paste("as.factor(failure) ~", paste(colnames(dats_0[2:length(dats_0)]), collapse="+")))
+```
+
+Logit
+```{r}
+time <- list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds_0[[i]]
+    test <- dats_0[index, ]
+    train <- dats_0[-index, ]
+    
+    set.seed(3052)
+    tic()
+    logit_cv <- glm(formula, data = train, family=binomial(link='logit'))
+    time[[i]] <- toc()
+    
+     # Out-of-sample prediction (i.e. the i-th fold)
+     fitted.prob.logit <- predict(logit_cv, newdata = test, type = 'response')
+     fitted.logit <- as.numeric(fitted.prob.logit)
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.logit <- fitted.logit[ test$failure == 1]
+     bg.logit <- fitted.logit[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di performance del classificatore
+     # sono THRESHOLD-FREE: misurano la performance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_logit <- roc.curve(scores.class0 = fg.logit,
+                            scores.class1 = bg.logit,
+                            curve = T)
+     #(roc_logit)
+     
+     pr_logit <- pr.curve(scores.class0 = fg.logit,
+                          scores.class1 = bg.logit,
+                          curve = T)
+     #plot(pr_logit)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.logit.integer <- ifelse(fitted.prob.logit > quantile(fitted.logit, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.logit.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_logit <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_logit <- f1_score(fitted.logit.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_logit <- as.data.frame(rbind(postResample(as.double(fitted.logit), test$failure )))
+
+
+    if(i==1) {
+     logit_fit <- as.data.frame(cbind(i, roc_logit$auc, pr_logit$auc.integral, f1_logit,
+                                      balanced_accuracy_logit, accuracy_logit$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     logit_fit <- rbind(logit_fit, cbind(i, roc_logit$auc, pr_logit$auc.integral, f1_logit, 
+                            balanced_accuracy_logit, accuracy_logit$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(logit_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(logit_fit) <- NULL
+logit_fit = rbind(logit_fit, c("Overall", mean(logit_fit$`Area under the ROC`), mean(logit_fit$`Area under the PR`), mean(logit_fit$`F1-Score`), mean(logit_fit$BACC), mean(logit_fit$`R squared`), round(mean(logit_fit$`Training time (sec.)`), digits = 4) ))
+
+# Logit fit across the 5-folds and on average
+logit_fit
+
+write.csv(logit_fit, file = "logit_complete_case_fit.csv")
+```
+
+Ctree
+```{r}
+time <- list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds_0[[i]]
+    test <- dats_0[index, ]
+    train <- dats_0[-index, ]
+    
+    set.seed(3052)
+    tic()
+    ctree_cv <- ctree(formula, 
+                      data=train, 
+                      control = ctree_control(testtype = "MonteCarlo", mincriterion = 0.90, nresample = 1000))
+    time[[i]] <- toc()  
+
+    
+     # Out-of-sample prediction (i.e. the i-th fold)
+     fitted.results.ctree <- as.matrix(unlist(predict(ctree_cv, newdata = test, type='prob')))
+     # Take the predictions in even positions (they corresponds to the probability of failure)
+     fitted.prob.ctree <- fitted.results.ctree[seq_along(fitted.results.ctree) %% 2 == 0]
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.ctree <- fitted.prob.ctree[ test$failure == 1]
+     bg.ctree <- fitted.prob.ctree[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di performance del classificatore
+     # sono THRESHOLD-FREE: misurano la performance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_ctree <- roc.curve(scores.class0 = fg.ctree,
+                            scores.class1 = bg.ctree,
+                            curve = T)
+     #(roc_ctree)
+     
+     pr_ctree <- pr.curve(scores.class0 = fg.ctree,
+                          scores.class1 = bg.ctree,
+                          curve = T)
+     #plot(pr_ctree)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.ctree.integer <- ifelse(fitted.prob.ctree > quantile(fitted.prob.ctree, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.ctree.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_ctree <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_ctree <- f1_score(fitted.ctree.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_ctree <- as.data.frame(rbind(postResample(as.double(fitted.prob.ctree), test$failure )))
+
+
+    if(i==1) {
+     ctree_fit <- as.data.frame(cbind(i, roc_ctree$auc, pr_ctree$auc.integral, f1_ctree,
+                                      balanced_accuracy_ctree, accuracy_ctree$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     ctree_fit <- rbind(ctree_fit, cbind(i, roc_ctree$auc, pr_ctree$auc.integral, f1_ctree, 
+                            balanced_accuracy_ctree, accuracy_ctree$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(ctree_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(ctree_fit) <- NULL
+ctree_fit = rbind(ctree_fit, c("Overall", mean(ctree_fit$`Area under the ROC`), mean(ctree_fit$`Area under the PR`), mean(ctree_fit$`F1-Score`), mean(ctree_fit$BACC), mean(ctree_fit$`R squared`), round(mean(ctree_fit$`Training time (sec.)`), digits = 4) ))
+
+# ctree fit across the 5-folds and on average
+ctree_fit
+
+write.csv(ctree_fit, file = "ctree_complete_case_fit.csv")
+```
+
+
+Random Forest
+```{r}
+time = list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds_0[[i]]
+    test <- dats_0[index, ]
+    train <- dats_0[-index, ]
+    
+    set.seed(3052)
+    tic()
+    rf_cv <- randomForest(formula, data = train, importance = FALSE, ntree=200)
+    time[[i]]  <- toc()
+
+     
+     # Prediction out-of-sample
+     fitted.prob.rf <- predict(rf_cv, newdata = test, type = "prob") 
+     fitted.prob.rf <- fitted.prob.rf[,2]
+
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.rf <- fitted.prob.rf[ test$failure == 1]
+     bg.rf <- fitted.prob.rf[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di performance del classificatore
+     # sono THRESHOLD-FREE: misurano la performance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_rf <- roc.curve(scores.class0 = fg.rf,
+                            scores.class1 = bg.rf,
+                            curve = T)
+     #(roc_rf)
+     
+     pr_rf <- pr.curve(scores.class0 = fg.rf,
+                          scores.class1 = bg.rf,
+                          curve = T)
+     #plot(pr_rf)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.rf.integer <- ifelse(fitted.prob.rf > quantile(fitted.prob.rf, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.rf.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_rf <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_rf <- f1_score(fitted.rf.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_rf <- as.data.frame(rbind(postResample(as.double(fitted.prob.rf), test$failure )))
+
+
+    if(i==1) {
+     rf_fit <- as.data.frame(cbind(i, roc_rf$auc, pr_rf$auc.integral, f1_rf,
+                                      balanced_accuracy_rf, accuracy_rf$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4) ))
+     
+    } else {
+     rf_fit <- rbind(rf_fit, cbind(i, roc_rf$auc, pr_rf$auc.integral, f1_rf, 
+                            balanced_accuracy_rf, accuracy_rf$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)) )
+      
+    }
+    
+    
+}
+
+colnames(rf_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(rf_fit) <- NULL
+rf_fit = rbind(rf_fit, c("Overall", mean(rf_fit$`Area under the ROC`), mean(rf_fit$`Area under the PR`), mean(rf_fit$`F1-Score`), mean(rf_fit$BACC), mean(rf_fit$`R squared`), round(mean(rf_fit$`Training time (sec.)`), digits = 4) ))
+
+# rf fit across the 5-folds and on average
+rf_fit
+
+write.csv(rf_fit, file = "rf_complete_case_fit.csv")
+```
+
+
+XGBoost
+```{r}
+time = list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds_0[[i]]
+    test <- dats_0[index, ]
+    train <- dats_0[-index, ]
+    train <- matrix(unlist(train), ncol = length(train), nrow = nrow(train))
+    test <- matrix(unlist(test), ncol = length(test), nrow = nrow(test))
+    
+    set.seed(3052)
+    tic()
+    xgboost_cv <- xgboost(data = train[, 2:ncol(train)], label = train[,1], objective = "binary:logistic", nrounds = 5)
+    time[[i]]  <- toc()
+     
+     # Prediction out-of-sample
+     fitted.prob.xgboost <- predict(xgboost_cv, newdata = test[, 2:ncol(train)] ) 
+
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.xgboost <- fitted.prob.xgboost[ test[,1] == 1]
+     bg.xgboost <- fitted.prob.xgboost[ test[,1] == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di pexgboostormance del classificatore
+     # sono THRESHOLD-FREE: misurano la pexgboostormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_xgboost <- roc.curve(scores.class0 = fg.xgboost,
+                            scores.class1 = bg.xgboost,
+                            curve = T)
+     #(roc_xgboost)
+     
+     pr_xgboost <- pr.curve(scores.class0 = fg.xgboost,
+                          scores.class1 = bg.xgboost,
+                          curve = T)
+     #plot(pr_xgboost)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.xgboost.integer <- ifelse(fitted.prob.xgboost > quantile(fitted.prob.xgboost, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.xgboost.integer), 
+                                    reference = as.factor(test[,1]), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_xgboost <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_xgboost <- f1_score(fitted.xgboost.integer, test[,1], positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_xgboost <- as.data.frame(rbind(postResample(as.double(fitted.prob.xgboost), test[,1] )))
+
+
+    if(i==1) {
+     xgboost_fit <- as.data.frame(cbind(i, roc_xgboost$auc, pr_xgboost$auc.integral, f1_xgboost,
+                                      balanced_accuracy_xgboost, accuracy_xgboost$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     xgboost_fit <- rbind(xgboost_fit, cbind(i, roc_xgboost$auc, pr_xgboost$auc.integral, f1_xgboost, 
+                            balanced_accuracy_xgboost, accuracy_xgboost$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(xgboost_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(xgboost_fit) <- NULL
+xgboost_fit = rbind(xgboost_fit, c("Overall", mean(xgboost_fit$`Area under the ROC`), mean(xgboost_fit$`Area under the PR`), mean(xgboost_fit$`F1-Score`), mean(xgboost_fit$BACC), mean(xgboost_fit$`R squared`), round(mean(xgboost_fit$`Training time (sec.)`), digits = 4) ))
+
+# xgboost fit across the 5-folds and on average
+xgboost_fit
+
+write.csv(xgboost_fit, file = "xgboost__complete_case_fit.csv")
+```
+
+
+BART (without MIA)
+```{r}
+time <- list()
+for (i in 1:n.folds){
+    
+      # Segment the data  
+      index <- folds_0[[i]]
+      test <- dats_0[index, ]
+      train <- dats_0[-index, ]
+      
+      
+      # Get TRAINING predictors matrix
+      X <- as.data.frame(train[, 2:length(train)])
+      
+      # Get TRAINING outcome Vector
+      y <- as.vector(train[,1])
+      y <- as.factor(unlist(y, use.names = FALSE))
+    
+      # Train the machine 
+      set.seed(3052)
+      options(java.parameters = "-Xmx1000g") 
+      tic()
+      bart_cv<-bartMachine(X, y, use_missing_data = FALSE)
+      time[[i]] <- toc() 
+      
+      # Get TEST predictors matrix 
+      M <- as.data.frame(test[, 2:length(test)])
+    
+      # Get fitted values: "0" is considered the target level, for this reason we use (1 - predict)
+      fitted.prob.bart <-  1 - round(predict(bart_cv, M, type='prob'), 6)    
+      
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.bart <- fitted.prob.bart[ test$failure == 1]
+     bg.bart <- fitted.prob.bart[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di pebartormance del classificatore
+     # sono THRESHOLD-FREE: misurano la pebartormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_bart <- roc.curve(scores.class0 = fg.bart,
+                            scores.class1 = bg.bart,
+                            curve = T)
+     #(roc_bart)
+     
+     pr_bart <- pr.curve(scores.class0 = fg.bart,
+                          scores.class1 = bg.bart,
+                          curve = T)
+     #plot(pr_bart)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.bart.integer <- ifelse(fitted.prob.bart > quantile(fitted.prob.bart, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.bart.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_bart <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_bart <- f1_score(fitted.bart.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_bart <- as.data.frame(rbind(postResample(as.double(fitted.prob.bart), test$failure )))
+
+
+    if(i==1) {
+     bart_fit <- as.data.frame(cbind(i, roc_bart$auc, pr_bart$auc.integral, f1_bart,
+                                      balanced_accuracy_bart, accuracy_bart$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     bart_fit <- rbind(bart_fit, cbind(i, roc_bart$auc, pr_bart$auc.integral, f1_bart, 
+                            balanced_accuracy_bart, accuracy_bart$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(bart_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(bart_fit) <- NULL
+bart_fit = rbind(bart_fit, c("Overall", mean(bart_fit$`Area under the ROC`), mean(bart_fit$`Area under the PR`), mean(bart_fit$`F1-Score`), mean(bart_fit$BACC), mean(bart_fit$`R squared`), round(mean(bart_fit$`Training time (sec.)`), digits = 4) ))
+
+# bart fit across the 5-folds and on average
+bart_fit
+
+write.csv(bart_fit, file = "bart_complete_case_fit.csv")
+```
+
+
+Super Learner
+```{r}
+time <- list()
+coef <- list()
+
+for (i in 1:n.folds){
+    
+      # Segment the data  
+      index <- folds_0[[i]]
+      test <- dats_0[index, ]
+      train <- dats_0[-index, ]
+      
+      # Get TRAINING predictors matrix
+      X <- as.data.frame(train[, 2:length(train)])
+      
+      # Get TRAINING outcome Vector
+      Y <- unlist(train[,1], use.names = FALSE)
+      
+      # Get TEST predictors matrix 
+      M <- as.data.frame(test[, 2:length(test)])
+      
+      tic()
+    
+      # V = 2 is the number of folds that the Super Learner (SL) uses to estimate the risk on future data. 
+      # By default the SL uses V = 10. However, but since we do not use this measure, we reduce the computational burden setting V=2. 
+      # For more information see: https://cran.r-project.org/web/packages/SuperLearner/vignettes/Guide-to-SuperLearner.html
+      SL_cv <- SuperLearner(Y = Y, 
+                            X = X, 
+                            SL.library = c("SL.glm", "SL.rpartPrune", "SL.randomForest", "SL.xgboost", "tmle.SL.dbarts2"), 
+                            verbose = FALSE, 
+                            method = "method.NNLS", 
+                            family = binomial(link='logit'), 
+                            cvControl = list(V = 2) )
+      
+
+      
+      time[[i]] <- toc() 
+    
+
+     # Get fitted values  
+     fitted <- predict(SL_cv, M, onlySL = TRUE)
+     fitted.prob.sl <- fitted$pred
+      
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.sl <- fitted.prob.sl[ test$failure == 1]
+     bg.sl <- fitted.prob.sl[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di peslormance del classificatore
+     # sono THRESHOLD-FREE: misurano la peslormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_sl <- roc.curve(scores.class0 = fg.sl,
+                            scores.class1 = bg.sl,
+                            curve = T)
+     #(roc_sl)
+     
+     pr_sl <- pr.curve(scores.class0 = fg.sl,
+                          scores.class1 = bg.sl,
+                          curve = T)
+     #plot(pr_sl)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.sl.integer <- ifelse(fitted.prob.sl > quantile(fitted.prob.sl, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.sl.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_sl <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_sl <- f1_score(fitted.sl.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_sl <- as.data.frame(rbind(postResample(as.double(fitted.prob.sl), test$failure )))
+
+
+    if(i==1) {
+     sl_fit <- as.data.frame(cbind(i, roc_sl$auc, pr_sl$auc.integral, f1_sl,
+                                      balanced_accuracy_sl, accuracy_sl$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     coef[[i]] = c(i,  unname(SL_cv$coef))
+     
+    } else {
+     sl_fit <- rbind(sl_fit, cbind(i, roc_sl$auc, pr_sl$auc.integral, f1_sl, 
+                            balanced_accuracy_sl, accuracy_sl$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     coef[[i]] = c(i,  unname(SL_cv$coef))
+      
+    }
+    
+    
+}
+
+colnames(sl_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(sl_fit) <- NULL
+sl_fit = rbind(sl_fit, c("Overall", mean(sl_fit$`Area under the ROC`), mean(sl_fit$`Area under the PR`), mean(sl_fit$`F1-Score`), mean(sl_fit$BACC), mean(sl_fit$`R squared`), round(mean(sl_fit$`Training time (sec.)`), digits = 4) ))
+
+# sl fit across the 5-folds and on average
+sl_fit
+
+# Save weights given to each model, in each fold and on average
+tot_coef = as.data.frame(rbind(coef[[1]], coef[[2]], coef[[3]], coef[[4]], coef[[5]]))
+colnames(tot_coef) = c("Fold", "Logit", "CART", "Random Forest", "XGBoost", "BART")
+tot_coef = rbind(tot_coef, c("Mean", mean(tot_coef$`Logit`), mean(tot_coef$`CART`),  mean(tot_coef$`Random Forest`),  mean(tot_coef$`XGBoost`),  mean(tot_coef$`BART`)) ) 
+
+tot_coef
+
+write.csv(sl_fit, file = "sl_complete_case_fit.csv")
+write.csv(tot_coef, file = "sl_complete_case_coef.csv")
+```
+
+
+
+
+
+
+
+
+
+
+## Encoding missingness 
+
+Create a new k-fold cross-validation (for the whole dataset)
+```{r}
+dats = data_italy[c("failure", predictors)]
 n.folds = 5
 
 folds <- list() # flexible object for storing folds
@@ -418,7 +966,6 @@ for (i in 1:n.folds){
     folds[[i]] <- select # store indices
     
     #write a special statement for the last fold — if there are ‘leftover points’
-    
     if (i == n.folds){
       folds[[i]] <- remain
     }
@@ -426,15 +973,29 @@ for (i in 1:n.folds){
     #update remaining indices to reflect what was taken out
     remain <- setdiff(remain, select)
     remain
-  }
+}
 ```
 
-## Logit 
+Define the model formula
+```{r}
+formula = as.formula(paste("as.factor(failure) ~", paste(colnames(dats[2:length(dats)]), collapse="+")))
+```
+
+
+### Encoding missingness (0): out-of-range values imputation
+```{r}
+data_encoded = data_italy[c("failure", predictors)]
+
+# Replace NaN with out-of-range values
+data_encoded[is.na(data_encoded)] = 10^20
+```
+
+
+Logit
 
 Check potential problem of multicollinearity: notice that our dataset has out-of-range values replacing missing values.
 NB: correlations changes significantly as the imputation value changes.
-
-In particular, if NaN are replace with 10^20 multicollineariy explodes while when are replaced with 5 is under control.
+In particular, if NaN are replace with 10^20 multicollinearity explodes while when are replaced with 5 is under control.
 ```{r}
 corr_simple(data = data_encoded, sig = 0.7)
 ```
@@ -445,8 +1006,8 @@ for (i in 1:n.folds){
     
     # Segment the data  
     index <- folds[[i]]
-    test <- dats[index, ]
-    train <- dats[-index, ]
+    test <- data_encoded[index, ]
+    train <- data_encoed[-index, ]
     
     set.seed(3052)
     tic()
@@ -516,15 +1077,15 @@ write.csv(logit_fit, file = "logit_fit.csv")
 ```
 
 
-## Classification Tree (CTree)
+Ctree
 ```{r}
 time <- list()
 for (i in 1:n.folds){
     
     # Segment the data  
     index <- folds[[i]]
-    test <- dats[index, ]
-    train <- dats[-index, ]
+    test <- data_encoded[index, ]
+    train <- data_encoded[-index, ]
     
     set.seed(3052)
     tic()
@@ -598,15 +1159,15 @@ write.csv(ctree_fit, file = "ctree_fit.csv")
 ```
 
 
-## Random Forest
+Random Forest
 ```{r}
 time = list()
 for (i in 1:n.folds){
     
     # Segment the data  
     index <- folds[[i]]
-    test <- dats[index, ]
-    train <- dats[-index, ]
+    test <- data_encoded[index, ]
+    train <- data_encoded[-index, ]
     
     set.seed(3052)
     tic()
@@ -678,15 +1239,15 @@ write.csv(rf_fit, file = "rf_fit.csv")
 ```
 
 
-## XGBoost
+#### XGBoost
 ```{r}
 time = list()
 for (i in 1:n.folds){
     
     # Segment the data  
     index <- folds[[i]]
-    test <- dats[index, ]
-    train <- dats[-index, ]
+    test <- data_encoded[index, ]
+    train <- data_encoded[-index, ]
     train <- matrix(unlist(train), ncol = length(train), nrow = nrow(train))
     test <- matrix(unlist(test), ncol = length(test), nrow = nrow(test))
     
@@ -754,25 +1315,25 @@ xgboost_fit = rbind(xgboost_fit, c("Overall", mean(xgboost_fit$`Area under the R
 # xgboost fit across the 5-folds and on average
 xgboost_fit
 
-write.csv(xgboost_fit, file = "xgboost_fit.csv")
+# write.csv(xgboost_fit, file = "xgboost_fit.csv")
 ```
 
 
-Moving PR
+Cutoff-based metrics with XGBoost
 ```{r}
 time = list()
-thresholds = seq.default(from = 0.5, to = 0.95, by = 0.05)
+thresholds = seq.default(from = 0.6, to = 0.95, by = 0.01)
 
 for (j in thresholds) {
   
-    print(paste("Iteration number ", which(thresholds == j), "/", length(thresholds)))
+    print(paste("Iteration number: ", which(thresholds == j), "/", length(thresholds)))
 
     for (i in 1:n.folds){
         
         # Segment the data  
         index <- folds[[i]]
-        test <- dats[index, ]
-        train <- dats[-index, ]
+        test <- data_encoded[index, ]
+        train <- data_encoded[-index, ]
         train <- matrix(unlist(train), ncol = length(train), nrow = nrow(train))
         test <- matrix(unlist(test), ncol = length(test), nrow = nrow(test))
         
@@ -799,6 +1360,11 @@ for (j in thresholds) {
                                         mode = "everything",
                                         positive = "1") 
          
+         TN = conf_matrix$table[1]
+         FP = conf_matrix$table[2]
+         FN = conf_matrix$table[3]
+         TP = conf_matrix$table[4] 
+         
          balanced_accuracy_xgboost <- conf_matrix[[4]][["Balanced Accuracy"]]
          f1_xgboost <- f1_score(fitted.xgboost.integer, test[,1], positive.class = "1")
          precision_xgboost <- conf_matrix[[4]][["Precision"]]
@@ -807,10 +1373,12 @@ for (j in thresholds) {
     
     
         if(i==1) {
-         xgboost_fit <- as.data.frame(cbind(i, precision_xgboost, recall_xgboost, f1_xgboost, balanced_accuracy_xgboost))
+         xgboost_fit <- as.data.frame(cbind(i, precision_xgboost, recall_xgboost, f1_xgboost, balanced_accuracy_xgboost, 
+                                            TN, FP, FN, TP))
          
         } else {
-         xgboost_fit <- rbind(xgboost_fit, cbind(i, precision_xgboost, recall_xgboost, f1_xgboost, balanced_accuracy_xgboost))
+         xgboost_fit <- rbind(xgboost_fit, cbind(i, precision_xgboost, recall_xgboost, f1_xgboost, balanced_accuracy_xgboost, 
+                                                 TN, FP, FN, TP))
           
         }
         
@@ -819,42 +1387,277 @@ for (j in thresholds) {
   
   
 
-    colnames(xgboost_fit) <- c("Fold", "Precision", "Recall", "F1-Score", "BACC")
+    colnames(xgboost_fit) <- c("Fold", "Precision", "Recall", "F1-Score", "BACC", 
+                               "True negatives", "False positives", "False negatives", "True positives")
     rownames(xgboost_fit) <- NULL
     
     
     if(which(thresholds == j) ==1) {
          xgboost_thresh_fit <- as.data.frame(cbind(j,  mean(xgboost_fit$`Precision`), mean(xgboost_fit$`Recall`), 
-                                                mean(xgboost_fit$`F1-Score`), mean(xgboost_fit$BACC) ))
+                                                mean(xgboost_fit$`F1-Score`), mean(xgboost_fit$BACC),
+                                                mean(xgboost_fit$`True negatives`), mean(xgboost_fit$`False positives`),
+                                                mean(xgboost_fit$`False negatives`), mean(xgboost_fit$`True positives`)))
          
     } else {
          xgboost_thresh_fit <- rbind(xgboost_thresh_fit, (cbind(j,  mean(xgboost_fit$`Precision`), mean(xgboost_fit$`Recall`),
-                                                      mean(xgboost_fit$`F1-Score`), mean(xgboost_fit$BACC) )) )
+                                                      mean(xgboost_fit$`F1-Score`), mean(xgboost_fit$BACC),
+                                                      mean(xgboost_fit$`True negatives`), mean(xgboost_fit$`False positives`),
+                                                      mean(xgboost_fit$`False negatives`), mean(xgboost_fit$`True positives`))) )
           
     }
 
 }
 
-colnames(xgboost_thresh_fit) = c("Threshold", "Precision", "Recall", "F1-Score", "BACC")
+xgboost_thresh_fit = cbind(format(xgboost_thresh_fit[,1], nsmall = 2), 
+                           format(xgboost_thresh_fit[,2:5], digits = 3, nsmall = 4), 
+                           format(xgboost_thresh_fit[,6:9], digits = 1, nsmall = 0) ) 
+
+colnames(xgboost_thresh_fit) = c("Threshold", "Precision", "Recall", "F1-Score", "BACC",
+                                 "True negatives", "False positives", "False negatives", "True positives")
+
+
+  
 xgboost_thresh_fit
 
-write.csv(xgboost_thresh_fit, file = "xgboost_thresh_fit.csv")
+write.csv(xgboost_thresh_fit[c("Threshold", "Precision", "Recall", "BACC",
+                                 "True negatives", "False positives", "False negatives", "True positives")] ,
+          file = "xgboost_thresh_fit.csv")
+```
+
+Plots
+```{r}
+# Reshape data for a better visualization with ggplot 
+statistics_melt = melt(xgboost_thresh_fit, id.vars = "Threshold", measure.vars = c("Precision", "Recall"), variable.name = "Metric") 
+statistics_melt$Threshold = as.numeric(statistics_melt$Threshold)
+statistics_melt$value = as.numeric(statistics_melt$value)
+
+ggplot(statistics_melt, aes(x = Threshold, y = `value`, color = `Metric`) ) +
+      geom_line(aes(color = `Metric`), size = 0.8) +
+      scale_color_manual(values = c("Precision" = "red", "Recall" = "dodgerblue1")) + 
+      labs(title = "", 
+             y   = "Value") + 
+      ylim(0, NA) + 
+      theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
+```
+
+```{r}
+statistics_melt = melt(xgboost_thresh_fit, id.vars = "Threshold", measure.vars = c("True negatives", "False positives"), variable.name = "Metric") 
+statistics_melt$Threshold = as.numeric(statistics_melt$Threshold)
+statistics_melt$value = as.numeric(statistics_melt$value)
+
+ggplot(statistics_melt, aes(x = Threshold, y = `value`, color = `Metric`) ) +
+      geom_line(aes(color = `Metric`), size = 0.8) +
+      scale_color_manual(values = c("True negatives" = "red", "False positives" = "dodgerblue1")) + 
+      labs(title = "", 
+             y   = "Value") + 
+      ylim(0, NA) + 
+      theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
+```
+
+```{r}
+statistics_melt = melt(xgboost_thresh_fit, id.vars = "Threshold", measure.vars = c("False negatives", "True positives"), variable.name = "Metric") 
+statistics_melt$Threshold = as.numeric(statistics_melt$Threshold)
+statistics_melt$value = as.numeric(statistics_melt$value)
+
+ggplot(statistics_melt, aes(x = Threshold, y = `value`, color = `Metric`) ) +
+      geom_line(aes(color = `Metric`), size = 0.8) +
+      scale_color_manual(values = c("False negatives" = "red", "True positives" = "dodgerblue1")) + 
+      labs(title = "", 
+             y   = "Value") + 
+      ylim(0, NA) + 
+      theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
+```
+
+#### XGBoost fine-tuning
+
+I) Find optimal number of iterations with 5-folds CV
+
+Change the numeric format of categorical variables to factors and one-hot encode them (for XGBoost requirements)
+```{r}
+data_tuning = data_encoded
+
+
+factors =  c("control", "consdummy", "ICR_failure", "interest_diff", "NEG_VA", 
+             "misallocated_fixed", "profitability", "dummy_patents", "dummy_trademark")
+data_tuning[, factors] = lapply(data_tuning[, factors], function(x) as.factor(x) )
+
+# Transform the data.frame into a data.table (more efficient version of data.table)
+setDT(data_tuning)
+
+# Perform one-hot encoding of all factors in the dataset
+X = model.matrix(~ . +0, data = data_tuning[, -c("failure")])
+ 
+# NOTE: model.matrix automatically performs one-hot encoding of the categorical variables (factors)
+#   .  = all the columns of 'data' not otherwise in the formula
+#   +0 = keep all levels when performing one-hot encoding of factors while omitting the intercept form the model
+#        (when "+0" is omitted form the formula the intercept is put in the model as a column of one while 
+#        the reference level is dropped from the model.matrix)
+
+y = data_tuning$failure
+```
+
+Get optimal number of boosting iterations
+```{r}
+# Use xgb.DMatrix to convert the data.table into a suitable matrix object for XGBoost 
+tuning_data = xgb.DMatrix(data = X, label = y)
+
+# Initialize the default parameters for XGBoost
+params <- list(booster = "gbtree", 
+               objective = "binary:logistic", 
+               eta = 0.3, 
+               gamma = 0, 
+               max_depth = 6, 
+               min_child_weight = 1, 
+               subsample = 1, 
+               colsample_bytree = 1)
+
+# Find the optimal number of boosting iterations
+set.seed(269)
+xgbcv <- xgb.cv(params = params, data = tuning_data, nrounds = 100, nfold = 5, showsd = T, stratified = T, print.every.n = 10, early.stop.round = 20, maximize = F)
+optimum_nrounds = xgbcv$best_iteration
+```
+
+Get optimal hyperparameters with random search
+```{r}
+# Set up the classification problem
+data_tuning$failure = as.factor(data_tuning$failure)
+data_tuning = as.data.frame(data_tuning)
+
+# Create the classification task
+task = makeClassifTask(data = data_tuning, target = "failure")
+
+# Perform one-hot encoding: replace all factors with their dummy variables.
+# Non-factor features will be left untouched and passed to the result.
+task = createDummyFeatures(obj = task)
+
+# Create learner
+lrn = makeLearner(cl = "classif.xgboost", predict.type = "prob")
+
+# Adjust default values of the hyperparameters
+lrn$par.vals = list(objective="binary:logistic", eval_metric = "error", nrounds = 100L, eta = 0.1)
+
+# Initialize the hyperparameters space
+params <- makeParamSet(makeDiscreteParam(id = "booster", values = c("gbtree") ), 
+                        makeIntegerParam(id = "max_depth", lower = 3L, upper = 10L), 
+                        makeNumericParam(id = "min_child_weight", lower = 1L, upper = 10L), 
+                        makeNumericParam(id = "subsample", lower = 0.5, upper = 1), 
+                        makeNumericParam(id = "colsample_bytree", lower = 0.5, upper = 1)       )
+
+# Set up the resampling strategy
+rdesc = makeResampleDesc(method = "CV", predict = "test", stratify = T, iters = 5)
+# NB: "stratify = T" ensure the proportion of the target variable is mantained in each training set as in the original data set (useful for our imbalanced label "failure")
+
+# Set up the search strategy: random search (other possibility: grid search)
+set.seed(269)
+ctrl <- makeTuneControlRandom(maxit = 10L)
+
+# Set up parallel backend to speed up computations 
+parallelStartSocket(cpus = detectCores())
+
+# Perform hyperparameters tuning
+mytune <- tuneParams(learner = lrn, task = task, resampling = rdesc, measures = acc, par.set = params, control = ctrl, show.info = T)
+```
+
+Perform XGBoost with tuned hyperparameters
+```{r}
+
+
+time = list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- data_encoded[index, ]
+    train <- data_encoded[-index, ]
+    train <- matrix(unlist(train), ncol = length(train), nrow = nrow(train))
+    test <- matrix(unlist(test), ncol = length(test), nrow = nrow(test))
+    
+    set.seed(3052)
+    tic()
+    xgboost_cv <- xgboost(data = train[, 2:ncol(train)], label = train[,1], 
+                          objective = "binary:logistic",
+                          nrounds = optimum_nrounds,
+                          booster = mytune$x$booster,
+                          max_depth = mytune$x$max_depth, 
+                          min_child_weight = mytune$x$min_child_weight,
+                          subsample = mytune$x$subsample,
+                          colsample_bytree = mytune$x$colsample_bytree)
+    time[[i]]  <- toc()
+     
+     # Prediction out-of-sample
+     fitted.prob.xgboost <- predict(xgboost_cv, newdata = test[, 2:ncol(train)], type = "response" ) 
+
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.xgboost <- fitted.prob.xgboost[ test[,1] == 1]
+     bg.xgboost <- fitted.prob.xgboost[ test[,1] == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di pexgboostormance del classificatore
+     # sono THRESHOLD-FREE: misurano la pexgboostormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_xgboost <- roc.curve(scores.class0 = fg.xgboost,
+                            scores.class1 = bg.xgboost,
+                            curve = T)
+     #(roc_xgboost)
+     
+     pr_xgboost <- pr.curve(scores.class0 = fg.xgboost,
+                          scores.class1 = bg.xgboost,
+                          curve = T)
+     #plot(pr_xgboost)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.xgboost.integer <- ifelse(fitted.prob.xgboost > quantile(fitted.prob.xgboost, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.xgboost.integer), 
+                                    reference = as.factor(test[,1]), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_xgboost <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_xgboost <- f1_score(fitted.xgboost.integer, test[,1], positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_xgboost <- as.data.frame(rbind(postResample(as.double(fitted.prob.xgboost), test[,1] )))
+
+
+    if(i==1) {
+     xgboost_fit <- as.data.frame(cbind(i, roc_xgboost$auc, pr_xgboost$auc.integral, f1_xgboost,
+                                      balanced_accuracy_xgboost, accuracy_xgboost$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     xgboost_fit <- rbind(xgboost_fit, cbind(i, roc_xgboost$auc, pr_xgboost$auc.integral, f1_xgboost, 
+                            balanced_accuracy_xgboost, accuracy_xgboost$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(xgboost_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(xgboost_fit) <- NULL
+xgboost_fit = rbind(xgboost_fit, c("Overall", mean(xgboost_fit$`Area under the ROC`), mean(xgboost_fit$`Area under the PR`), mean(xgboost_fit$`F1-Score`), mean(xgboost_fit$BACC), mean(xgboost_fit$`R squared`), round(mean(xgboost_fit$`Training time (sec.)`), digits = 4) ))
+
+# xgboost fit across the 5-folds and on average
+xgboost_fit
+
+write.csv(xgboost_fit, file = "xgboost_fine_tuned_fit.csv")
+write.csv(mytune$x, file = "xgboost_tuned_par.csv")
 ```
 
 
 
-
-
-
-## BART - without MIA -
+BART (without MIA)
 ```{r}
 time <- list()
 for (i in 1:n.folds){
     
       # Segment the data  
       index <- folds[[i]]
-      test <- dats[index, ]
-      train <- dats[-index, ]
+      test <- data_encoded[index, ]
+      train <- data_encoded[-index, ]
       
       
       # Get TRAINING predictors matrix
@@ -935,8 +1738,7 @@ bart_fit
 write.csv(bart_fit, file = "bart_fit.csv")
 ```
 
-
-## Super Learner
+Super Learner
 ```{r}
 time <- list()
 coef <- list()
@@ -945,8 +1747,8 @@ for (i in 1:n.folds){
     
       # Segment the data  
       index <- folds[[i]]
-      test <- dats[index, ]
-      train <- dats[-index, ]
+      test <- data_encoded[index, ]
+      train <- data_encoded[-index, ]
       
       # Get TRAINING predictors matrix
       X <- as.data.frame(train[, 2:length(train)])
@@ -1048,8 +1850,7 @@ write.csv(tot_coef, file = "sl_coef.csv")
 
 ```
 
-
-## BART-MIA on non-encoded missing data
+BART-MIA (on non-encoded missing data)
 ```{r}
 data_missing = data_italy[c("failure", predictors)]
 
@@ -1143,25 +1944,342 @@ write.csv(bart_missing_fit, file = "bart_missing_fit.csv")
 
 
 
-## Missing values imputation with unconditional mean imputation
+### Encoding missingness (1): unconditional median imputation
 ```{r}
 data_missing = data_italy[c("failure", predictors)]
 
-# Imputation with CART
-temp = mice(data_missing, method = "mean", m = 1, remove.collinear = FALSE)
+# Perform unconditional median imputation 
+temp = impute_median(data_missing, type = "columnwise", ordered_low = FALSE, convert_tibble = TRUE)
 
 # Get imputed data
-data_imputed_mean = complete(temp)
+data_imputed_median = complete(temp)
 ```
-BART - without MIA - on imputed data with mean imputation
+
+Logit
+```{r}
+time <- list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- data_imputed_median[index, ]
+    train <- data_imputed_median[-index, ]
+    
+    set.seed(3052)
+    tic()
+    logit_cv <- glm(formula, data = train, family=binomial(link='logit'))
+    time[[i]] <- toc()
+    
+     # Out-of-sample prediction (i.e. the i-th fold)
+     fitted.prob.logit <- predict(logit_cv, newdata = test, type = 'response')
+     fitted.logit <- as.numeric(fitted.prob.logit)
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.logit <- fitted.logit[ test$failure == 1]
+     bg.logit <- fitted.logit[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di performance del classificatore
+     # sono THRESHOLD-FREE: misurano la performance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_logit <- roc.curve(scores.class0 = fg.logit,
+                            scores.class1 = bg.logit,
+                            curve = T)
+     #(roc_logit)
+     
+     pr_logit <- pr.curve(scores.class0 = fg.logit,
+                          scores.class1 = bg.logit,
+                          curve = T)
+     #plot(pr_logit)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.logit.integer <- ifelse(fitted.prob.logit > quantile(fitted.logit, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.logit.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_logit <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_logit <- f1_score(fitted.logit.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_logit <- as.data.frame(rbind(postResample(as.double(fitted.logit), test$failure )))
+
+
+    if(i==1) {
+     logit_fit <- as.data.frame(cbind(i, roc_logit$auc, pr_logit$auc.integral, f1_logit,
+                                      balanced_accuracy_logit, accuracy_logit$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     logit_fit <- rbind(logit_fit, cbind(i, roc_logit$auc, pr_logit$auc.integral, f1_logit, 
+                            balanced_accuracy_logit, accuracy_logit$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(logit_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(logit_fit) <- NULL
+logit_fit = rbind(logit_fit, c("Overall", mean(logit_fit$`Area under the ROC`), mean(logit_fit$`Area under the PR`), mean(logit_fit$`F1-Score`), mean(logit_fit$BACC), mean(logit_fit$`R squared`), round(mean(logit_fit$`Training time (sec.)`), digits = 4) ))
+
+# Logit fit across the 5-folds and on average
+logit_fit
+
+write.csv(logit_fit, file = "logit_median_imputation_fit.csv")
+```
+
+Ctree
+```{r}
+time <- list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- data_imputed_median[index, ]
+    train <- data_imputed_median[-index, ]
+    
+    set.seed(3052)
+    tic()
+    ctree_cv <- ctree(formula, 
+                      data=train, 
+                      control = ctree_control(testtype = "MonteCarlo", mincriterion = 0.90, nresample = 1000))
+    time[[i]] <- toc()  
+
+    
+     # Out-of-sample prediction (i.e. the i-th fold)
+     fitted.results.ctree <- as.matrix(unlist(predict(ctree_cv, newdata = test, type='prob')))
+     # Take the predictions in even positions (they corresponds to the probability of failure)
+     fitted.prob.ctree <- fitted.results.ctree[seq_along(fitted.results.ctree) %% 2 == 0]
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.ctree <- fitted.prob.ctree[ test$failure == 1]
+     bg.ctree <- fitted.prob.ctree[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di performance del classificatore
+     # sono THRESHOLD-FREE: misurano la performance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_ctree <- roc.curve(scores.class0 = fg.ctree,
+                            scores.class1 = bg.ctree,
+                            curve = T)
+     #(roc_ctree)
+     
+     pr_ctree <- pr.curve(scores.class0 = fg.ctree,
+                          scores.class1 = bg.ctree,
+                          curve = T)
+     #plot(pr_ctree)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.ctree.integer <- ifelse(fitted.prob.ctree > quantile(fitted.prob.ctree, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.ctree.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_ctree <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_ctree <- f1_score(fitted.ctree.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_ctree <- as.data.frame(rbind(postResample(as.double(fitted.prob.ctree), test$failure )))
+
+
+    if(i==1) {
+     ctree_fit <- as.data.frame(cbind(i, roc_ctree$auc, pr_ctree$auc.integral, f1_ctree,
+                                      balanced_accuracy_ctree, accuracy_ctree$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     ctree_fit <- rbind(ctree_fit, cbind(i, roc_ctree$auc, pr_ctree$auc.integral, f1_ctree, 
+                            balanced_accuracy_ctree, accuracy_ctree$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(ctree_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(ctree_fit) <- NULL
+ctree_fit = rbind(ctree_fit, c("Overall", mean(ctree_fit$`Area under the ROC`), mean(ctree_fit$`Area under the PR`), mean(ctree_fit$`F1-Score`), mean(ctree_fit$BACC), mean(ctree_fit$`R squared`), round(mean(ctree_fit$`Training time (sec.)`), digits = 4) ))
+
+# ctree fit across the 5-folds and on average
+ctree_fit
+
+write.csv(ctree_fit, file = "ctree_median_imputation_fit.csv")
+```
+
+Random Forest
+```{r}
+time = list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- data_imputed_median[index, ]
+    train <- data_imputed_median[-index, ]
+    
+    set.seed(3052)
+    tic()
+    rf_cv <- randomForest(formula, data = train, importance = FALSE, ntree=200)
+    time[[i]]  <- toc()
+
+     
+     # Prediction out-of-sample
+     fitted.prob.rf <- predict(rf_cv, newdata = test, type = "prob") 
+     fitted.prob.rf <- fitted.prob.rf[,2]
+
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.rf <- fitted.prob.rf[ test$failure == 1]
+     bg.rf <- fitted.prob.rf[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di performance del classificatore
+     # sono THRESHOLD-FREE: misurano la performance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_rf <- roc.curve(scores.class0 = fg.rf,
+                            scores.class1 = bg.rf,
+                            curve = T)
+     #(roc_rf)
+     
+     pr_rf <- pr.curve(scores.class0 = fg.rf,
+                          scores.class1 = bg.rf,
+                          curve = T)
+     #plot(pr_rf)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.rf.integer <- ifelse(fitted.prob.rf > quantile(fitted.prob.rf, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.rf.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_rf <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_rf <- f1_score(fitted.rf.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_rf <- as.data.frame(rbind(postResample(as.double(fitted.prob.rf), test$failure )))
+
+
+    if(i==1) {
+     rf_fit <- as.data.frame(cbind(i, roc_rf$auc, pr_rf$auc.integral, f1_rf,
+                                      balanced_accuracy_rf, accuracy_rf$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4) ))
+     
+    } else {
+     rf_fit <- rbind(rf_fit, cbind(i, roc_rf$auc, pr_rf$auc.integral, f1_rf, 
+                            balanced_accuracy_rf, accuracy_rf$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)) )
+      
+    }
+    
+    
+}
+
+colnames(rf_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(rf_fit) <- NULL
+rf_fit = rbind(rf_fit, c("Overall", mean(rf_fit$`Area under the ROC`), mean(rf_fit$`Area under the PR`), mean(rf_fit$`F1-Score`), mean(rf_fit$BACC), mean(rf_fit$`R squared`), round(mean(rf_fit$`Training time (sec.)`), digits = 4) ))
+
+# rf fit across the 5-folds and on average
+rf_fit
+
+write.csv(rf_fit, file = "rf_median_imputation_fit.csv")
+```
+
+XGBoost
+```{r}
+time = list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- data_imputed_median[index, ]
+    train <- data_imputed_median[-index, ]
+    train <- matrix(unlist(train), ncol = length(train), nrow = nrow(train))
+    test <- matrix(unlist(test), ncol = length(test), nrow = nrow(test))
+    
+    set.seed(3052)
+    tic()
+    xgboost_cv <- xgboost(data = train[, 2:ncol(train)], label = train[,1], objective = "binary:logistic", nrounds = 5)
+    time[[i]]  <- toc()
+     
+     # Prediction out-of-sample
+     fitted.prob.xgboost <- predict(xgboost_cv, newdata = test[, 2:ncol(train)] ) 
+
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.xgboost <- fitted.prob.xgboost[ test[,1] == 1]
+     bg.xgboost <- fitted.prob.xgboost[ test[,1] == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di pexgboostormance del classificatore
+     # sono THRESHOLD-FREE: misurano la pexgboostormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_xgboost <- roc.curve(scores.class0 = fg.xgboost,
+                            scores.class1 = bg.xgboost,
+                            curve = T)
+     #(roc_xgboost)
+     
+     pr_xgboost <- pr.curve(scores.class0 = fg.xgboost,
+                          scores.class1 = bg.xgboost,
+                          curve = T)
+     #plot(pr_xgboost)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.xgboost.integer <- ifelse(fitted.prob.xgboost > quantile(fitted.prob.xgboost, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.xgboost.integer), 
+                                    reference = as.factor(test[,1]), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_xgboost <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_xgboost <- f1_score(fitted.xgboost.integer, test[,1], positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_xgboost <- as.data.frame(rbind(postResample(as.double(fitted.prob.xgboost), test[,1] )))
+
+
+    if(i==1) {
+     xgboost_fit <- as.data.frame(cbind(i, roc_xgboost$auc, pr_xgboost$auc.integral, f1_xgboost,
+                                      balanced_accuracy_xgboost, accuracy_xgboost$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     xgboost_fit <- rbind(xgboost_fit, cbind(i, roc_xgboost$auc, pr_xgboost$auc.integral, f1_xgboost, 
+                            balanced_accuracy_xgboost, accuracy_xgboost$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(xgboost_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(xgboost_fit) <- NULL
+xgboost_fit = rbind(xgboost_fit, c("Overall", mean(xgboost_fit$`Area under the ROC`), mean(xgboost_fit$`Area under the PR`), mean(xgboost_fit$`F1-Score`), mean(xgboost_fit$BACC), mean(xgboost_fit$`R squared`), round(mean(xgboost_fit$`Training time (sec.)`), digits = 4) ))
+
+# xgboost fit across the 5-folds and on average
+xgboost_fit
+
+write.csv(xgboost_fit, file = "xgboost_median_imputation_fit.csv")
+```
+
+BART (without MIA)
 ```{r}
 time <- list()
 for (i in 1:n.folds){
     
       # Segment the data  
       index <- folds[[i]]
-      test <- data_imputed_mean[index, ]
-      train <- data_imputed_mean[-index, ]
+      test <- data_imputed_median[index, ]
+      train <- data_imputed_median[-index, ]
       
       
       # Get TRAINING predictors matrix
@@ -1239,34 +2357,463 @@ bart_fit = rbind(bart_fit, c("Overall", mean(bart_fit$`Area under the ROC`), mea
 # bart fit across the 5-folds and on average
 bart_fit
 
-write.csv(bart_fit, file = "bart_mean_imputation_fit.csv")
+write.csv(bart_fit, file = "bart_median_imputation_fit.csv")
+```
+
+Super Learner
+```{r}
+time <- list()
+coef <- list()
+
+for (i in 1:n.folds){
+    
+      # Segment the data  
+      index <- folds[[i]]
+      test <- data_imputed_median[index, ]
+      train <- data_imputed_median[-index, ]
+      
+      # Get TRAINING predictors matrix
+      X <- as.data.frame(train[, 2:length(train)])
+      
+      # Get TRAINING outcome Vector
+      Y <- unlist(train[,1], use.names = FALSE)
+      
+      # Get TEST predictors matrix 
+      M <- as.data.frame(test[, 2:length(test)])
+      
+      tic()
+    
+      # V = 2 is the number of folds that the Super Learner (SL) uses to estimate the risk on future data. 
+      # By default the SL uses V = 10. However, but since we do not use this measure, we reduce the computational burden setting V=2. 
+      # For more information see: https://cran.r-project.org/web/packages/SuperLearner/vignettes/Guide-to-SuperLearner.html
+      SL_cv <- SuperLearner(Y = Y, 
+                            X = X, 
+                            SL.library = c("SL.glm", "SL.rpartPrune", "SL.randomForest", "SL.xgboost", "tmle.SL.dbarts2"), 
+                            verbose = FALSE, 
+                            method = "method.NNLS", 
+                            family = binomial(link='logit'), 
+                            cvControl = list(V = 2) )
+      
+
+      
+      time[[i]] <- toc() 
+    
+
+     # Get fitted values  
+     fitted <- predict(SL_cv, M, onlySL = TRUE)
+     fitted.prob.sl <- fitted$pred
+      
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.sl <- fitted.prob.sl[ test$failure == 1]
+     bg.sl <- fitted.prob.sl[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di peslormance del classificatore
+     # sono THRESHOLD-FREE: misurano la peslormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_sl <- roc.curve(scores.class0 = fg.sl,
+                            scores.class1 = bg.sl,
+                            curve = T)
+     #(roc_sl)
+     
+     pr_sl <- pr.curve(scores.class0 = fg.sl,
+                          scores.class1 = bg.sl,
+                          curve = T)
+     #plot(pr_sl)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.sl.integer <- ifelse(fitted.prob.sl > quantile(fitted.prob.sl, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.sl.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_sl <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_sl <- f1_score(fitted.sl.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_sl <- as.data.frame(rbind(postResample(as.double(fitted.prob.sl), test$failure )))
+
+
+    if(i==1) {
+     sl_fit <- as.data.frame(cbind(i, roc_sl$auc, pr_sl$auc.integral, f1_sl,
+                                      balanced_accuracy_sl, accuracy_sl$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     coef[[i]] = c(i,  unname(SL_cv$coef))
+     
+    } else {
+     sl_fit <- rbind(sl_fit, cbind(i, roc_sl$auc, pr_sl$auc.integral, f1_sl, 
+                            balanced_accuracy_sl, accuracy_sl$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     coef[[i]] = c(i,  unname(SL_cv$coef))
+      
+    }
+    
+    
+}
+
+colnames(sl_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(sl_fit) <- NULL
+sl_fit = rbind(sl_fit, c("Overall", mean(sl_fit$`Area under the ROC`), mean(sl_fit$`Area under the PR`), mean(sl_fit$`F1-Score`), mean(sl_fit$BACC), mean(sl_fit$`R squared`), round(mean(sl_fit$`Training time (sec.)`), digits = 4) ))
+
+# sl fit across the 5-folds and on average
+sl_fit
+
+# Save weights given to each model, in each fold and on average
+tot_coef = as.data.frame(rbind(coef[[1]], coef[[2]], coef[[3]], coef[[4]], coef[[5]]))
+colnames(tot_coef) = c("Fold", "Logit", "CART", "Random Forest", "XGBoost", "BART")
+tot_coef = rbind(tot_coef, c("Mean", mean(tot_coef$`Logit`), mean(tot_coef$`CART`),  mean(tot_coef$`Random Forest`),  mean(tot_coef$`XGBoost`),  mean(tot_coef$`BART`)) ) 
+
+tot_coef
+
+write.csv(sl_fit, file = "sl_median_imputation_fit.csv")
+write.csv(tot_coef, file = "sl_median_imputation_coef.csv")
+
 ```
 
 
 
-
-## Missing values imputation with CART
-```{r}
+### Encoding missingness (2): KNN imputation
+```{r eval=FALSE}
 data_missing = data_italy[c("failure", predictors)]
 
-# Imputation with KNN
-# temp = knnImputation(data_missing, k = 3, scale = TRUE, meth = "weighAvg")
+# Get imputed data: it uses either the median (in case of numeric variables) or the most frequent value (in case of factors), of the neighbours to fill in the NAs. 
+set.seed(345)
+data_imputed_knn <- knnImp(data_missing, k = 5, scale = TRUE, distData = NULL)
 
-# Imputation with CART
-temp = mice(data_missing, method = "cart", m = 1)
-
-# Get imputed data
-data_imputed_cart = complete(temp)
+write_dta(data_imputed_knn, "data_imputed_knn.dta")
 ```
-BART - without MIA - on imputed data with CART
+
+```{r}
+data_imputed_knn <- read_dta("data_imputed_knn.dta")
+```
+
+Logit
+```{r}
+time <- list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- data_imputed_knn[index, ]
+    train <- data_imputed_knn[-index, ]
+    
+    set.seed(3052)
+    tic()
+    logit_cv <- glm(formula, data = train, family=binomial(link='logit'))
+    time[[i]] <- toc()
+    
+     # Out-of-sample prediction (i.e. the i-th fold)
+     fitted.prob.logit <- predict(logit_cv, newdata = test, type = 'response')
+     fitted.logit <- as.numeric(fitted.prob.logit)
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.logit <- fitted.logit[ test$failure == 1]
+     bg.logit <- fitted.logit[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di performance del classificatore
+     # sono THRESHOLD-FREE: misurano la performance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_logit <- roc.curve(scores.class0 = fg.logit,
+                            scores.class1 = bg.logit,
+                            curve = T)
+     #(roc_logit)
+     
+     pr_logit <- pr.curve(scores.class0 = fg.logit,
+                          scores.class1 = bg.logit,
+                          curve = T)
+     #plot(pr_logit)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.logit.integer <- ifelse(fitted.prob.logit > quantile(fitted.logit, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.logit.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_logit <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_logit <- f1_score(fitted.logit.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_logit <- as.data.frame(rbind(postResample(as.double(fitted.logit), test$failure )))
+
+
+    if(i==1) {
+     logit_fit <- as.data.frame(cbind(i, roc_logit$auc, pr_logit$auc.integral, f1_logit,
+                                      balanced_accuracy_logit, accuracy_logit$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     logit_fit <- rbind(logit_fit, cbind(i, roc_logit$auc, pr_logit$auc.integral, f1_logit, 
+                            balanced_accuracy_logit, accuracy_logit$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(logit_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(logit_fit) <- NULL
+logit_fit = rbind(logit_fit, c("Overall", mean(logit_fit$`Area under the ROC`), mean(logit_fit$`Area under the PR`), mean(logit_fit$`F1-Score`), mean(logit_fit$BACC), mean(logit_fit$`R squared`), round(mean(logit_fit$`Training time (sec.)`), digits = 4) ))
+
+# Logit fit across the 5-folds and on average
+logit_fit
+
+write.csv(logit_fit, file = "logit_knn_imputation_fit.csv")
+```
+
+Ctree
+```{r}
+time <- list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- data_imputed_knn[index, ]
+    train <- data_imputed_knn[-index, ]
+    
+    set.seed(3052)
+    tic()
+    ctree_cv <- ctree(formula, 
+                      data=train, 
+                      control = ctree_control(testtype = "MonteCarlo", mincriterion = 0.90, nresample = 1000))
+    time[[i]] <- toc()  
+
+    
+     # Out-of-sample prediction (i.e. the i-th fold)
+     fitted.results.ctree <- as.matrix(unlist(predict(ctree_cv, newdata = test, type='prob')))
+     # Take the predictions in even positions (they corresponds to the probability of failure)
+     fitted.prob.ctree <- fitted.results.ctree[seq_along(fitted.results.ctree) %% 2 == 0]
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.ctree <- fitted.prob.ctree[ test$failure == 1]
+     bg.ctree <- fitted.prob.ctree[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di performance del classificatore
+     # sono THRESHOLD-FREE: misurano la performance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_ctree <- roc.curve(scores.class0 = fg.ctree,
+                            scores.class1 = bg.ctree,
+                            curve = T)
+     #(roc_ctree)
+     
+     pr_ctree <- pr.curve(scores.class0 = fg.ctree,
+                          scores.class1 = bg.ctree,
+                          curve = T)
+     #plot(pr_ctree)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.ctree.integer <- ifelse(fitted.prob.ctree > quantile(fitted.prob.ctree, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.ctree.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_ctree <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_ctree <- f1_score(fitted.ctree.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_ctree <- as.data.frame(rbind(postResample(as.double(fitted.prob.ctree), test$failure )))
+
+
+    if(i==1) {
+     ctree_fit <- as.data.frame(cbind(i, roc_ctree$auc, pr_ctree$auc.integral, f1_ctree,
+                                      balanced_accuracy_ctree, accuracy_ctree$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     ctree_fit <- rbind(ctree_fit, cbind(i, roc_ctree$auc, pr_ctree$auc.integral, f1_ctree, 
+                            balanced_accuracy_ctree, accuracy_ctree$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(ctree_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(ctree_fit) <- NULL
+ctree_fit = rbind(ctree_fit, c("Overall", mean(ctree_fit$`Area under the ROC`), mean(ctree_fit$`Area under the PR`), mean(ctree_fit$`F1-Score`), mean(ctree_fit$BACC), mean(ctree_fit$`R squared`), round(mean(ctree_fit$`Training time (sec.)`), digits = 4) ))
+
+# ctree fit across the 5-folds and on average
+ctree_fit
+
+write.csv(ctree_fit, file = "ctree_knn_imputation_fit.csv")
+```
+
+Random Forest
+```{r}
+time = list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- data_imputed_knn[index, ]
+    train <- data_imputed_knn[-index, ]
+    
+    set.seed(3052)
+    tic()
+    rf_cv <- randomForest(formula, data = train, importance = FALSE, ntree=200)
+    time[[i]]  <- toc()
+
+     
+     # Prediction out-of-sample
+     fitted.prob.rf <- predict(rf_cv, newdata = test, type = "prob") 
+     fitted.prob.rf <- fitted.prob.rf[,2]
+
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.rf <- fitted.prob.rf[ test$failure == 1]
+     bg.rf <- fitted.prob.rf[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di performance del classificatore
+     # sono THRESHOLD-FREE: misurano la performance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_rf <- roc.curve(scores.class0 = fg.rf,
+                            scores.class1 = bg.rf,
+                            curve = T)
+     #(roc_rf)
+     
+     pr_rf <- pr.curve(scores.class0 = fg.rf,
+                          scores.class1 = bg.rf,
+                          curve = T)
+     #plot(pr_rf)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.rf.integer <- ifelse(fitted.prob.rf > quantile(fitted.prob.rf, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.rf.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_rf <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_rf <- f1_score(fitted.rf.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_rf <- as.data.frame(rbind(postResample(as.double(fitted.prob.rf), test$failure )))
+
+
+    if(i==1) {
+     rf_fit <- as.data.frame(cbind(i, roc_rf$auc, pr_rf$auc.integral, f1_rf,
+                                      balanced_accuracy_rf, accuracy_rf$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4) ))
+     
+    } else {
+     rf_fit <- rbind(rf_fit, cbind(i, roc_rf$auc, pr_rf$auc.integral, f1_rf, 
+                            balanced_accuracy_rf, accuracy_rf$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)) )
+      
+    }
+    
+    
+}
+
+colnames(rf_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(rf_fit) <- NULL
+rf_fit = rbind(rf_fit, c("Overall", mean(rf_fit$`Area under the ROC`), mean(rf_fit$`Area under the PR`), mean(rf_fit$`F1-Score`), mean(rf_fit$BACC), mean(rf_fit$`R squared`), round(mean(rf_fit$`Training time (sec.)`), digits = 4) ))
+
+# rf fit across the 5-folds and on average
+rf_fit
+
+write.csv(rf_fit, file = "rf_knn_imputation_fit.csv")
+```
+
+XGBoost
+```{r}
+time = list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- data_imputed_knn[index, ]
+    train <- data_imputed_knn[-index, ]
+    train <- matrix(unlist(train), ncol = length(train), nrow = nrow(train))
+    test <- matrix(unlist(test), ncol = length(test), nrow = nrow(test))
+    
+    set.seed(3052)
+    tic()
+    xgboost_cv <- xgboost(data = train[, 2:ncol(train)], label = train[,1], objective = "binary:logistic", nrounds = 5)
+    time[[i]]  <- toc()
+     
+     # Prediction out-of-sample
+     fitted.prob.xgboost <- predict(xgboost_cv, newdata = test[, 2:ncol(train)] ) 
+
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.xgboost <- fitted.prob.xgboost[ test[,1] == 1]
+     bg.xgboost <- fitted.prob.xgboost[ test[,1] == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di pexgboostormance del classificatore
+     # sono THRESHOLD-FREE: misurano la pexgboostormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_xgboost <- roc.curve(scores.class0 = fg.xgboost,
+                            scores.class1 = bg.xgboost,
+                            curve = T)
+     #(roc_xgboost)
+     
+     pr_xgboost <- pr.curve(scores.class0 = fg.xgboost,
+                          scores.class1 = bg.xgboost,
+                          curve = T)
+     #plot(pr_xgboost)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.xgboost.integer <- ifelse(fitted.prob.xgboost > quantile(fitted.prob.xgboost, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.xgboost.integer), 
+                                    reference = as.factor(test[,1]), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_xgboost <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_xgboost <- f1_score(fitted.xgboost.integer, test[,1], positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_xgboost <- as.data.frame(rbind(postResample(as.double(fitted.prob.xgboost), test[,1] )))
+
+
+    if(i==1) {
+     xgboost_fit <- as.data.frame(cbind(i, roc_xgboost$auc, pr_xgboost$auc.integral, f1_xgboost,
+                                      balanced_accuracy_xgboost, accuracy_xgboost$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     xgboost_fit <- rbind(xgboost_fit, cbind(i, roc_xgboost$auc, pr_xgboost$auc.integral, f1_xgboost, 
+                            balanced_accuracy_xgboost, accuracy_xgboost$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(xgboost_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(xgboost_fit) <- NULL
+xgboost_fit = rbind(xgboost_fit, c("Overall", mean(xgboost_fit$`Area under the ROC`), mean(xgboost_fit$`Area under the PR`), mean(xgboost_fit$`F1-Score`), mean(xgboost_fit$BACC), mean(xgboost_fit$`R squared`), round(mean(xgboost_fit$`Training time (sec.)`), digits = 4) ))
+
+# xgboost fit across the 5-folds and on average
+xgboost_fit
+
+write.csv(xgboost_fit, file = "xgboost_knn_imputation_fit.csv")
+```
+
+BART (without MIA)
 ```{r}
 time <- list()
 for (i in 1:n.folds){
     
       # Segment the data  
       index <- folds[[i]]
-      test <- data_imputed_cart[index, ]
-      train <- data_imputed_cart[-index, ]
+      test <- data_imputed_knn[index, ]
+      train <- data_imputed_knn[-index, ]
       
       
       # Get TRAINING predictors matrix
@@ -1344,7 +2891,666 @@ bart_fit = rbind(bart_fit, c("Overall", mean(bart_fit$`Area under the ROC`), mea
 # bart fit across the 5-folds and on average
 bart_fit
 
-write.csv(bart_fit, file = "bart_cart_fit.csv")
+write.csv(bart_fit, file = "bart_knn_imputation_fit.csv")
 ```
+
+Super Learner
+```{r}
+time <- list()
+coef <- list()
+
+for (i in 1:n.folds){
+    
+      # Segment the data  
+      index <- folds[[i]]
+      test <- data_imputed_knn[index, ]
+      train <- data_imputed_knn[-index, ]
+      
+      # Get TRAINING predictors matrix
+      X <- as.data.frame(train[, 2:length(train)])
+      
+      # Get TRAINING outcome Vector
+      Y <- unlist(train[,1], use.names = FALSE)
+      
+      # Get TEST predictors matrix 
+      M <- as.data.frame(test[, 2:length(test)])
+      
+      tic()
+    
+      # V = 2 is the number of folds that the Super Learner (SL) uses to estimate the risk on future data. 
+      # By default the SL uses V = 10. However, but since we do not use this measure, we reduce the computational burden setting V=2. 
+      # For more information see: https://cran.r-project.org/web/packages/SuperLearner/vignettes/Guide-to-SuperLearner.html
+      SL_cv <- SuperLearner(Y = Y, 
+                            X = X, 
+                            SL.library = c("SL.glm", "SL.rpartPrune", "SL.randomForest", "SL.xgboost", "tmle.SL.dbarts2"), 
+                            verbose = FALSE, 
+                            method = "method.NNLS", 
+                            family = binomial(link='logit'), 
+                            cvControl = list(V = 2) )
+      
+
+      
+      time[[i]] <- toc() 
+    
+
+     # Get fitted values  
+     fitted <- predict(SL_cv, M, onlySL = TRUE)
+     fitted.prob.sl <- fitted$pred
+      
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.sl <- fitted.prob.sl[ test$failure == 1]
+     bg.sl <- fitted.prob.sl[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di peslormance del classificatore
+     # sono THRESHOLD-FREE: misurano la peslormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_sl <- roc.curve(scores.class0 = fg.sl,
+                            scores.class1 = bg.sl,
+                            curve = T)
+     #(roc_sl)
+     
+     pr_sl <- pr.curve(scores.class0 = fg.sl,
+                          scores.class1 = bg.sl,
+                          curve = T)
+     #plot(pr_sl)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.sl.integer <- ifelse(fitted.prob.sl > quantile(fitted.prob.sl, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.sl.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_sl <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_sl <- f1_score(fitted.sl.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_sl <- as.data.frame(rbind(postResample(as.double(fitted.prob.sl), test$failure )))
+
+
+    if(i==1) {
+     sl_fit <- as.data.frame(cbind(i, roc_sl$auc, pr_sl$auc.integral, f1_sl,
+                                      balanced_accuracy_sl, accuracy_sl$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     coef[[i]] = c(i,  unname(SL_cv$coef))
+     
+    } else {
+     sl_fit <- rbind(sl_fit, cbind(i, roc_sl$auc, pr_sl$auc.integral, f1_sl, 
+                            balanced_accuracy_sl, accuracy_sl$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     coef[[i]] = c(i,  unname(SL_cv$coef))
+      
+    }
+    
+    
+}
+
+colnames(sl_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(sl_fit) <- NULL
+sl_fit = rbind(sl_fit, c("Overall", mean(sl_fit$`Area under the ROC`), mean(sl_fit$`Area under the PR`), mean(sl_fit$`F1-Score`), mean(sl_fit$BACC), mean(sl_fit$`R squared`), round(mean(sl_fit$`Training time (sec.)`), digits = 4) ))
+
+# sl fit across the 5-folds and on average
+sl_fit
+
+# Save weights given to each model, in each fold and on average
+tot_coef = as.data.frame(rbind(coef[[1]], coef[[2]], coef[[3]], coef[[4]], coef[[5]]))
+colnames(tot_coef) = c("Fold", "Logit", "CART", "Random Forest", "XGBoost", "BART")
+tot_coef = rbind(tot_coef, c("Mean", mean(tot_coef$`Logit`), mean(tot_coef$`CART`),  mean(tot_coef$`Random Forest`),  mean(tot_coef$`XGBoost`),  mean(tot_coef$`BART`)) ) 
+
+tot_coef
+
+write.csv(sl_fit, file = "sl_knn_imputation_fit.csv")
+write.csv(tot_coef, file = "sl_knn_imputation_coef.csv")
+
+```
+
+
+
+### Encodig missingness (3): uniform median imputation
+
+For each variable (column) we impute the missing values by sampling from a continuous uniform distribution centered in the median of the variable and with bounded support on [median - sd(variable),  median + sd(variable)]  
+```{r}
+data_unif_imputed = data_italy[c("failure", predictors)]
+var = colnames(data_unif_imputed)
+var = var[!(var %in% c("failure", "nace", "area"))]  
+
+for (i in var) {
+    row_missing = which(is.na(data_unif_imputed[[i]] ))
+    
+    median = quantile(data_unif_imputed[[i]] , probs = c(0.5), na.rm =TRUE)
+    a = median - sd(data_italy[[i]], na.rm = TRUE)
+    b = median + sd(data_italy[[i]], na.rm = TRUE)
+    
+    imputed_values = runif(length(row_missing), min = a, max = b)
+    
+    data_unif_imputed[row_missing, i] = imputed_values   
+} 
+```
+
+
+Logit
+```{r}
+time <- list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- data_unif_imputed[index, ]
+    train <- data_unif_imputed[-index, ]
+    
+    set.seed(3052)
+    tic()
+    logit_cv <- glm(formula, data = train, family=binomial(link='logit'))
+    time[[i]] <- toc()
+    
+     # Out-of-sample prediction (i.e. the i-th fold)
+     fitted.prob.logit <- predict(logit_cv, newdata = test, type = 'response')
+     fitted.logit <- as.numeric(fitted.prob.logit)
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.logit <- fitted.logit[ test$failure == 1]
+     bg.logit <- fitted.logit[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di performance del classificatore
+     # sono THRESHOLD-FREE: misurano la performance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_logit <- roc.curve(scores.class0 = fg.logit,
+                            scores.class1 = bg.logit,
+                            curve = T)
+     #(roc_logit)
+     
+     pr_logit <- pr.curve(scores.class0 = fg.logit,
+                          scores.class1 = bg.logit,
+                          curve = T)
+     #plot(pr_logit)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.logit.integer <- ifelse(fitted.prob.logit > quantile(fitted.logit, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.logit.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_logit <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_logit <- f1_score(fitted.logit.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_logit <- as.data.frame(rbind(postResample(as.double(fitted.logit), test$failure )))
+
+
+    if(i==1) { 
+     logit_fit <- as.data.frame(cbind(i, roc_logit$auc, pr_logit$auc.integral, f1_logit,
+                                      balanced_accuracy_logit, accuracy_logit$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     logit_fit <- rbind(logit_fit, cbind(i, roc_logit$auc, pr_logit$auc.integral, f1_logit, 
+                            balanced_accuracy_logit, accuracy_logit$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(logit_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(logit_fit) <- NULL
+logit_fit = rbind(logit_fit, c("Overall", mean(logit_fit$`Area under the ROC`), mean(logit_fit$`Area under the PR`), mean(logit_fit$`F1-Score`), mean(logit_fit$BACC), mean(logit_fit$`R squared`), round(mean(logit_fit$`Training time (sec.)`), digits = 4) ))
+
+# Logit fit across the 5-folds and on average
+logit_fit
+
+write.csv(logit_fit, file = "logit_unif_imputation_fit.csv")
+```
+
+Ctree
+```{r}
+time <- list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- data_unif_imputed[index, ]
+    train <- data_unif_imputed[-index, ]
+    
+    set.seed(3052)
+    tic()
+    ctree_cv <- ctree(formula, 
+                      data=train, 
+                      control = ctree_control(testtype = "MonteCarlo", mincriterion = 0.90, nresample = 1000))
+    time[[i]] <- toc()  
+
+    
+     # Out-of-sample prediction (i.e. the i-th fold)
+     fitted.results.ctree <- as.matrix(unlist(predict(ctree_cv, newdata = test, type='prob')))
+     # Take the predictions in even positions (they corresponds to the probability of failure)
+     fitted.prob.ctree <- fitted.results.ctree[seq_along(fitted.results.ctree) %% 2 == 0]
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.ctree <- fitted.prob.ctree[ test$failure == 1]
+     bg.ctree <- fitted.prob.ctree[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di performance del classificatore
+     # sono THRESHOLD-FREE: misurano la performance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_ctree <- roc.curve(scores.class0 = fg.ctree,
+                            scores.class1 = bg.ctree,
+                            curve = T)
+     #(roc_ctree)
+     
+     pr_ctree <- pr.curve(scores.class0 = fg.ctree,
+                          scores.class1 = bg.ctree,
+                          curve = T)
+     #plot(pr_ctree)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.ctree.integer <- ifelse(fitted.prob.ctree > quantile(fitted.prob.ctree, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.ctree.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_ctree <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_ctree <- f1_score(fitted.ctree.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_ctree <- as.data.frame(rbind(postResample(as.double(fitted.prob.ctree), test$failure )))
+
+
+    if(i==1) {
+     ctree_fit <- as.data.frame(cbind(i, roc_ctree$auc, pr_ctree$auc.integral, f1_ctree,
+                                      balanced_accuracy_ctree, accuracy_ctree$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     ctree_fit <- rbind(ctree_fit, cbind(i, roc_ctree$auc, pr_ctree$auc.integral, f1_ctree, 
+                            balanced_accuracy_ctree, accuracy_ctree$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(ctree_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(ctree_fit) <- NULL
+ctree_fit = rbind(ctree_fit, c("Overall", mean(ctree_fit$`Area under the ROC`), mean(ctree_fit$`Area under the PR`), mean(ctree_fit$`F1-Score`), mean(ctree_fit$BACC), mean(ctree_fit$`R squared`), round(mean(ctree_fit$`Training time (sec.)`), digits = 4) ))
+
+# ctree fit across the 5-folds and on average
+ctree_fit
+
+write.csv(ctree_fit, file = "ctree_unif_imputation_fit.csv")
+```
+
+Random Forest
+```{r}
+time = list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- data_unif_imputed[index, ]
+    train <- data_unif_imputed[-index, ]
+    
+    set.seed(3052)
+    tic()
+    rf_cv <- randomForest(formula, data = train, importance = FALSE, ntree=200)
+    time[[i]]  <- toc()
+
+     
+     # Prediction out-of-sample
+     fitted.prob.rf <- predict(rf_cv, newdata = test, type = "prob") 
+     fitted.prob.rf <- fitted.prob.rf[,2]
+
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.rf <- fitted.prob.rf[ test$failure == 1]
+     bg.rf <- fitted.prob.rf[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di performance del classificatore
+     # sono THRESHOLD-FREE: misurano la performance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_rf <- roc.curve(scores.class0 = fg.rf,
+                            scores.class1 = bg.rf,
+                            curve = T)
+     #(roc_rf)
+     
+     pr_rf <- pr.curve(scores.class0 = fg.rf,
+                          scores.class1 = bg.rf,
+                          curve = T)
+     #plot(pr_rf)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.rf.integer <- ifelse(fitted.prob.rf > quantile(fitted.prob.rf, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.rf.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_rf <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_rf <- f1_score(fitted.rf.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_rf <- as.data.frame(rbind(postResample(as.double(fitted.prob.rf), test$failure )))
+
+
+    if(i==1) {
+     rf_fit <- as.data.frame(cbind(i, roc_rf$auc, pr_rf$auc.integral, f1_rf,
+                                      balanced_accuracy_rf, accuracy_rf$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4) ))
+     
+    } else {
+     rf_fit <- rbind(rf_fit, cbind(i, roc_rf$auc, pr_rf$auc.integral, f1_rf, 
+                            balanced_accuracy_rf, accuracy_rf$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)) )
+      
+    }
+    
+    
+}
+
+colnames(rf_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(rf_fit) <- NULL
+rf_fit = rbind(rf_fit, c("Overall", mean(rf_fit$`Area under the ROC`), mean(rf_fit$`Area under the PR`), mean(rf_fit$`F1-Score`), mean(rf_fit$BACC), mean(rf_fit$`R squared`), round(mean(rf_fit$`Training time (sec.)`), digits = 4) ))
+
+# rf fit across the 5-folds and on average
+rf_fit
+
+write.csv(rf_fit, file = "rf_unif_imputation_fit.csv")
+```
+
+XGBoost
+```{r}
+time = list()
+for (i in 1:n.folds){
+    
+    # Segment the data  
+    index <- folds[[i]]
+    test <- data_unif_imputed[index, ]
+    train <- data_unif_imputed[-index, ]
+    train <- matrix(unlist(train), ncol = length(train), nrow = nrow(train))
+    test <- matrix(unlist(test), ncol = length(test), nrow = nrow(test))
+    
+    set.seed(3052)
+    tic()
+    xgboost_cv <- xgboost(data = train[, 2:ncol(train)], label = train[,1], objective = "binary:logistic", nrounds = 5)
+    time[[i]]  <- toc()
+     
+     # Prediction out-of-sample
+     fitted.prob.xgboost <- predict(xgboost_cv, newdata = test[, 2:ncol(train)] ) 
+
+     
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.xgboost <- fitted.prob.xgboost[ test[,1] == 1]
+     bg.xgboost <- fitted.prob.xgboost[ test[,1] == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di pexgboostormance del classificatore
+     # sono THRESHOLD-FREE: misurano la pexgboostormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_xgboost <- roc.curve(scores.class0 = fg.xgboost,
+                            scores.class1 = bg.xgboost,
+                            curve = T)
+     #(roc_xgboost)
+     
+     pr_xgboost <- pr.curve(scores.class0 = fg.xgboost,
+                          scores.class1 = bg.xgboost,
+                          curve = T)
+     #plot(pr_xgboost)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.xgboost.integer <- ifelse(fitted.prob.xgboost > quantile(fitted.prob.xgboost, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.xgboost.integer), 
+                                    reference = as.factor(test[,1]), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_xgboost <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_xgboost <- f1_score(fitted.xgboost.integer, test[,1], positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_xgboost <- as.data.frame(rbind(postResample(as.double(fitted.prob.xgboost), test[,1] )))
+
+
+    if(i==1) {
+     xgboost_fit <- as.data.frame(cbind(i, roc_xgboost$auc, pr_xgboost$auc.integral, f1_xgboost,
+                                      balanced_accuracy_xgboost, accuracy_xgboost$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     xgboost_fit <- rbind(xgboost_fit, cbind(i, roc_xgboost$auc, pr_xgboost$auc.integral, f1_xgboost, 
+                            balanced_accuracy_xgboost, accuracy_xgboost$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(xgboost_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(xgboost_fit) <- NULL
+xgboost_fit = rbind(xgboost_fit, c("Overall", mean(xgboost_fit$`Area under the ROC`), mean(xgboost_fit$`Area under the PR`), mean(xgboost_fit$`F1-Score`), mean(xgboost_fit$BACC), mean(xgboost_fit$`R squared`), round(mean(xgboost_fit$`Training time (sec.)`), digits = 4) ))
+
+# xgboost fit across the 5-folds and on average
+xgboost_fit
+
+write.csv(xgboost_fit, file = "xgboost_unif_imputation_fit.csv")
+```
+
+BART (without MIA)
+```{r}
+time <- list()
+for (i in 1:n.folds){
+    
+      # Segment the data  
+      index <- folds[[i]]
+      test <- data_unif_imputed[index, ]
+      train <- data_unif_imputed[-index, ]
+      
+      
+      # Get TRAINING predictors matrix
+      X <- as.data.frame(train[, 2:length(train)])
+      
+      # Get TRAINING outcome Vector
+      y <- as.vector(train[,1])
+      y <- as.factor(unlist(y, use.names = FALSE))
+    
+      # Train the machine 
+      set.seed(3052)
+      options(java.parameters = "-Xmx1000g") 
+      tic()
+      bart_cv<-bartMachine(X, y, use_missing_data = FALSE)
+      time[[i]] <- toc() 
+      
+      # Get TEST predictors matrix 
+      M <- as.data.frame(test[, 2:length(test)])
+    
+      # Get fitted values: "0" is considered the target level, for this reason we use (1 - predict)
+      fitted.prob.bart <-  1 - round(predict(bart_cv, M, type='prob'), 6)    
+      
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.bart <- fitted.prob.bart[ test$failure == 1]
+     bg.bart <- fitted.prob.bart[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di pebartormance del classificatore
+     # sono THRESHOLD-FREE: misurano la pebartormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_bart <- roc.curve(scores.class0 = fg.bart,
+                            scores.class1 = bg.bart,
+                            curve = T)
+     #(roc_bart)
+     
+     pr_bart <- pr.curve(scores.class0 = fg.bart,
+                          scores.class1 = bg.bart,
+                          curve = T)
+     #plot(pr_bart)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.bart.integer <- ifelse(fitted.prob.bart > quantile(fitted.prob.bart, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.bart.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_bart <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_bart <- f1_score(fitted.bart.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_bart <- as.data.frame(rbind(postResample(as.double(fitted.prob.bart), test$failure )))
+
+
+    if(i==1) {
+     bart_fit <- as.data.frame(cbind(i, roc_bart$auc, pr_bart$auc.integral, f1_bart,
+                                      balanced_accuracy_bart, accuracy_bart$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     
+    } else {
+     bart_fit <- rbind(bart_fit, cbind(i, roc_bart$auc, pr_bart$auc.integral, f1_bart, 
+                            balanced_accuracy_bart, accuracy_bart$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+      
+    }
+    
+    
+}
+
+colnames(bart_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(bart_fit) <- NULL
+bart_fit = rbind(bart_fit, c("Overall", mean(bart_fit$`Area under the ROC`), mean(bart_fit$`Area under the PR`), mean(bart_fit$`F1-Score`), mean(bart_fit$BACC), mean(bart_fit$`R squared`), round(mean(bart_fit$`Training time (sec.)`), digits = 4) ))
+
+# bart fit across the 5-folds and on average
+bart_fit
+
+write.csv(bart_fit, file = "bart_unif_imputation_fit.csv")
+```
+
+Super Learner
+```{r}
+time <- list()
+coef <- list()
+
+for (i in 1:n.folds){
+    
+      # Segment the data  
+      index <- folds[[i]]
+      test <- data_unif_imputed[index, ]
+      train <- data_unif_imputed[-index, ]
+      
+      # Get TRAINING predictors matrix
+      X <- as.data.frame(train[, 2:length(train)])
+      
+      # Get TRAINING outcome Vector
+      Y <- unlist(train[,1], use.names = FALSE)
+      
+      # Get TEST predictors matrix 
+      M <- as.data.frame(test[, 2:length(test)])
+      
+      tic()
+    
+      # V = 2 is the number of folds that the Super Learner (SL) uses to estimate the risk on future data. 
+      # By default the SL uses V = 10. However, but since we do not use this measure, we reduce the computational burden setting V=2. 
+      # For more information see: https://cran.r-project.org/web/packages/SuperLearner/vignettes/Guide-to-SuperLearner.html
+      SL_cv <- SuperLearner(Y = Y, 
+                            X = X, 
+                            SL.library = c("SL.glm", "SL.rpartPrune", "SL.randomForest", "SL.xgboost", "tmle.SL.dbarts2"), 
+                            verbose = FALSE, 
+                            method = "method.NNLS", 
+                            family = binomial(link='logit'), 
+                            cvControl = list(V = 2) )
+      
+
+      
+      time[[i]] <- toc() 
+    
+
+     # Get fitted values  
+     fitted <- predict(SL_cv, M, onlySL = TRUE)
+     fitted.prob.sl <- fitted$pred
+      
+     # Separating the predictions of firms who actually failed from those who don't
+     fg.sl <- fitted.prob.sl[ test$failure == 1]
+     bg.sl <- fitted.prob.sl[ test$failure == 0]
+     
+     # Area under the ROC and PR curve: nota che queste due misure di peslormance del classificatore
+     # sono THRESHOLD-FREE: misurano la peslormance al variare della soglia di discriminazione tra positivo e negativo 
+     #  F1-Score, BACC e R-Squared invece sono threshold dependent. 
+     roc_sl <- roc.curve(scores.class0 = fg.sl,
+                            scores.class1 = bg.sl,
+                            curve = T)
+     #(roc_sl)
+     
+     pr_sl <- pr.curve(scores.class0 = fg.sl,
+                          scores.class1 = bg.sl,
+                          curve = T)
+     #plot(pr_sl)
+     
+     
+     
+     # Approccio data-driven: predico che fallisci se stai sopra il 50° percentile 
+     fitted.sl.integer <- ifelse(fitted.prob.sl > quantile(fitted.prob.sl, probs = c(0.5), na.rm =TRUE), 1, 0)
+     
+     # F1-Score and BACC
+     conf_matrix <- confusionMatrix(data = as.factor(fitted.sl.integer), 
+                                    reference = as.factor(test$failure), 
+                                    mode = "everything",
+                                    positive = "1") 
+     
+     balanced_accuracy_sl <- conf_matrix[[4]][["Balanced Accuracy"]]
+     f1_sl <- f1_score(fitted.sl.integer, test$failure, positive.class = "1")
+
+     # postResample: to get RMSE, Rsquared and MAE
+     accuracy_sl <- as.data.frame(rbind(postResample(as.double(fitted.prob.sl), test$failure )))
+
+
+    if(i==1) {
+     sl_fit <- as.data.frame(cbind(i, roc_sl$auc, pr_sl$auc.integral, f1_sl,
+                                      balanced_accuracy_sl, accuracy_sl$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     coef[[i]] = c(i,  unname(SL_cv$coef))
+     
+    } else {
+     sl_fit <- rbind(sl_fit, cbind(i, roc_sl$auc, pr_sl$auc.integral, f1_sl, 
+                            balanced_accuracy_sl, accuracy_sl$Rsquared, round(time[[i]]$toc- time[[i]]$tic, digits = 4)))
+     coef[[i]] = c(i,  unname(SL_cv$coef))
+      
+    }
+    
+    
+}
+
+colnames(sl_fit) <- c("Fold", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared", "Training time (sec.)")
+rownames(sl_fit) <- NULL
+sl_fit = rbind(sl_fit, c("Overall", mean(sl_fit$`Area under the ROC`), mean(sl_fit$`Area under the PR`), mean(sl_fit$`F1-Score`), mean(sl_fit$BACC), mean(sl_fit$`R squared`), round(mean(sl_fit$`Training time (sec.)`), digits = 4) ))
+
+# sl fit across the 5-folds and on average
+sl_fit
+
+# Save weights given to each model, in each fold and on average
+tot_coef = as.data.frame(rbind(coef[[1]], coef[[2]], coef[[3]], coef[[4]], coef[[5]]))
+colnames(tot_coef) = c("Fold", "Logit", "CART", "Random Forest", "XGBoost", "BART")
+tot_coef = rbind(tot_coef, c("Mean", mean(tot_coef$`Logit`), mean(tot_coef$`CART`),  mean(tot_coef$`Random Forest`),  mean(tot_coef$`XGBoost`),  mean(tot_coef$`BART`)) ) 
+
+tot_coef
+
+write.csv(sl_fit, file = "sl_unif_imputation_fit.csv")
+write.csv(tot_coef, file = "sl_unif_imputation_coef.csv")
+
+```
+
+
+
+
+
+
 
 
