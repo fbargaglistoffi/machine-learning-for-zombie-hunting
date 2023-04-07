@@ -124,12 +124,12 @@ percent.table(as.factor(data_italy$Status[data_italy$Status!="Active" &
                                           data_italy$Status!="Active (rescue plan)"]))
 ```
 
-Remove firms in liquidation
+To remove firms in liquidation (7221) uncomment the following chunk (we do not do it, WE KEEP THEM)
 ```{r}
-print("Number of italian firms in liquidation")
-nrow(data_italy[which(data_italy$Status == "In liquidation"), ])
-
-data_italy = data_italy[which(data_italy$Status != "In liquidation"), ]
+# print("Number of italian firms in liquidation")
+# nrow(data_italy[which(data_italy$Status == "In liquidation"), ])
+# 
+# data_italy = data_italy[which(data_italy$Status != "In liquidation"), ]
 ```
 
 ```{r eval = FALSE}
@@ -389,7 +389,7 @@ predictors <- c("control", "shareholders_funds","nace",
 data = data_italy[c("failure", predictors)]
 data_comp = na.omit(data_italy[c("failure", predictors)])
 x = sum(data$failure) - sum(data_comp$failure)
-paste("Number of sample failures (liquidations excluded): ", sum(data$failure))
+paste("Number of sample failures (liquidations included): ", sum(data$failure))
 paste("Number of dropped failures for complete-case analysis: ", x)
 paste("Residual failures available for training: ", sum(data_comp$failure))
 paste("Relative loss:", format(x/sum(data$failure)*100, digits = 4), "%")
@@ -510,7 +510,7 @@ logit_fit = rbind(logit_fit, c("Overall", mean(logit_fit$`Area under the ROC`), 
 # Logit fit across the 5-folds and on average
 logit_fit
 
-write.csv(logit_fit, file = "logit_complete_case_fit.csv")
+write.csv(logit_fit, file = "logit_complete_case__liq_fit.csv")
 ```
 
 Average ROC curve for Logit (across 5-fold CV)
@@ -518,7 +518,7 @@ Average ROC curve for Logit (across 5-fold CV)
 pred_logit <- prediction(predictions, labels)
 perf_logit_roc <- performance(pred_logit, 'tpr', 'fpr')
 
-ROCR::plot(perf_logit_roc, avg = "threshold", col = "red", lwd = 3, main ="ROC curve \n Average AUC 0.8797594", xlab = "FPR", ylab = "Sensitivity")
+ROCR::plot(perf_logit_roc, avg = "threshold", col = "red", lwd = 3, main ="ROC curve \n Average AUC 0.8965582", xlab = "FPR", ylab = "Sensitivity")
 ```
 
 
@@ -607,7 +607,7 @@ ctree_fit = rbind(ctree_fit, c("Overall", mean(ctree_fit$`Area under the ROC`), 
 # ctree fit across the 5-folds and on average
 ctree_fit
 
-write.csv(ctree_fit, file = "ctree_complete_case_fit.csv")
+write.csv(ctree_fit, file = "ctree_complete_case_liq_fit.csv")
 ```
 
 
@@ -687,7 +687,7 @@ rf_fit = rbind(rf_fit, c("Overall", mean(rf_fit$`Area under the ROC`), mean(rf_f
 # rf fit across the 5-folds and on average
 rf_fit
 
-write.csv(rf_fit, file = "rf_complete_case_fit.csv")
+write.csv(rf_fit, file = "rf_complete_case_liq_fit.csv")
 ```
 
 
@@ -780,7 +780,7 @@ xgboost_fit = rbind(xgboost_fit, c("Overall", mean(xgboost_fit$`Area under the R
 # xgboost fit across the 5-folds and on average
 xgboost_fit
 
-write.csv(xgboost_fit, file = "xgboost__complete_case_fit.csv")
+write.csv(xgboost_fit, file = "xgboost__complete_case_liq_fit.csv")
 ```
 
 
@@ -790,7 +790,7 @@ pred <- prediction(predictions, labels)
 perf <- performance(pred, 'tpr', 'fpr')
 
 # ROCR::plot(perf, col = 'blue', lwd = 2, main = "ROC", avg = "vertical", spread.estimate = 'stddev', spread.scale = 2)
-ROCR::plot(perf, colorize = TRUE, lwd = 1, main ="ROC curve \n Average AUC 0.9027051", xlab = "FPR", ylab = "Sensitivity")
+ROCR::plot(perf, colorize = TRUE, lwd = 1, main ="ROC curve \n Average AUC 0.8884260", xlab = "FPR", ylab = "Sensitivity")
 # par(new=TRUE)
 # ROCR::plot(perf, col = "red", avg = "threshold", lwd = 1)
 ```
@@ -803,6 +803,7 @@ perf <- performance(pred, 'prec', 'rec')
 
 ROCR::plot(perf, colorize = TRUE, lwd = 1, main ="PR curve \n Average AUC 0.2696093", xlab = "Recall", ylab = "Precision")
 ```
+
 
 ### BART (without MIA)
 ```{r}
@@ -890,7 +891,7 @@ bart_fit = rbind(bart_fit, c("Overall", mean(bart_fit$`Area under the ROC`), mea
 # bart fit across the 5-folds and on average
 bart_fit
 
-write.csv(bart_fit, file = "bart_complete_case_fit.csv")
+write.csv(bart_fit, file = "bart_complete_case_liq_fit.csv")
 ```
 
 
@@ -1001,8 +1002,8 @@ tot_coef = rbind(tot_coef, c("Mean", mean(tot_coef$`Logit`), mean(tot_coef$`CART
 
 tot_coef
 
-write.csv(sl_fit, file = "sl_complete_case_fit.csv")
-write.csv(tot_coef, file = "sl_complete_case_coef.csv")
+write.csv(sl_fit, file = "sl_complete_case_liq_fit.csv")
+write.csv(tot_coef, file = "sl_complete_case_liq_coef.csv")
 ```
 
 
@@ -1123,7 +1124,7 @@ bart_missing_fit = rbind(bart_missing_fit, c("Overall", mean(bart_missing_fit$`A
 # bart fit across the 5-folds and on average
 bart_missing_fit
 
-write.csv(bart_missing_fit, file = "bart_cc_missing_fit.csv")
+write.csv(bart_missing_fit, file = "bart_cc_missing__liq_fit.csv")
 ```
 
 ### XGBoost on a sample of the same dimension of data_comp but including observations with missing values
@@ -1213,7 +1214,7 @@ xgboost_fit = rbind(xgboost_fit, c("Overall", mean(xgboost_fit$`Area under the R
 # xgboost fit across the 5-folds and on average
 xgboost_fit
 
-write.csv(xgboost_fit, file = "xgboost_cc_missing_fit.csv")
+write.csv(xgboost_fit, file = "xgboost_cc_missing_liq_fit.csv")
 ```
 
 
@@ -1223,7 +1224,7 @@ Average ROC for XGboost (across 5-fold CV)
 pred_xgboost <- prediction(predictions, labels)
 perf_xgboost_roc <- performance(pred_xgboost, 'tpr', 'fpr')
 
-ROCR::plot(perf_xgboost_roc, col = "blue", avg = "threshold", lwd = 3, main ="ROC curve \n Average AUC 0.9752980", xlab = "FPR", ylab = "Sensitivity")
+ROCR::plot(perf_xgboost_roc, col = "blue", avg = "threshold", lwd = 3, main ="ROC curve \n Average AUC 0.9685188", xlab = "FPR", ylab = "Sensitivity")
 
 # Check that the AUC ROC in the 5-folds with the package ROCR: it's equal to AUC ROC in the performance output above
 # prova <- performance(pred_xgboost, 'auc')
@@ -1245,7 +1246,7 @@ ROCR::plot(perf_xgboost_pr,
            avg = "threshold", 
            col = "blue", 
            lwd = 3, 
-           main ="PR curve \n Average AUC 0.7463202", 
+           main ="PR curve \n Average AUC 0.7591088", 
            xlab = "Recall", 
            ylab = "Precision")
 
@@ -1273,6 +1274,8 @@ plot(perf_xgboost_pr,
      add = T) 
 legend(x = 0.78, y = 0.95, legend = c("XGBoost", "Logit"), col = c("blue", "red"), lty = 1, lwd = 2, cex = 1)
 ```
+
+
 
 
 

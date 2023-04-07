@@ -1,0 +1,434 @@
+---
+title: "Generate categories"
+author: "Fabio Incerti"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+Clean the environment
+```{r}
+rm(list=ls()) 
+```
+
+```{r warning = FALSE}
+library(haven)
+library(BART)
+library(ggplot2)
+library(gtools)
+library(labelVector)
+library(caret)
+library(Gmisc)
+library(RColorBrewer)
+library(xtable)
+library(dplyr)
+library(tidyr)
+```
+
+Set Working Directory
+```{r}
+setwd("C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses")
+```
+
+Upload Data
+```{r}
+# Without liquidations: data <- read_dta("data_year_by_year.dta")
+data <- read_dta("data_liq_year_by_year.dta")
+```
+
+
+# Deciles transitions analysis 
+
+Generate decile categories. "category_year" involves 5 levels and they identify:
+
+ - 1 = the probability of failure falls in: [0th decile, 6th  decile] 
+ 
+ - 2 = the probability of failure falls in: (6th decile, 7th  decile]
+ 
+ - 3 = the probability of failure falls in: (7th decile, 8th  decile]
+ 
+ - 4 = the probability of failure falls in: (8th decile, 9th  decile] 
+ 
+ - 5 = the probability of failure falls in: (9th decile, 10th decile] 
+ 
+```{r}
+years <- c(2009:2017)
+categories <- matrix(NA, ncol = length(years), nrow = nrow(data))
+
+for (i in (years)){
+  # Subset firms with observable probability of failure in year i 
+  fitted <- unlist( data[which(!is.na(data[paste("prob", sep = "_", i)])), paste("prob", sep = "_", i) ], use.names = FALSE )
+  
+  # Generate category variable
+  category_year = quantcut(fitted, c(0, 0.6, seq(0.7,1,0.1)) )
+  categories[which(!is.na(data[,paste("prob", sep = "_", i)])), which(years==i)] <- category_year
+}
+
+names = c()
+for (i in years) {
+  names = append(names, paste("cat_decile", sep = "_", i))
+  
+}
+
+colnames(categories) = names
+categories = as.data.frame(categories)
+
+# Append to the original dataset
+data = cbind(data, categories)
+```
+
+
+
+(Table 6): Compute the average transition (t --> t+1) across deciles over years 2015 - 2017 
+```{r}
+# Compute transition matrices year by year
+trn_mtrx_2010 <- with(categories, table(cat_decile_2009, cat_decile_2010, useNA = "no"))
+trn_mtrx_2011 <- with(categories, table(cat_decile_2010, cat_decile_2011, useNA = "no"))
+trn_mtrx_2012 <- with(categories, table(cat_decile_2011, cat_decile_2012, useNA = "no"))
+trn_mtrx_2013 <- with(categories, table(cat_decile_2012, cat_decile_2013, useNA = "no"))
+trn_mtrx_2014 <- with(categories, table(cat_decile_2013, cat_decile_2014, useNA = "no"))
+trn_mtrx_2015 <- with(categories, table(cat_decile_2014, cat_decile_2015, useNA = "no"))
+trn_mtrx_2016 <- with(categories, table(cat_decile_2015, cat_decile_2016, useNA = "no"))
+trn_mtrx_2017 <- with(categories, table(cat_decile_2016, cat_decile_2017, useNA = "no"))
+
+# Average transition shares of (2014-2015, 2015-2016, 2016-2017)
+
+# Sum the number of transitions that occurred in a given decile over the years 2015-2017
+trn_mtrx <- trn_mtrx_2010 + trn_mtrx_2011  + trn_mtrx_2012 + trn_mtrx_2013 + trn_mtrx_2014 + trn_mtrx_2015 + trn_mtrx_2016  + trn_mtrx_2017  
+
+# Normalize each column by the total number of firms that were in a given decile in the previous year
+trn_mtrx <- round(prop.table(trn_mtrx, m = 1), 4) * 100
+
+colnames(trn_mtrx) = c("[0th, 6th] ", "(6th, 7th]", "(7th, 8th]", "(8th, 9th]", "(9th, 10th]")
+rownames(trn_mtrx) = c("[0th, 6th] ", "(6th, 7th]", "(7th, 8th]", "(8th, 9th]", "(9th, 10th]")
+trn_mtrx
+```
+
+
+(Figure A3): Transition plot 
+```{r}
+output_perc <- function(txt) sprintf("%s", txt)
+box_txt <-cbind(mapply(output_perc, 
+                       txt = c("Below 6th decile", "6th decile", "7th decile", "8th decile", "9th decile")),
+                mapply(output_perc, 
+                       txt = c("Below 6th decile", "6th decile", "7th decile", "8th decile", "9th decile")) ) 
+
+rev(brewer.pal(5,"Reds"))
+plot.new()
+transitionPlot(trn_mtrx, 
+               fill_start_box = c("#FB6A4A", "#DE2D26", "red2", "red3", "red4"), 
+               fill_end_box = c("#FB6A4A", "#DE2D26", "red2", "red3", "red4"),
+               #main = "Transition plot",
+               box_label = c("t", "t+1"),
+               box_txt = box_txt,
+               cex = 1.2,
+               type_of_arrow = "gradient",
+               lwd_prop_total = TRUE)
+```
+
+Save augmented data of decile categories
+```{r}
+# write_dta(data, "C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/data_categories.dta")
+ write_dta(data, "C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/data_liq_categories.dta")
+```
+
+
+# Confusion matrix categories
+
+Fix the quantile threshold discriminating exit and non-exit prediction (where we expect lie most zombie firms)
+```{r}
+cutoff = 0.90
+```
+
+
+Get a vectorized confusion matrix in each year by comparing:
+
+- the threshold-based (integer) fitted values
+
+- the actual failure indicator
+
+i.e., each non-missing observation in the fitted value is assigned a category: TP, FP, TN, FN
+```{r}
+years <- c(2009:2017)
+categories_confusion_matrix <- data.frame(matrix(NA, ncol = length(years), nrow = nrow(data)))
+
+for (i in years) {
+  # Get non-missing observation in prob_i (and consequently in failure_i)
+  index = which(!is.na(data[paste("prob", sep="_", i)]))
+  
+  # Transform numeric predictions into integer according to the cutoff
+  fitted.complete = data[index, paste("prob", sep="_", i)]
+  fitted.integer = ifelse(fitted.complete > quantile(fitted.complete, probs = cutoff, na.rm =TRUE), 1, 0)
+  
+  # Convert predicted and actual values into factors
+  fitted.integer = as.factor(fitted.integer)
+  ground_truth = as.factor(data[index, paste("failure", sep="_", i)]) 
+  
+  # Assign to each firm its confusion matrix category
+  vectorized_conf_matrix = matrix(NA, ncol = 1, nrow = length(fitted.integer))
+  vectorized_conf_matrix[which(fitted.integer == 1 & ground_truth == 0)] = "FP"    # False positives: potential ZOMBIES
+  vectorized_conf_matrix[which(fitted.integer == 1 & ground_truth == 1)] = "TP"    # True positives: failed firms above the 9th decile
+  vectorized_conf_matrix[which(fitted.integer == 0 & ground_truth == 1)] = "FN"    # False negatives: failed firms below the 9th decile
+  vectorized_conf_matrix[which(fitted.integer == 0 & ground_truth == 0)] = "TN"    # True negatives: non-failing firms below the 9th decile
+  
+  # Transform into factor
+  vectorized_conf_matrix = factor(vectorized_conf_matrix, levels = c("FP", "TP", "FN", "TN"))
+  
+  # Levels will now be encoded in categories_confusion_matrix as: 1 (FP), 2 (TP), 3 (FN), 4 (TN)
+  categories_confusion_matrix[index, which(years ==i)] = vectorized_conf_matrix
+}
+
+# Rename columns
+names = c()
+for (i in years) {
+  names = append(names, paste("cat_conf_matrix", sep = "_", i))
+  
+}
+colnames(categories_confusion_matrix) = names
+```
+
+
+# Transitions across FP, TP, FN, TN (2010 - 2017)
+```{r}
+trn_mtrx_2010 <- with(categories_confusion_matrix, table(cat_conf_matrix_2009, cat_conf_matrix_2010))
+trn_mtrx_2011 <- with(categories_confusion_matrix, table(cat_conf_matrix_2010, cat_conf_matrix_2011))
+trn_mtrx_2012 <- with(categories_confusion_matrix, table(cat_conf_matrix_2011, cat_conf_matrix_2012))
+trn_mtrx_2013 <- with(categories_confusion_matrix, table(cat_conf_matrix_2012, cat_conf_matrix_2013))
+trn_mtrx_2014 <- with(categories_confusion_matrix, table(cat_conf_matrix_2013, cat_conf_matrix_2014))
+trn_mtrx_2015 <- with(categories_confusion_matrix, table(cat_conf_matrix_2014, cat_conf_matrix_2015))
+trn_mtrx_2016 <- with(categories_confusion_matrix, table(cat_conf_matrix_2015, cat_conf_matrix_2016))
+trn_mtrx_2017 <- with(categories_confusion_matrix, table(cat_conf_matrix_2016, cat_conf_matrix_2017))
+```
+
+Fix trn_mtrx_2010, who misses the the 3rd categories (FP), manually adding the missing row
+```{r}
+# Convert into data frame: I get the observed combinations of cat_conf_matrix_2009 and cat_conf_matrix_2010
+prova = data.frame(trn_mtrx_2010)
+
+# Convert cat_conf_matrix_2009 and cat_conf_matrix_2010 from factors to numeric
+# 
+# NB: I first use "as.character" otheriwse the observed levels (1,2,4) will be converted into (1,2,3) when numeric conversion is performed
+# (see https://stackoverflow.com/questions/7611810/converting-a-factor-to-numeric-without-losing-information-r-as-numeric-doesn)
+prova[,1] = as.numeric(as.character(prova[,1]))
+prova[,2] = as.numeric(as.character(prova[,2]))
+
+
+# Check if there exist a row for each possibile pairs from (1,2,3,4) and if not, add the missing ones
+for (j in c(1:4) ) {
+      for (i in c(1:4) ) {
+           # Check if there exist a row from with cat_conf_matrix_2009 == j & cat_conf_matrix_2010 == i
+           x = nrow(subset(prova, cat_conf_matrix_2009 == j & cat_conf_matrix_2010 == i))
+           
+           # If it doesn't, add this pair as a new row
+          if (x == 0) {
+                new = data.frame(cbind(j, i, 0))
+                colnames(new) = colnames(prova)
+                prova = rbind(prova, new)
+          }
+      }
+}
+
+# Recode as factor
+prova[,1] = as.factor(prova[,1])
+prova[,2] = as.factor(prova[,2])
+
+# Reconvert the augmented dataframe into a confusion matrix
+matrix = matrix(data = NA, nrow = 4, ncol = 4)
+for (j in c(1:4) ) {
+      for (i in c(1:4) ) {
+          matrix[i,j] = prova$Freq[which(prova$cat_conf_matrix_2009 == i & prova$cat_conf_matrix_2010 == j)]
+      }
+}
+trn_mtrx_2010 <- matrix
+```
+
+Compute the average transition from 2010 to 2017 (based on the 0.9 cutoff)
+```{r}
+prova_2 = trn_mtrx_2010 + trn_mtrx_2011 + trn_mtrx_2012 + trn_mtrx_2013 + trn_mtrx_2014 + trn_mtrx_2015 + trn_mtrx_2016 + trn_mtrx_2017
+prova_2 <- round(prop.table(prova_2, m = 1), 4) * 100
+
+# Convert missing entries in 0 
+prova_2[is.na(prova_2)] = 0
+
+colnames(prova_2) = c("FP", "TP", "FN", "TN")
+rownames(prova_2) = c("FP", "TP", "FN", "TN")
+prova_2
+```
+
+
+
+# Zombie analysis
+
+Zombie indicator = "Zombie" if the firm is (FP, FP, FP) in (t-2, t-1, t), for t = 2011, ..., 2017
+
+Remark: the indicator is based on the 0.9 cutoff.
+```{r}
+zombie <- data.frame(matrix(NA, ncol = length(2011:2017), nrow = nrow(data)))
+
+for (t in c(2011:2017)) {
+  index = which(categories_confusion_matrix[paste("cat_conf_matrix", sep = "_", t)] == 1     # FP in t
+              & categories_confusion_matrix[paste("cat_conf_matrix", sep = "_", t-1)] == 1   # FP in t-1
+              & categories_confusion_matrix[paste("cat_conf_matrix", sep = "_", t-2)] == 1)  # FP in t-2
+  
+  zombie[index, which(2011:2017==t)] = "Zombie"
+}
+
+# Rename columns of the zombie dataframe
+names = c()
+for (i in c(2011:2017)) {
+  names = append(names, paste("zombie_indicator", sep = "_", i))
+  
+}
+colnames(zombie) = names
+
+# Print the number of zombies over time
+sapply(zombie, function(x) sum(x == "Zombie", na.rm = TRUE))
+```
+
+
+Run the following chucnk if you want to check how the number of zombies changes when you move the cutoff 
+```{r eval=FALSE}
+cutoff_vector = seq.default(from = 0.7, to = 0.95, by = 0.02)
+
+for (c in cutoff_vector) {
+  
+
+years <- c(2009:2017)
+categories_confusion_matrix <- data.frame(matrix(NA, ncol = length(years), nrow = nrow(data)))
+
+for (i in years) {
+  # Get non-missing observation in prob_i (and conseuqnently in failure_i)
+  index = which(!is.na(data[paste("prob", sep="_", i)]))
+  
+  # Transform numeric predictions into integer according to the cutoff
+  fitted.complete = data[index, paste("prob", sep="_", i)]
+  fitted.integer = ifelse(fitted.complete > quantile(fitted.complete, probs = c, na.rm =TRUE), 1, 0)
+  
+  # Convert predicted and actual values into factors
+  fitted.integer = as.factor(fitted.integer)
+  ground_truth = as.factor(data[index, paste("failure", sep="_", i)]) 
+  
+  # Assign each confusion matrix category to the relevant obserbations
+  vectorized_conf_matrix = matrix(NA, ncol = 1, nrow = length(fitted.integer))
+  vectorized_conf_matrix[which(fitted.integer == 1 & ground_truth == 0)] = "FP"    # False positives: potential ZOMBIES
+  vectorized_conf_matrix[which(fitted.integer == 1 & ground_truth == 1)] = "TP"    # True positives: failed firms above the 9th decile
+  vectorized_conf_matrix[which(fitted.integer == 0 & ground_truth == 1)] = "FN"    # False negatives: failed firms below the 9th decile
+  vectorized_conf_matrix[which(fitted.integer == 0 & ground_truth == 0)] = "TN"    # True negatives: non-failing firms below the 9th decile
+  
+  # Transform into factor
+  vectorized_conf_matrix = factor(vectorized_conf_matrix, levels = c("FP", "TP", "FN", "TN"))
+  
+  # Levels will now be encoded in within categories_confusion_matrix as: 1 (FP), 2 (TP), 3 (FN), 4 (TN)
+  categories_confusion_matrix[index, which(years ==i)] = vectorized_conf_matrix
+}
+
+# Rename columns
+names = c()
+for (i in years) {
+  names = append(names, paste("cat_conf_matrix", sep = "_", i))
+  
+}
+colnames(categories_confusion_matrix) = names
+
+zombie <- data.frame(matrix(NA, ncol = length(2009:2015), nrow = nrow(data)))
+
+
+for (t in c(2009:2015)) {
+  index = which(categories_confusion_matrix[paste("cat_conf_matrix", sep = "_", t)] == 1    # FP in t
+              & categories_confusion_matrix[paste("cat_conf_matrix", sep = "_", t+1)] == 1  # FP in t+1
+              & categories_confusion_matrix[paste("cat_conf_matrix", sep = "_", t+2)] == 1)  # FP in t+2
+  
+  zombie[index, which(2009:2015==t)] = "Zombie"
+}
+
+names = c()
+for (i in c(2009:2015)) {
+  names = append(names, paste("zombie_indicator", sep = "_", i))
+  
+}
+colnames(zombie) = names
+print(paste("Cutoff ", c))
+print(sapply(zombie, function(x) sum(x == "Zombie", na.rm = TRUE)))
+
+}
+```
+
+
+
+Compute the number of firms transited from a zombie status in t to: (I) Zombie, (II) Failure, (III) Lower distress region, (IV) No distress region in year t+1
+```{r}
+zombie_transitions <- data.frame(matrix(NA, ncol = length(2011:2016), nrow = nrow(data)))
+
+for (t in c(2011:2016)) {
+  col = which(2011:2016 == t)
+  index_1 = which(zombie[, col] == "Zombie")
+  
+  # Zombies remaining zombies in t+1
+  index_2 = which(zombie[, col+1] == "Zombie")
+  index_3 = index_1[which(index_1 %in% index_2)] 
+  
+  # Zombies that failed in t+1
+  index_4 = which(data[ , paste("failure", sep = "_", t+1)] == 1)
+  index_5 = index_1[which(index_1 %in% index_4)]
+  
+  # Zombies transited to a lower distress region in t+1, i.e. (6th decile, 9th decile]
+  index_6 = which(categories[ , paste("cat_decile", sep = "_", t+1)] == 2 |    #6th decile
+                  categories[ , paste("cat_decile", sep = "_", t+1)] == 3 |    #7th decile
+                  categories[ , paste("cat_decile", sep = "_", t+1)] == 4)     #8th decile
+  index_7 = index_1[which(index_1 %in% index_6)]
+  
+  # Zombies transited to non-distress region in t+1, i.e. [0, 6th decile]
+  index_8 = which(categories[ , paste("cat_decile", sep = "_", t+1)] == 1)  #Below the 6th decile
+  index_9 = index_1[which(index_1 %in% index_8)]
+  
+  zombie_transitions[index_3, col] = 1 # Zombies remaining zombies in t+1
+  zombie_transitions[index_5, col] = 2 # Zombies that failed in t+1
+  zombie_transitions[index_7, col] = 3 # Zombies transited to a lower distress region in t+1
+  zombie_transitions[index_9, col] = 4 # Zombies transited to non-distress region in t+1
+}
+
+for (i in c(1:6)) {
+  print(paste("Year", sep = " ", 2010+i))
+  print(table(factor(zombie_transitions[,i], labels = c("Remained Zombie", "Failed", "Lower Distress", "No distress")), useNA = "no"))
+}
+```
+
+
+(Figure 8): Transitions after predictions of a zombie status 
+```{r}
+# Create the input vectors.
+colors = c("red","brown","grey48", "gray88")
+years <- c("2011","2012","2013","2014","2015", "2016")
+status <- c("Failed","Zombie","Distressed", "Not distressed")
+
+# Create the matrix of the values.
+Values <- matrix(c(84, 102, 108, 467, 905, 1278,        # Failed: red
+                   2851, 3222, 3482, 3517, 2504, 2313,  # Zombie: brown
+                   1002, 1497, 1975, 1466, 2231, 738,   # Lower distress: grey48
+                   469, 244, 82, 100, 76, 6),           # No distress: grey88
+                   nrow = 4, ncol = 6, byrow = TRUE)
+
+# Old values 
+# Values <- matrix(c(2927,3209,3639,3718,3336,2056,  # Zombie
+#                    3368,3675,4133,3766,3932,4029,  # Failed
+#                    977,923,1007,1340, 1251, 794,   # Distressed
+#                    6, 3, 3, 3, 2, 0),              # No distress
+#                  nrow = 4, ncol = 6, byrow = TRUE)
+
+
+# Plot layout
+#layout(matrix(c(1,2), ncol=1, nrow=2, byrow=TRUE), heights=c(2.5, 1))
+
+# Create the bar chart
+par(mar=c(5.1, 4.1, 4.1, 5.1), xpd=TRUE)
+barplot(prop.table(Values, margin = 2), names.arg = years, xlab = "Year of prediction (t)", ylab = "Compositional share (t+1)", col = colors)
+
+# Add the legend to the chart
+#par(mai=c(0,0,0,0))
+#plot.new()
+legend("right", status, cex = 0.7, fill = colors, horiz = FALSE, inset = c(-0.185, -0.5))
+```
+
+
+
+
+
