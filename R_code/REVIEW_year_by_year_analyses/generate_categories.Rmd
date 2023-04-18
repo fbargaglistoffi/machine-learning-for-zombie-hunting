@@ -11,7 +11,7 @@ rm(list=ls())
 ```
 
 ```{r warning = FALSE}
-library(haven)
+library(tidyr)
 library(BART)
 library(ggplot2)
 library(gtools)
@@ -21,7 +21,7 @@ library(Gmisc)
 library(RColorBrewer)
 library(xtable)
 library(dplyr)
-library(tidyr)
+library(haven)
 ```
 
 Set Working Directory
@@ -36,7 +36,7 @@ data <- read_dta("data_liq_year_by_year.dta")
 ```
 
 
-# Deciles transitions analysis 
+# Transition across deciles analysis 
 
 Generate decile categories. "category_year" involves 5 levels and they identify:
 
@@ -128,11 +128,11 @@ transitionPlot(trn_mtrx,
 Save augmented data of decile categories
 ```{r}
 # write_dta(data, "C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/data_categories.dta")
- write_dta(data, "C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/data_liq_categories.dta")
+write_dta(data, "C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/data_liq_categories.dta")
 ```
 
 
-# Confusion matrix categories
+# Confusion matrix categories (2009 - 2017)
 
 Fix the quantile threshold discriminating exit and non-exit prediction (where we expect lie most zombie firms)
 ```{r}
@@ -163,7 +163,7 @@ for (i in years) {
   fitted.integer = as.factor(fitted.integer)
   ground_truth = as.factor(data[index, paste("failure", sep="_", i)]) 
   
-  # Assign to each firm its confusion matrix category
+  # Assign each firm its confusion matrix category
   vectorized_conf_matrix = matrix(NA, ncol = 1, nrow = length(fitted.integer))
   vectorized_conf_matrix[which(fitted.integer == 1 & ground_truth == 0)] = "FP"    # False positives: potential ZOMBIES
   vectorized_conf_matrix[which(fitted.integer == 1 & ground_truth == 1)] = "TP"    # True positives: failed firms above the 9th decile
@@ -256,6 +256,8 @@ prova_2
 
 
 
+
+
 # Zombie analysis
 
 Zombie indicator = "Zombie" if the firm is (FP, FP, FP) in (t-2, t-1, t), for t = 2011, ..., 2017
@@ -285,7 +287,7 @@ sapply(zombie, function(x) sum(x == "Zombie", na.rm = TRUE))
 ```
 
 
-Run the following chucnk if you want to check how the number of zombies changes when you move the cutoff 
+Run the following chunk if you want to check how the number of zombies changes when you move the cutoff 
 ```{r eval=FALSE}
 cutoff_vector = seq.default(from = 0.7, to = 0.95, by = 0.02)
 
@@ -354,7 +356,7 @@ print(sapply(zombie, function(x) sum(x == "Zombie", na.rm = TRUE)))
 
 
 
-Compute the number of firms transited from a zombie status in t to: (I) Zombie, (II) Failure, (III) Lower distress region, (IV) No distress region in year t+1
+Compute the number of firms transited from a zombie status in year t to: (I) Zombie, (II) Failure, (III) Lower distress region, (IV) No distress region in year t+1
 ```{r}
 zombie_transitions <- data.frame(matrix(NA, ncol = length(2011:2016), nrow = nrow(data)))
 
@@ -429,6 +431,42 @@ legend("right", status, cex = 0.7, fill = colors, horiz = FALSE, inset = c(-0.18
 ```
 
 
+## Create the dataset for Table 6 (Productivity and size premia for zombies vs healthy firms)
+
+Create an "overall" zombie indicator: 1 if you have been classified zombie in a year, 0 otherwise
 
 
+Revert one-hot encoding: we need nace a categorical variable for "NACE", no dummy encoding
+```{r}
+names = grep("nace", colnames(data))
+prova = data[ , names]
+prova$nace <- colnames(prova)[apply(prova, 1, which.max)]
+
+new_data = data[, -names]
+new_data$nace = prova$nace 
+```
+
+
+Create the "overall" (TIME-VARIANT) zombie indicator
+```{r}
+# Transform the zombie dataframe into a binary one (1 = "Zombie", 0 otherwise)
+zombie_indicator <- data.frame(matrix(NA, ncol = length(2011:2016), nrow = nrow(new_data)))
+for (col in colnames(zombie)) {
+  zombie_indicator[, which(colnames(zombie)==col)]<- ifelse(grepl("Zombie", zombie[, col]), 1, 0)
+}
+
+# Rename columns of the zombie_indicator dataframe
+names = c()
+for (i in c(2011:2017)) {
+  names = append(names, paste("zombie_indicator", sep = "_", i))
+  
+}
+colnames(zombie_indicator) = names
+
+
+# Add a the "overall" time-variant zombie indicator to new_data
+new_data = cbind(new_data, zombie_indicator)
+
+write_dta(new_data, "C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/data_zombie_indicator_time_variant.dta")
+```
 

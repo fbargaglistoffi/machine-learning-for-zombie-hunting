@@ -83,7 +83,7 @@ model_compare <- function(predicted, expected, positive.class) {
 # mcap: value of company assets
 # debt: debt of the firm
 # vol: equity volatility 
-# r: risk free interes rate
+# r: risk free interest rate
 
 DtD <- function(mcap, debt, vol, r){
   
@@ -98,12 +98,14 @@ DtD <- function(mcap, debt, vol, r){
   
   # Compute D1
   d1 <- function(mcap, debt, sV, Maturity) {
-    if(which(mcap/debt<0)){
-      num <- 0 + r + 0.5*sV*sV*Maturity
-    }
-    else{
-      num <- log(mcap/debt) + r + 0.5*sV*sV*Maturity
-    }
+    # if(which(mcap/debt<0)){
+    #   num <- 0 + r + 0.5*sV*sV*Maturity
+    # }
+    # else{
+    #   num <- log(mcap/debt) + r + 0.5*sV*sV*Maturity
+    # }
+    
+    num <- ifelse(mcap/debt < 0, (0 + r + 0.5*sV*sV*Maturity), (log(mcap/debt) + r + 0.5*sV*sV*Maturity) )
     den <- sV * sqrt(Maturity)
     num/den
   }
@@ -117,12 +119,13 @@ DtD <- function(mcap, debt, vol, r){
   e <- mcap*pnorm(d1(mcap, debt, sV, Maturity)) - debt*pnorm(d2(mcap, debt, sV, Maturity))*exp(-r)
   
   # Save Positive Values
-  if(e < 0){
-    e <- 0
-  }
-  else{
-    e <- e
-  }
+  # if(e < 0){
+  #   e <- 0
+  # }
+  # else{
+  #   e <- e
+  # }
+  e <- ifelse(e<0, 0, e)
   
   # Return DtD
   return(e)
@@ -130,7 +133,9 @@ DtD <- function(mcap, debt, vol, r){
 
 
 
-####### Compute correlations when many columns are available
+#############################################################################################################
+# Compute correlations when many columns are available
+# 
 # See: https://towardsdatascience.com/how-to-create-a-correlation-matrix-with-too-many-variables-309cc0c0a57
 
 # df = dataframe of interest
@@ -163,48 +168,6 @@ corr_simple <- function(data, sig){
 
 
 
-
-
-######## Create SL.bartMachine.better because the oridinal library SL.bartMachine does not work
-SL.bartMachine.better <- function(Y, X, newX, family, obsWeights, id,
-                                  num_trees = 50, num_burn_in = 250, verbose = TRUE,
-                                  alpha = 0.95, beta = 2, k = 2, q = 0.9, nu = 3,
-                                  num_iterations_after_burn_in = 1000, ...) {
-  #.SL.require("bartMachine")
-
-  # Get TRAINING outcome Vector
-  options(java.parameters = "-Xmx1000g")
-  tic()
-  model = bartMachine(X, Y, use_missing_data = FALSE)
-  toc = toc()
-  # pred returns predicted responses (on the scale of the outcome)
-  pred <- predict(model, newX)
-  # fit returns all objects needed for predict.SL.template
-  fit <- list(object = model)
-  #fit <- vector("list", length=0)
-  class(fit) <- c("SL.bartMachine")
-  out <- list(pred = pred, fit = fit, toc = toc)
-  return(out)
-
-}
-
-#' bartMachine prediction
-#' @param object SuperLearner object
-#' @param newdata Dataframe to predict the outcome
-#' @param family "gaussian" for regression, "binomial" for binary
-#'   classification. (Not used)
-#' @param Y Outcome variable (not used)
-#' @param X Covariate dataframe (not used)
-#' @param ... Additional arguments (not used)
-#'
-#' @export
-
-
-predict.SL.bartMachine <- function(object, newdata, family, X = NULL, Y = NULL,...) {
-  .SL.require("bartMachine")
-  pred <- predict(object$object, newdata)
-  return(pred)
-}
 
 
 

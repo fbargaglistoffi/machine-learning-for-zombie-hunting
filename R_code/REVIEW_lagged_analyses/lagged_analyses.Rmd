@@ -1276,6 +1276,7 @@ legend(x = 0.78, y = 0.95, legend = c("XGBoost", "Logit"), col = c("blue", "red"
 
 
 
+
 ## Encoding missingness 
 
 Create a new k-fold cross-validation (for the whole dataset)
@@ -1583,7 +1584,7 @@ for (i in 1:n.folds){
     
     set.seed(3052)
     tic()
-    xgboost_cv <- xgboost(data = train[, 2:ncol(train)], label = train[,1], objective = "binary:logistic", nrounds = 5)
+    xgboost_cv <- xgboost(data = train[, 2:ncol(train)], label = train[,1], objective = "binary:logistic", nrounds = 100, verbose = FALSE)
     time[[i]]  <- toc()
      
      # Prediction out-of-sample
@@ -1645,14 +1646,14 @@ xgboost_fit = rbind(xgboost_fit, c("Overall", mean(xgboost_fit$`Area under the R
 # xgboost fit across the 5-folds and on average
 xgboost_fit
 
-# write.csv(xgboost_fit, file = "xgboost_fit.csv")
+write.csv(xgboost_fit, file = "xgboost_fit.csv")
 ```
 
 
 Cutoff-based metrics with XGBoost
 ```{r}
 time = list()
-thresholds = seq.default(from = 0.5, to = 1, by = 0.02)
+thresholds = seq.default(from = 0.5, to = 1, by = 0.01)
 
 for (j in thresholds) {
   
@@ -1806,14 +1807,14 @@ ggplot(statistics_melt, aes(x = Threshold, y = `value`, color = `Metric`) ) +
 
 ```{r}
 # thresh = read.csv("xgboost_thresh_fit.csv")
-
+thresh = xgboost_thresh_fit
 ggplot(thresh, aes(x = Threshold, y = BACC) ) +
       geom_line(color = "grey20") +
       geom_point(size = 1.5, color = "red", fill = "red", shape = 21) +
       labs(title = "", 
              y   = "BACC",
              x   = "Cutoff") + 
-      ylim(0.8, 1) + 
+      ylim(0.5, 1) + 
       theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 ```
 

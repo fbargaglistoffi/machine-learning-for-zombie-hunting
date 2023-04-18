@@ -1007,6 +1007,7 @@ write.csv(tot_coef, file = "sl_complete_case_liq_coef.csv")
 ```
 
 
+
 ## Sample of the same dimension of CC data but with missing values + create ad-hoc 5-fold CV
 ```{r}
 set.seed(3052)
@@ -1218,7 +1219,6 @@ write.csv(xgboost_fit, file = "xgboost_cc_missing_liq_fit.csv")
 ```
 
 
-
 Average ROC for XGboost (across 5-fold CV)
 ```{r}
 pred_xgboost <- prediction(predictions, labels)
@@ -1274,6 +1274,7 @@ plot(perf_xgboost_pr,
      add = T) 
 legend(x = 0.78, y = 0.95, legend = c("XGBoost", "Logit"), col = c("blue", "red"), lty = 1, lwd = 2, cex = 1)
 ```
+
 
 
 
@@ -1340,7 +1341,7 @@ for (i in 1:n.folds){
     # Segment the data  
     index <- folds[[i]]
     test <- data_encoded[index, ]
-    train <- data_encoed[-index, ]
+    train <- data_encoded[-index, ]
     
     set.seed(3052)
     tic()
@@ -1406,7 +1407,7 @@ logit_fit = rbind(logit_fit, c("Overall", mean(logit_fit$`Area under the ROC`), 
 # Logit fit across the 5-folds and on average
 logit_fit
 
-write.csv(logit_fit, file = "logit_fit.csv")
+write.csv(logit_fit, file = "logit_liq_fit.csv")
 ```
 
 
@@ -1488,7 +1489,7 @@ ctree_fit = rbind(ctree_fit, c("Overall", mean(ctree_fit$`Area under the ROC`), 
 # ctree fit across the 5-folds and on average
 ctree_fit
 
-write.csv(ctree_fit, file = "ctree_fit.csv")
+write.csv(ctree_fit, file = "ctree_liq_fit.csv")
 ```
 
 
@@ -1568,7 +1569,7 @@ rf_fit = rbind(rf_fit, c("Overall", mean(rf_fit$`Area under the ROC`), mean(rf_f
 # rf fit across the 5-folds and on average
 rf_fit
 
-write.csv(rf_fit, file = "rf_fit.csv")
+write.csv(rf_fit, file = "rf_liq_fit.csv")
 ```
 
 
@@ -1586,7 +1587,7 @@ for (i in 1:n.folds){
     
     set.seed(3052)
     tic()
-    xgboost_cv <- xgboost(data = train[, 2:ncol(train)], label = train[,1], objective = "binary:logistic", nrounds = 5)
+    xgboost_cv <- xgboost(data = train[, 2:ncol(train)], label = train[,1], objective = "binary:logistic", nrounds = 100)
     time[[i]]  <- toc()
      
      # Prediction out-of-sample
@@ -1648,7 +1649,7 @@ xgboost_fit = rbind(xgboost_fit, c("Overall", mean(xgboost_fit$`Area under the R
 # xgboost fit across the 5-folds and on average
 xgboost_fit
 
-# write.csv(xgboost_fit, file = "xgboost_fit.csv")
+write.csv(xgboost_fit, file = "xgboost_liq_fit.csv")
 ```
 
 
@@ -1809,27 +1810,18 @@ ggplot(statistics_melt, aes(x = Threshold, y = `value`, color = `Metric`) ) +
 
 ```{r}
 # thresh = read.csv("xgboost_thresh_fit.csv")
+thresh = xgboost_thresh_fit 
 
 ggplot(thresh, aes(x = Threshold, y = BACC) ) +
       geom_line(color = "grey20") +
-      geom_point(size = 1.5, color = "red", fill = "red", shape = 21) +
+      # geom_point(size = 1.5, color = "red", fill = "red", shape = 21) +
       labs(title = "", 
              y   = "BACC",
              x   = "Cutoff") + 
-      ylim(0.8, 1) + 
+      ylim(0.5, 1) + 
       theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 ```
 
-```{r}
-ggplot(xgboost_thresh_fit[1:10, ] , aes(x = Threshold, y = BACC) ) +
-      geom_line(color = "grey20") +
-      geom_point(size = 1.5, color = "red", fill = "red", shape = 21) +
-      labs(title = "", 
-             y   = "BACC",
-             x   = "Cutoff") + 
-      ylim(0.8, 1) + 
-      theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
-```
 
 
 #### XGBoost fine-tuning
@@ -2005,8 +1997,8 @@ xgboost_fit = rbind(xgboost_fit, c("Overall", mean(xgboost_fit$`Area under the R
 # xgboost fit across the 5-folds and on average
 xgboost_fit
 
-write.csv(xgboost_fit, file = "xgboost_fine_tuned_fit.csv")
-write.csv(mytune$x, file = "xgboost_tuned_par.csv")
+write.csv(xgboost_fit, file = "xgboost_fine_tuned_liq_fit.csv")
+write.csv(mytune$x, file = "xgboost_tuned_liq_par.csv")
 ```
 
 
@@ -2097,7 +2089,7 @@ bart_fit = rbind(bart_fit, c("Overall", mean(bart_fit$`Area under the ROC`), mea
 # bart fit across the 5-folds and on average
 bart_fit
 
-write.csv(bart_fit, file = "bart_fit.csv")
+write.csv(bart_fit, file = "bart_liq_fit.csv")
 ```
 
 Super Learner
@@ -2207,8 +2199,8 @@ tot_coef = rbind(tot_coef, c("Mean", mean(tot_coef$`Logit`), mean(tot_coef$`CART
 
 tot_coef
 
-write.csv(sl_fit, file = "sl_fit.csv")
-write.csv(tot_coef, file = "sl_coef.csv")
+write.csv(sl_fit, file = "sl_liq_fit.csv")
+write.csv(tot_coef, file = "sl_liq_coef.csv")
 
 ```
 
@@ -2392,7 +2384,7 @@ logit_fit = rbind(logit_fit, c("Overall", mean(logit_fit$`Area under the ROC`), 
 # Logit fit across the 5-folds and on average
 logit_fit
 
-write.csv(logit_fit, file = "logit_median_imputation_fit.csv")
+write.csv(logit_fit, file = "logit_median_imputation_liq_fit.csv")
 ```
 
 Ctree
@@ -2473,7 +2465,7 @@ ctree_fit = rbind(ctree_fit, c("Overall", mean(ctree_fit$`Area under the ROC`), 
 # ctree fit across the 5-folds and on average
 ctree_fit
 
-write.csv(ctree_fit, file = "ctree_median_imputation_fit.csv")
+write.csv(ctree_fit, file = "ctree_median_imputation_liq_fit.csv")
 ```
 
 Random Forest
@@ -2552,7 +2544,7 @@ rf_fit = rbind(rf_fit, c("Overall", mean(rf_fit$`Area under the ROC`), mean(rf_f
 # rf fit across the 5-folds and on average
 rf_fit
 
-write.csv(rf_fit, file = "rf_median_imputation_fit.csv")
+write.csv(rf_fit, file = "rf_median_imputation_liq_fit.csv")
 ```
 
 XGBoost
@@ -2569,7 +2561,7 @@ for (i in 1:n.folds){
     
     set.seed(3052)
     tic()
-    xgboost_cv <- xgboost(data = train[, 2:ncol(train)], label = train[,1], objective = "binary:logistic", nrounds = 5)
+    xgboost_cv <- xgboost(data = train[, 2:ncol(train)], label = train[,1], objective = "binary:logistic", nrounds = 100)
     time[[i]]  <- toc()
      
      # Prediction out-of-sample
@@ -2631,7 +2623,7 @@ xgboost_fit = rbind(xgboost_fit, c("Overall", mean(xgboost_fit$`Area under the R
 # xgboost fit across the 5-folds and on average
 xgboost_fit
 
-write.csv(xgboost_fit, file = "xgboost_median_imputation_fit.csv")
+write.csv(xgboost_fit, file = "xgboost_median_imputation_liq_fit.csv")
 ```
 
 BART (without MIA)
@@ -2720,7 +2712,7 @@ bart_fit = rbind(bart_fit, c("Overall", mean(bart_fit$`Area under the ROC`), mea
 # bart fit across the 5-folds and on average
 bart_fit
 
-write.csv(bart_fit, file = "bart_median_imputation_fit.csv")
+write.csv(bart_fit, file = "bart_median_imputation_liq_fit.csv")
 ```
 
 Super Learner
@@ -2830,8 +2822,8 @@ tot_coef = rbind(tot_coef, c("Mean", mean(tot_coef$`Logit`), mean(tot_coef$`CART
 
 tot_coef
 
-write.csv(sl_fit, file = "sl_median_imputation_fit.csv")
-write.csv(tot_coef, file = "sl_median_imputation_coef.csv")
+write.csv(sl_fit, file = "sl_median_imputation_liq_fit.csv")
+write.csv(tot_coef, file = "sl_median_imputation_liq_coef.csv")
 
 ```
 

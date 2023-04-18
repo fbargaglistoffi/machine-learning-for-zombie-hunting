@@ -1,0 +1,470 @@
+---
+title: "Shapley"
+author: "Fabio Incerti"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+Clean the environment
+```{r}
+rm(list=ls()) 
+```
+
+```{r warning = FALSE}
+library(dbarts)
+library(haven)
+library(fastshap)
+library(ranger)
+library(ggplot2)
+library(imputeMissings)
+library(patchwork)
+library(tictoc)
+library(xgboost)
+source('C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/functions.R')
+```
+
+Set Working Directory
+```{r}
+setwd("C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_Shapley")
+```
+
+```{r}
+pred_fun <- function(model, newdata, y) {
+      #predict(model, newdata)$predictions[,2]
+      pred = predict(model, newdata, mu = mean(y))
+    }
+```
+
+
+
+Upload data
+```{r}
+data <- read_dta("H://.shortcut-targets-by-id//1keYb51HXkcQwzkU2kBgbnguQaqUy3umX//Zombie Hunting New Data/analysis_data_indicators.dta")
+```
+
+
+Get italian data
+```{r}
+data <- data[which(data$iso=="IT"),] 
+names(data)[names(data) == 'GUO___BvD_ID_number'] <- 'guo'
+
+data$control <- ifelse(data$guo=="", 0, 1)
+data$nace <- as.factor(data$nace)
+data$area <- as.factor(data$area)
+
+levels(data$nace) <- floor(as.numeric(levels(data$nace))/100) 
+```
+
+Rename incorrectly labeled variables:
+- misallocated_2008_fixed -> misallocated_fixed_2008
+- revenue2008 -> revenue_2008
+- depr2008 -> depr_2008
+```{r}
+for (i in c(2008:2016)) {
+  colnames(data) <- gsub(paste("misallocated", sep="_", i, "fixed"), paste("misallocated", sep="_", "fixed", i), colnames(data))
+  colnames(data) <- gsub(paste("revenue", sep="", i), paste("revenue", sep="_", i), colnames(data))
+  colnames(data) <- gsub(paste("depr", sep="", i), paste("depr", sep="_", i), colnames(data))
+}
+```
+
+
+Construct yearly failure Indicator
+```{r}
+data <- failure_yearly(data)
+```
+
+
+Define predictors
+```{r}
+# Time-variant predictors
+lagged_predictors <- c("shareholders_funds",
+                       "added_value", "cash_flow", "ebitda",
+                       "fin_rev", "liquidity_ratio", "total_assets",
+                       "depr", "long_term_debt", "employees",
+                       "materials", "loans", "wage_bill", "tfp_acf",
+                       "fixed_assets", "tax", "current_liabilities",
+                       "current_assets", "fin_expenses", "int_paid",
+                       "solvency_ratio", "net_income", "revenue",
+                       "capital_intensity", "fin_cons", "inv",
+                       "ICR_failure", "interest_diff", "NEG_VA",
+                       "real_SA", "profitability", "misallocated_fixed",
+                       "financial_sustainability", "liquidity_return",
+                       "int_fixed_assets")
+
+# Time-invariant predictors
+predictors <- c("control", "nace", "consdummy", "area", "dummy_patents", "dummy_trademark")
+```
+
+
+Compute SHAP values
+```{r}
+years <- c(2010:2017)
+shapley <- c()
+
+tic()
+  for (i in (years)){
+    
+    # Subset data by Year
+    data_model <- data[which(!is.na(data[,paste("failure", sep = "_", i)])),]
+    
+    # Get Outcome Vector
+    y <- as.vector(data_model[,paste("failure", sep = "_", i)])
+    # y <- as.factor(unlist(y, use.names = FALSE))
+    
+    
+    # Get Predictors Matrix
+    data_model <- as.data.frame(cbind(y, data_model[,paste(lagged_predictors, sep = "_", i - 1)], data_model[, paste(predictors)]))
+    
+    # Generate NA Variable: count the number of NA for each row
+    MissCount = rowSums(is.na(data_model))
+    
+    # Mark observations based on the number of NA: 35 is the cardinality of "lagged_predictors"
+    miss = rep(NA, nrow(data_model))
+    miss[which(MissCount == 0)] = 0                      # No time-variant predictor is missing
+    miss[which(MissCount > 0 & MissCount < 35)] = 1      # Some time-variant predictors is missing
+    miss[which(MissCount == 35)] = 2                     # All time-variant predictors at (i-1) are missing
+
+    y <- data_model[, 1]
+    X <- data_model[, -1]
+    X <- impute(X, object = NULL, method = "median/mode", flag = FALSE)
+    X <- cbind(X, miss)
+    temp <- colnames(X)
+    
+    # XGBoost requires matrix format for the predictor matrix
+    X <- matrix(unlist(X), ncol = length(X), nrow = nrow(X))
+    colnames(X) <- temp
+    
+    # Run the model
+    set.seed(42)
+    xgboost <- xgboost(data = X, 
+                       label = y, 
+                       objective = "binary:logistic", 
+                       nrounds = 100)
+
+    
+    # Compute fast (approximate) Shapley values for the set of features
+    shap <- explain(xgboost, X = X, pred_wrapper = predict, nsim = 1, newdata = X)
+    colnames(shap) <- c(lagged_predictors, predictors, paste("miss"))
+    shapley <- rbind(shapley, shap)
+  }
+toc()
+  
+write.csv(shapley,"shapley.csv", row.names = FALSE)
+```
+
+
+(Figure 6) Compute the mean Shapley values and plot them
+```{r}
+# Sum up the values computed for each observation and divide by the number of observations
+shap_imp <- data.frame(Variable = names(shapley),
+                       Importance = apply(shapley, MARGIN = 2, FUN = function(x) sum(abs(x))/nrow(shapley) )
+)
+
+# Define new labels for ggplot
+new.names <-  c(control = "Corporate control",
+                miss = "Missingness",
+                net_income = "Net income",
+                employees = "Employees",
+                tax = "Tax",
+                real_SA = "Size-Age",
+                fixed_assets = "Fixed assets",
+                shareholders_funds = "Shareholders funds",
+                revenue = "Revenues",
+                tfp_acf = "TFP",
+                inv = "Investement indicator",
+                current_liabilities = "Current liabilities",
+                current_assets = "Current assets",
+                wage_bill = "Cost of employees",
+                solvency_ratio = "Solvency ratio",
+                total_assets = "Total assets",
+                int_fixed_assets = "Intangible fixed assets",
+                fin_rev = "Financial revenues",
+                nace = "NACE rev. 2",
+                materials = "Material costs",
+                liquidity_return = "Liquidity return",
+                fin_expenses = "Financial expenses",
+                depr = "Depreciation",
+                area = "Area",
+                liquidity_ratio = "Liquidity ratio",
+                ebitda = "EBITDA",
+                int_paid = "Interest payments",
+                financial_sustainability = "Financial sustainability",
+                capital_intensity = "Capital intensity",
+                loans = "Loans",
+                added_value = "Added value",
+                long_term_debt = "Long-term debt",
+                cash_flow = "Cash flow",
+                fin_cons = "Financial Constraints",
+                interest_diff = "Benchmark interest difference",
+                dummy_trademark = "Dummy trademarks",
+                dummy_patents = "Dummy patents",
+                misallocated_fixed = "Financial misallocation",
+                ICR_failure = "ICR",
+                profitability = "Profitability",
+                consdummy = "Dummy consolidated accounts",
+                NEG_VA = "Negative value added")
+
+
+# Plot Shap-based variable importance
+ggplot(shap_imp, aes(reorder(Variable, Importance), Importance)) +
+       geom_col() +
+       coord_flip() +
+       scale_x_discrete(labels = new.names) +
+       xlab("") +
+       ylab("Shapley value") +
+       theme(text = element_text(size=8) )
+```
+
+
+
+
+
+
+# NON-OVERLAP of variables among categories: each variable belongs to at most one group (partitioning the features space into groups)
+
+(Figure 7) Compute the mean Shapley values for groups of variables
+```{r}
+sector <- c("nace")
+shap_imp_sector <- data.frame(
+  Variable = names(shapley[paste(sector)]),
+  Importance = apply(shapley[paste(sector)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_sector <- sum(shap_imp_sector$Importance)
+
+area <- c("area")
+shap_imp_area <- data.frame(
+  Variable = names(shapley[paste(area)]),
+  Importance = apply(shapley[paste(area)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_area <- sum(shap_imp_area$Importance)
+
+missingness <- c("miss")
+shap_imp_miss <- data.frame(
+  Variable = names(shapley[paste(missingness)]),
+  Importance = apply(shapley[paste(missingness)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_miss <- sum(shap_imp_miss$Importance)
+
+productivity <- c("tfp_acf")
+shap_imp_productivity <- data.frame(
+  Variable = names(shapley[paste(productivity)]),
+  Importance = apply(shapley[paste(productivity)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_productivity <- sum(shap_imp_productivity$Importance)
+
+size <- c("total_assets", "employees", "net_income")
+shap_imp_size <- data.frame(
+  Variable = names(shapley[,paste(size)]),
+  Importance = apply(shapley[,paste(size)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_size <- sum(shap_imp_size$Importance)
+
+profitability <- c("ebitda", "profitability")
+shap_imp_profitability <- data.frame(
+  Variable = names(shapley[,paste(profitability)]),
+  Importance = apply(shapley[,paste(profitability)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_profitability <- sum(shap_imp_profitability$Importance)
+
+governance <- c("control", "consdummy")
+shap_imp_governance <- data.frame(
+  Variable = names(shapley[,paste(governance)]),
+  Importance = apply(shapley[,paste(governance)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_governance <- sum(shap_imp_governance$Importance)
+
+innovation <- c("dummy_patents", "dummy_trademark")
+shap_imp_innovation <- data.frame(
+  Variable = names(shapley[,paste(innovation)]),
+  Importance = apply(shapley[,paste(innovation)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_innovation <- sum(shap_imp_innovation$Importance)
+
+financial_constraints <- c("real_SA", "financial_sustainability",
+                           "liquidity_return", "int_fixed_assets", "fin_cons")
+
+shap_imp_fin_cons <- data.frame(
+  Variable = names(shapley[,paste(financial_constraints)]),
+  Importance = apply(shapley[,paste(financial_constraints)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_fin_cons <- sum(shap_imp_fin_cons$Importance)
+
+zombie_indicators <- c("ICR_failure", "NEG_VA", "interest_diff", "profitability",
+                       "misallocated_fixed")
+shap_imp_zombie <- data.frame(
+  Variable = names(shapley[,paste(zombie_indicators)]),
+  Importance = apply(shapley[,paste(zombie_indicators)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_zombie <- sum(shap_imp_zombie$Importance)
+
+financial_accounts <- c("shareholders_funds", "added_value", "cash_flow", "inv",
+                        "fin_rev", "liquidity_ratio", "depr", "long_term_debt", 
+                        "materials", "loans", "wage_bill",  "fixed_assets", "tax",
+                        "current_liabilities", "current_assets", "fin_expenses",
+                        "int_paid","solvency_ratio", "revenue","capital_intensity")
+shap_imp_fin_acc <- data.frame(
+  Variable = names(shapley[,paste(financial_accounts)]),
+  Importance = apply(shapley[,paste(financial_accounts)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_fin_acc <- sum(shap_imp_fin_acc$Importance)
+
+# Group the Indicators
+shap_imp_by_group <- data.frame(
+  Variable = c("sector", "area", "size", "missingness", "profitability", "governance", "innovation",
+               "productivity", "financial_constrains", "zombie_indicators", "financial_accounts"),
+  Importance = c(shap_imp_sector, shap_imp_area, shap_imp_size, shap_imp_miss, shap_imp_profitability,
+                 shap_imp_governance, shap_imp_innovation, shap_imp_productivity,
+                 shap_imp_fin_cons, shap_imp_zombie, shap_imp_fin_acc)
+)
+
+shap_imp_by_group$Importance = shap_imp_by_group$Importance / nrow(shapley)
+
+# Define new labels for ggplot
+new.labels <-  c(financial_accounts = "Financial accounts",
+                governance = "Governance",
+                financial_constrains = "Financial constraints",
+                size = "Size",
+                missingness = "Missingness",
+                productivity = "Productivity",
+                sector = "Sector",
+                area = "Area",
+                profitability = "Profitability",
+                zombie_indicators = "Zombie indicators",
+                inv = "Investement indicator",
+                innovation = "Innovation")
+
+# Plot Shap-based variable importance
+ggplot(shap_imp_by_group, aes(reorder(Variable, Importance), Importance)) +
+        geom_col() +
+        coord_flip() +
+        xlab("") +
+        scale_x_discrete(labels = new.labels) +
+        ylab("Shapley value")  
+```
+
+
+# OVERLAP of variables among categories: each variable can belongs to more groups (additional analysis)
+
+Compute the mean Shapley values for groups of variables
+```{r}
+# Aggregated Predictors (OVERLAP)
+sector <- c("nace")
+shap_imp_sector <- data.frame(
+  Variable = names(shapley[paste(sector)]),
+  Importance = apply(shapley[paste(sector)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_sector <- sum(shap_imp_sector$Importance)
+
+area <- c("area")
+shap_imp_area <- data.frame(
+  Variable = names(shapley[paste(area)]),
+  Importance = apply(shapley[paste(area)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_area <- sum(shap_imp_area$Importance)
+
+missingness <- c("miss")
+shap_imp_miss <- data.frame(
+  Variable = names(shapley[paste(missingness)]),
+  Importance = apply(shapley[paste(missingness)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_miss <- sum(shap_imp_miss$Importance)
+
+size <- c("total_assets", "employees", "net_income")
+shap_imp_size <- data.frame(
+  Variable = names(shapley[,paste(size)]),
+  Importance = apply(shapley[,paste(size)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_size <- sum(shap_imp_size$Importance)
+
+profitability <- c("ebitda", "profitability")
+shap_imp_profitability <- data.frame(
+  Variable = names(shapley[,paste(profitability)]),
+  Importance = apply(shapley[,paste(profitability)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_profitability <- sum(shap_imp_profitability$Importance)
+
+governance <- c("control", "consdummy")
+shap_imp_governance <- data.frame(
+  Variable = names(shapley[,paste(governance)]),
+  Importance = apply(shapley[,paste(governance)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_governance <- sum(shap_imp_governance$Importance)
+
+innovation <- c("dummy_patents", "dummy_trademark")
+shap_imp_innovation <- data.frame(
+  Variable = names(shapley[,paste(innovation)]),
+  Importance = apply(shapley[,paste(innovation)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_innovation <- sum(shap_imp_innovation$Importance)
+
+productivity <- c("tfp_acf", "NEG_VA")
+shap_imp_productivity <- data.frame(
+  Variable = names(shapley[,paste(productivity)]),
+  Importance = apply(shapley[,paste(productivity)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_productivity <- sum(shap_imp_productivity$Importance)
+
+financial_constraints <- c("ICR_failure", "interest_diff", "NEG_VA", "real_SA", 
+                           "misallocated_fixed", "financial_sustainability",
+                           "liquidity_return", "int_fixed_assets", "fin_cons")
+shap_imp_fin_cons <- data.frame(
+  Variable = names(shapley[,paste(financial_constraints)]),
+  Importance = apply(shapley[,paste(financial_constraints)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_fin_cons <- sum(shap_imp_fin_cons$Importance)
+
+zombie_indicators <- c("ICR_failure", "NEG_VA", "interest_diff", "profitability",
+                       "misallocated_fixed")
+shap_imp_zombie <- data.frame(
+  Variable = names(shapley[,paste(zombie_indicators)]),
+  Importance = apply(shapley[,paste(zombie_indicators)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_zombie <- sum(shap_imp_zombie$Importance)
+
+financial_accounts <- c("shareholders_funds", "added_value", "cash_flow", "inv",
+                       "fin_rev", "liquidity_ratio", "depr", "long_term_debt", 
+                       "materials", "loans", "wage_bill",  "fixed_assets", "tax",
+                       "current_liabilities", "current_assets", "fin_expenses",
+                       "int_paid","solvency_ratio", "revenue","capital_intensity")
+shap_imp_fin_acc <- data.frame(
+  Variable = names(shapley[,paste(financial_accounts)]),
+  Importance = apply(shapley[,paste(financial_accounts)], MARGIN = 2, FUN = function(x) sum(abs(x)))
+)
+shap_imp_fin_acc <- sum(shap_imp_fin_acc$Importance)
+
+# Group the Indicators
+shap_imp_by_group <- data.frame(
+  Variable = c("sector", "area", "size", "missingness", "profitability", "governance", "innovation",
+               "productivity", "financial_constrains", "zombie_indicators", "financial_accounts"),
+  Importance = c(shap_imp_sector, shap_imp_area, shap_imp_size, shap_imp_miss, shap_imp_profitability,
+                 shap_imp_governance, shap_imp_innovation, shap_imp_productivity,
+                 shap_imp_fin_cons, shap_imp_zombie, shap_imp_fin_acc)
+)
+
+shap_imp_by_group$Importance = shap_imp_by_group$Importance / nrow(shapley)
+
+
+# Define new labels for ggplot
+new.labels <-  c(financial_accounts = "Financial accounts",
+                governance = "Governance",
+                financial_constrains = "Financial constraints",
+                size = "Size",
+                missingness = "Missingness",
+                producitivity = "Productivity",
+                sector = "Sector",
+                area = "Area",
+                profitability = "Profitability",
+                zombie_indicators = "Zombie indicators",
+                inv = "Investement indicator",
+                innovation = "Innovation")
+
+# Plot Shap-based variable importance
+ggplot(shap_imp_by_group, aes(reorder(Variable, Importance), Importance)) +
+  geom_col() +
+  coord_flip() +
+  xlab("") +
+  scale_x_discrete(labels = new.labels) +
+  ylab("Shapley value")
+```
+
+

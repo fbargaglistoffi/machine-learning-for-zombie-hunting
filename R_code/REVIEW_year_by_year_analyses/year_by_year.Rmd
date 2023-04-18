@@ -31,6 +31,8 @@ library(naniar)
 library(plotrix)
 library(ggplot2)
 source('C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/functions.R')
+
+#data_2 <- read_dta("H://.shortcut-targets-by-id//1keYb51HXkcQwzkU2kBgbnguQaqUy3umX//Zombie Hunting New Data/analysis_data_indicators.dta")
 ```
 
 Upload data
@@ -72,8 +74,7 @@ status_aggregated[which(data_italy$Status=="In liquidation")] <- "In Liquidation
 Rename incorrectly labeled variables:
 - misallocated_2008_fixed -> misallocated_fixed_2008
 - revenue2008 -> revenue_2008
-- depr2008 -> depr_2008
-                                                                            )
+- depr2008 -> depr_2008                                                                            )
 ```{r}
 for (i in c(2008:2016)) {
   colnames(data_italy) <- gsub(paste("misallocated", sep="_", i, "fixed"), paste("misallocated", sep="_", "fixed", i), colnames(data_italy))
@@ -149,7 +150,7 @@ for (i in c(2009:2016)) {
 }
 
 
-# Year 2009-2016
+# Years 2009-2016
 outside = c("inv", "interest_diff")
 dyn_outside <- paste(outside, sep = "_", 2009, collapse = NULL)
 for (i in c(2010:2016)) {
@@ -162,7 +163,88 @@ predictors <- c("control", "nace", "consdummy", "area", "dummy_patents", "dummy_
 ```
 
 
-# Missingness patterns between firms in liquidations and other failed firms
+# Missingness patterns
+
+```{r}
+# Define new labels for ggplot
+new.names <-  c(control = "Corporate control",
+                miss = "Missingness",
+                net_income = "Net income",
+                employees = "Employees",
+                tax = "Tax",
+                real_SA = "Size-Age",
+                fixed_assets = "Fixed assets",
+                shareholders_funds = "Shareholders funds",
+                revenue = "Revenues",
+                tfp_acf = "TFP",
+                inv = "Investement indicator",
+                current_liabilities = "Current liabilities",
+                current_assets = "Current assets",
+                wage_bill = "Cost of employees",
+                solvency_ratio = "Solvency ratio",
+                total_assets = "Total assets",
+                int_fixed_assets = "Intangible fixed assets",
+                fin_rev = "Financial revenues",
+                nace = "NACE rev. 2",
+                materials = "Material costs",
+                liquidity_return = "Liquidity return",
+                fin_expenses = "Financial expenses",
+                depr = "Depreciation",
+                area = "Area",
+                liquidity_ratio = "Liquidity ratio",
+                ebitda = "EBITDA",
+                int_paid = "Interest payments",
+                financial_sustainability = "Financial sustainability",
+                capital_intensity = "Capital intensity",
+                loans = "Loans",
+                added_value = "Added value",
+                long_term_debt = "Long-term debt",
+                cash_flow = "Cash flow",
+                fin_cons = "Financial Constraints",
+                interest_diff = "Benchmark interest difference",
+                dummy_trademark = "Dummy trademarks",
+                dummy_patents = "Dummy patents",
+                misallocated_fixed = "Financial misallocation",
+                ICR_failure = "ICR",
+                profitability = "Profitability",
+                consdummy = "Dummy consolidated accounts",
+                NEG_VA = "Negative value added")
+```
+
+
+Non-failing firms (N=287587)
+```{r}
+# Replace "_" with "." for reshaping data from wide to long format (e.g. shareholders_funds_2008 --> shareholders_funds.2009)
+prova = data_italy[ which(status_aggregated=="Active"), c("id", dyn_predictors)]
+for (i in c(2008:2016)) {
+  colnames(prova) = gsub(paste("_", sep = "", i), paste(".", sep = "", i), colnames(prova))
+}
+
+# Reshape data from wide to long format
+prova_2 = reshape(data = as.data.frame(prova), 
+                  varying = 2:length(prova),
+                  timevar = "Year",
+                  idvar = "id",
+                  direction = "long",
+                  sep = ".")
+
+# Plot missingness patterns over years
+gg_miss_fct(prova_2[2:length(prova_2)], Year) + 
+  labs(title = "Non-failing firms", 
+           x = "Years", 
+           y = "Variables") +
+  scale_x_discrete(limits = c(2008:2016)) +
+  scale_y_discrete(labels = new.names) +
+  scale_fill_continuous(type = "viridis", name = "% Missing") + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.y = element_text(size=7),
+        axis.title.y=element_blank(),
+        axis.title.x=element_blank()) 
+
+# Uncomment for table information
+#sapply(data_italy[c("id", dyn_predictors)], function(x) sum(is.na(x))/nrow(data_italy))
+```
+
 
 Firms in liquidation
 ```{r}
@@ -186,8 +268,12 @@ gg_miss_fct(prova_2[2:length(prova_2)], Year) +
            x = "Years", 
            y = "Variables") +
   scale_x_discrete(limits = c(2008:2016)) +
+  scale_y_discrete(labels = new.names) +
   scale_fill_continuous(type = "viridis", name = "% Missing") + 
-  theme(plot.title = element_text(hjust = 0.5)) 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.y = element_text(size=7),
+        axis.title.y=element_blank(),
+        axis.title.x=element_blank()) 
 
 # Uncomment for table information
 #sapply(data_italy_liq[c("id", dyn_predictors)], function(x) sum(is.na(x))/nrow(data_italy_liq))
@@ -212,12 +298,16 @@ prova_2 = reshape(data = as.data.frame(prova),
 
 # Plot missingness patterns over years
 gg_miss_fct(prova_2[2:length(prova_2)], Year) + 
-  labs(title = "Bankruptcies and dissolved firms", 
+  labs(title = "Bankruptcies and other dissolved firms", 
            x = "Years", 
-           y = "Variables") +
+           y = "Variables" ) +
   scale_x_discrete(limits = c(2008:2016)) +
+  scale_y_discrete(labels = new.names) +
   scale_fill_continuous(type = "viridis", name = "% Missing") + 
-  theme(plot.title = element_text(hjust = 0.5)) 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.y = element_text(size=7),
+        axis.title.y=element_blank(),
+        axis.title.x=element_blank()) 
 
 # Uncomment for table information
 #sapply(data_italy_non_liq[c("id", dyn_predictors)], function(x) sum(is.na(x))/nrow(data_italy_non_liq))
@@ -230,7 +320,9 @@ gg_miss_fct(prova_2[2:length(prova_2)], Year) +
 
 
 
-# Analysis for Italian Firms (2009-2017): failures without liquidations
+
+#
+Analysis for Italian Firms (2009-2017)
 
 XGBoost requires one-hot encoding of the categorical predictors (i.e. nace and area)
 ```{r}
@@ -319,7 +411,7 @@ train$prob_2016 <- prob[,8]
 train$prob_2017 <- prob[,9]
 ```
 
-Save data augment with default probabilities
+Save data augmented of default probabilities
 ```{r}
 # Rename one-hot encoded variables because "." is considered an illegal character
 colnames(train) = gsub("nace.", "nace_", colnames(train))
@@ -582,6 +674,8 @@ xgboost_fit
 
 
 
+
+
 # Figure 9: compute the share of zombie firms over time
 
 We consider a firm as a zombie if lying above the 9th decile for three consecutive years without failing (i.e. False Positive)
@@ -695,7 +789,7 @@ twoord.plot(lx = years, ly = zombie_share,
             xlab = "Years",
             ylab = "Zombie rate",
             rylab = "GDP growth rate",
-            main = "Share of Zombie Firms and GDP growth",
+            #main = "Share of Zombie Firms and GDP growth",
             do.first="plot_bg();grid(col=\"white\",lty=1)")
 
 twoord.plot(lx = years, ly = zombie_share,
@@ -710,7 +804,7 @@ twoord.plot(lx = years, ly = zombie_share,
             xlab = "Years",
             ylab = "Zombie rate",
             rylab = "Unemployment rate rate",
-            main = "Share of Zombie Firms and Unemployment Rate",
+            #main = "Share of Zombie Firms and Unemployment Rate",
             do.first="plot_bg();grid(col=\"white\",lty=1)")
 ```
 
