@@ -30,9 +30,9 @@ library(tidyr)
 library(naniar)
 library(plotrix)
 library(ggplot2)
+library(fmsb)
+library(reshape2)
 source('C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/functions.R')
-
-#data_2 <- read_dta("H://.shortcut-targets-by-id//1keYb51HXkcQwzkU2kBgbnguQaqUy3umX//Zombie Hunting New Data/analysis_data_indicators.dta")
 ```
 
 Upload data
@@ -321,8 +321,8 @@ gg_miss_fct(prova_2[2:length(prova_2)], Year) +
 
 
 
-#
-Analysis for Italian Firms (2009-2017)
+
+# Analysis for Italian Firms (2009-2017)
 
 XGBoost requires one-hot encoding of the categorical predictors (i.e. nace and area)
 ```{r}
@@ -424,7 +424,6 @@ write_dta(train, "C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-
 
 Load previously saved data
 ```{r}
-#train <- read_dta("C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/data_year_by_year.dta")
 train <- read_dta("C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/data_liq_year_by_year.dta")
 ```
 
@@ -497,6 +496,8 @@ else{
 colnames(xgboost_fit) <- c("Year", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared")
 xgboost_fit
 ```
+
+
 
 
 
@@ -676,10 +677,10 @@ xgboost_fit
 
 
 
+
 # Figure 9: compute the share of zombie firms over time
 
 We consider a firm as a zombie if lying above the 9th decile for three consecutive years without failing (i.e. False Positive)
-
 
 Fix the quantile threshold discriminating exit and non-exit prediction (where we expect lie most zombie firms)
 ```{r}
@@ -738,11 +739,32 @@ years <- c(2011:2017)
 
 zombie <- data.frame(matrix(NA, ncol = length(years), nrow = nrow(categories_confusion_matrix)))
 
+# Identifying ZOMBIES: firms resulting in the 9th decile for 3 consecutive years (put NA if the condition is not met)
 for (i in years) {
   zombie[which(years ==i)] <- ifelse(categories_confusion_matrix[ , paste("cat_conf_matrix", sep = "_", c(i-2))] == 1 &
                                      categories_confusion_matrix[ , paste("cat_conf_matrix", sep = "_", c(i-1))] == 1 & 
-                                     categories_confusion_matrix[ , paste("cat_conf_matrix", sep = "_", c(i))] == 1, 1, 0)
+                                     categories_confusion_matrix[ , paste("cat_conf_matrix", sep = "_", c(i))] == 1, 1, NA)
 }
+
+# Identifying NO ZOMBIES: firms not lying in the 9th decile AND non-missing in the decile category for 3 consecutive years 
+# (sono imprese che so per certo non soddisfino le condizioni di "zombieness" poiché hanno per es (1,1,4), (2,3,4) o altre combinazioni
+# ma non sono missing nelle 3 categorie decili coinvolte per la zombieness di un certo anno)
+# 
+# (I am sure these firms do not meet the "zombieness)
+for (i in years) {
+  zombie_index = which(zombie[, which(years ==i)] == 1)
+  
+  no_missing_index = which(!is.na(categories_confusion_matrix[ , paste("cat_conf_matrix", sep = "_", c(i-2))]) & 
+                           !is.na(categories_confusion_matrix[ , paste("cat_conf_matrix", sep = "_", c(i-1))]) & 
+                           !is.na(categories_confusion_matrix[ , paste("cat_conf_matrix", sep = "_", c(i))  ]) )
+  
+  overall_index = no_missing_index[!(no_missing_index %in% zombie_index)]
+  
+  
+  zombie[overall_index, which(years ==i)] <- 0
+}
+
+
 
 # Rename columns
 names = c()
@@ -759,19 +781,20 @@ Number and share of zombie firms overtime
 print("Number of zombie firms")
 sapply(zombie, function(x) sum(x == 1, na.rm = TRUE))
 
-# percent.table mi da delle % che non sommano a 1 perché la parte rimanente sono missing values: sottostima pertanto la quota di imprese zombie
-# rispetto alle imprese di cui osserviamo lo status zombie/non-zombie in un certo anno
-# sapply(zombie, percent.table)
+# non uso sapply(zombie, percent.table) perché percent.table mi da delle % che non sommano a 1 perché la parte rimanente sono missing values: sottostima pertanto la quota di imprese zombie rispetto alle imprese di cui osserviamo lo status zombie/non-zombie in un certo anno
 
 print("Share of zombie firms")
 sapply(zombie, function(x) length(which(x ==1)) / length(which(!is.na(x)))   ) * 100
 
-prova = sapply(zombie, function(x) length(which(x ==1)) / length(which(!is.na(x)))   ) * 100
+print("Non-missing")
+sapply(zombie, function(x) length(which(!is.na(x)))  )
+
+prova <- sapply(zombie, function(x) length(which(x ==1)) / length(which(!is.na(x)))   ) * 100 
 ```
 
 
 Plot the share of zombie firms (FP for three consectuvie years based on 0.9 cutoff) against GDP 
-```{r}
+```{r eval=FALSE}
 zombie_share <- prova
 gdp_growth <- c(0.707, -2.981, -1.841, -0.005, 0.778, 1.280, 1.716) # Data from World Bank (https://data.worldbank.org/indicator/NY.GDP.MKTP.KD.ZG?end=2018&locations=IT&start=2011)
 unemployment <- c(8.4, 10.7, 12.1, 12.7, 11.9, 11.7, 11.2) # Data from Statista (https://www.statista.com/statistics/531010/unemployment-rate-italy/)
@@ -782,8 +805,8 @@ twoord.plot(lx = years, ly = zombie_share,
             rx = years, ry = gdp_growth,
             type= c("l", "l"),
             lwd = 3,
-            yaxt = 'n',
-            lylim = range(zombie_share) + c(-0.5,0.5),
+            #yaxt = 'n',
+            lylim = range(zombie_share) + c(-0.2,0.2),
             rylim = range(gdp_growth) + c(-0.5,0.5),
             lcol = "blue",
             xlab = "Years",
@@ -792,20 +815,564 @@ twoord.plot(lx = years, ly = zombie_share,
             #main = "Share of Zombie Firms and GDP growth",
             do.first="plot_bg();grid(col=\"white\",lty=1)")
 
-twoord.plot(lx = years, ly = zombie_share,
-            rx = years, ry = unemployment,
-            type= c("l", "l"),
-            lwd = 3, 
-            yaxt = 'n',
-            lylim = range(zombie_share) + c(-0.5,0.5),
-            rylim = range(unemployment) + c(-0.5,0.5),
-            lcol = 4,
-            rcol="coral4",
-            xlab = "Years",
-            ylab = "Zombie rate",
-            rylab = "Unemployment rate rate",
-            #main = "Share of Zombie Firms and Unemployment Rate",
-            do.first="plot_bg();grid(col=\"white\",lty=1)")
+# twoord.plot(lx = years, ly = zombie_share,
+#             rx = years, ry = unemployment,
+#             type= c("l", "l"),
+#             lwd = 3, 
+#             yaxt = 'n',
+#             lylim = range(zombie_share) + c(-0.5,0.5),
+#             rylim = range(unemployment) + c(-0.5,0.5),
+#             lcol = 4,
+#             rcol="coral4",
+#             xlab = "Years",
+#             ylab = "Zombie rate",
+#             rylab = "Unemployment rate rate",
+#             #main = "Share of Zombie Firms and Unemployment Rate",
+#             do.first="plot_bg();grid(col=\"white\",lty=1)")
 ```
+
+
+# Testing other pupular criteria for zombieness and compare with XGBoost
+
+## ICR (McGowan et al., 2018; Banerjee & Hoffman, 2018)
+
+### Geography (NUTS 2)
+
+Identify zombie firms: ICR < 1 for 3 consecutive years (we get zombies for years 2011-2016 since our last available ICR is on 2016
+```{r}
+years <- c(2011:2016)
+
+zombie_icr <- data.frame(matrix(NA, ncol = length(years), nrow = nrow(train)))
+
+# Identifying ICR-based zombies: (ICR< 1 for 3 consecutive years, age >= 10, not failed). Put NA if this condition is not met. 
+for (i in years) {
+  zombie_icr[ , which(years ==i)] <- ifelse(train[ , paste("ICR_failure", sep = "_", c(i-2))] == 1 &
+                                         train[ , paste("ICR_failure", sep = "_", c(i-1))] == 1 & 
+                                         train[ , paste("ICR_failure", sep = "_", c(i))] == 1 &
+                                         train[ , paste("failure", sep = "_", c(i))] == 0 &   
+                                         train[ , "age"] >= 10, 1, NA)
+}
+
+# Identifying NO ICR-based zombies: firms no satisfying the condition: (ICR< 1 for 3 consecutive years, age >= 10, not failed)
+# (sono imprese che so per certo non soddisfino questa condizione, ma non sono missing nell'ICR per 3 anni, in age e in failure
+for (i in years) {
+  zombie_icr_index = which(zombie_icr[, which(years ==i)] == 1)
+  
+  no_missing_index = which(!is.na(train[ , paste("ICR_failure", sep = "_", c(i-2))]) & 
+                           !is.na(train[ , paste("ICR_failure", sep = "_", c(i-1))]) & 
+                           !is.na(train[ , paste("ICR_failure", sep = "_", c(i))  ]) &
+                            (train[ , paste("failure", sep = "_", c(i))] == 0 | train[ , paste("failure", sep = "_", c(i))] == 1) & 
+                           !is.na(train[ , "age"]))
+  
+  overall_index = no_missing_index[!(no_missing_index %in% zombie_icr_index)]
+  
+  
+  zombie_icr[overall_index, which(years ==i)] <- 0
+}
+
+
+
+# Rename columns
+names = c()
+for (i in years) {
+  names = append(names, paste("zombie_icr", sep = "_", i))
+  
+}
+colnames(zombie_icr) = names
+```
+
+
+
+```{r}
+print("Number of ICR zombie firms")
+sapply(zombie_icr, function(x) sum(x == 1, na.rm = TRUE))
+
+# non uso sapply(zombie, percent.table) perché percent.table mi da delle % che non sommano a 1 perché la parte rimanente sono missing values: sottostima pertanto la quota di imprese zombie rispetto alle imprese di cui osserviamo lo status zombie/non-zombie in un certo anno
+
+print("Share of ICR zombie firms")
+sapply(zombie_icr, function(x) length(which(x ==1)) / length(which(!is.na(x)))   ) * 100
+
+print("Non-missing ICR")
+sapply(zombie_icr, function(x) length(which(!is.na(x)))  )
+```
+
+Get firms at least one year zombies
+```{r}
+zombie_icr_1_year = which(rowSums(zombie_icr, na.rm = TRUE) > 0)
+zombie_xgboost_1_year = which(rowSums(zombie, na.rm = TRUE) > 0)
+
+# Zombies detected by both criteria (XGBoost and ICR)
+intersection = zombie_xgboost_1_year[zombie_xgboost_1_year %in% zombie_icr_1_year]
+
+# XGBoost zombies not detected by ICR critetion
+XGB_exclusive_zombie = zombie_xgboost_1_year[!(zombie_xgboost_1_year %in% zombie_icr_1_year)]
+
+# ICR zombies not detected by XGBoost
+ICR_exclusive_zombie = zombie_icr_1_year[!(zombie_icr_1_year %in% zombie_xgboost_1_year)]
+```
+
+Create categorical variable:
+
+- 1 if you have been detected from both XGBoost and ICR (common support)
+
+- 2 only XGBoost
+
+- 3 only ICR
+```{r}
+zombie_compare = data.frame(matrix(NA, ncol = 1, nrow = nrow(train)))
+colnames(zombie_compare) = c("zombie_compare")
+
+# Create categorical variable: 1 = common support, 2 = exclusive XGBoost zombies, 3 = esclusive ICR zombies
+zombie_compare[intersection, ] = 1
+zombie_compare[XGB_exclusive_zombie, ] = 2
+zombie_compare[ICR_exclusive_zombie, ] = 3
+
+# Merge the categorical variable to the original data
+data_zombie_xgb_ICR  = cbind(train, zombie_compare)
+
+# Save zombies catched overall by the two criteria
+zombies_xgboost_icr = data_zombie_xgb_ICR[c(intersection, XGB_exclusive_zombie, ICR_exclusive_zombie), ]
+```
+
+
+Preparare data for radarchart (see https://r-graph-gallery.com/143-spider-chart-with-saveral-individuals.html)
+```{r}
+# Select data of interest for radar plot
+data_plot = data_zombie_xgb_ICR[ , c("region", "zombie_compare")]
+
+# Keep only zombies (either indentified by both algorithm or at least one)
+data_plot = data_plot[complete.cases(data_plot), ]
+
+# Convert variables into factor
+data_plot$region = as.factor(data_plot$region)
+data_plot$zombie_compare = as.factor(data_plot$zombie_compare)
+
+# Create contingency table: how many zombies fall in each region, for each category (common support / only XGBoost / only ICR)
+table = table(data_plot$zombie_compare, data_plot$region)
+
+# Convert into frequency by region 
+data_plot = data.frame(prop.table(table, m=2))
+data_plot = data_plot[4:nrow(data_plot), ]
+
+# Reshape data for radarchart requirements
+data_plot = reshape(data_plot, varying = levels(data_plot$Var2)[2:21], idvar = "Var1", timevar = "Var2", direction = "wide")
+
+# Remove the first column (useless)
+data_plot = data_plot[ , 2:ncol(data_plot)] 
+
+# Rename rows 
+row.names(data_plot) = c("Intersection", "Only XGBoost", "Only ICR")
+
+# Add upper and lower bounds of the radar by adding two lines
+data_plot <- rbind(rep(1, ncol(data_plot)) , rep(0,ncol(data_plot)) , data_plot)
+data_plot <- round(data_plot, digits = 2)
+
+# Rename regions
+colnames(data_plot) = c("ITF1", "ITF5", "ITF6", "ITF3", "ITH5", "ITH4","ITI4","ITC3","ITC4","ITI3","ITF2","ITC1","ITF4","ITG2","ITG1", "ITH1/2", "ITI1", "ITI2", "ITC2", "ITH3")
+#colnames(data_plot) = c("ABR", "BAS", "CAL", "CAM", "EMR", "FVG", "LAZ", "LIG", "LOM", "MAR", "MOL", "PIE", "PUG", "SAR", "SIC", "TAA", "TOS", "UMB", "VDA", "VEN")
+
+# Set up colors 
+colors_border=c( rgb(0.2,0.5,0.5,0.9), rgb(0.8,0.2,0.5,0.9) , rgb(0.7,0.5,0.1,0.9) )
+colors_in=c( rgb(0.2,0.5,0.5,0.4), rgb(0.8,0.2,0.5,0.4) , rgb(0.7,0.5,0.1,0.4) )
+```
+
+Plot radarchart comparison of zombies among regions
+```{r}
+radarchart(data_plot, 
+           axistype = 1, 
+           #custom polygon
+           pcol=colors_border , pfcol=colors_in , plwd = 1 , plty = 1, pty = c(15,16,17),
+           #custom the grid
+           cglcol="grey", cglty=1, axislabcol="grey", 
+           caxislabels = seq(from = 0, to = 1, by = 0.25),
+           cglwd=0.8,
+           #custom labels
+           vlcex=0.8)
+
+legend(x = 1, y = 1.4, legend = c("Common support", "MA-XGBoost", "ICR"), bty = "n", pch = c(15,16,17) , col=colors_in , text.col = "black", cex=0.7, pt.cex=1.5)
+
+# colnames(data_plot)[16] <- "ITH1_2"
+# write_dta(data_plot[3:5, ], "C:/Users/fabio/OneDrive/Desktop/zombie_nace_ICR.dta")
+```
+
+
+Save radar chart in table format 
+```{r eval = FALSE}
+data_plot = t(data_plot)
+write.csv(data_plot[,3:5], "C:/Users/fabio/OneDrive/Desktop/zombie_nuts_ICR.csv")
+```
+
+### Industries
+
+Upload original data (in "train" we do not have NACE since it has been converted in dummy with one-hot encoding for XGBoost). We need original italian data with NACE 
+```{r}
+data <- read_dta("analysis_data_indicators.dta")
+
+# Get Italian data
+data_italy <- data[which(data$iso=="IT"),] 
+
+names(data_italy)[names(data_italy) == 'GUO___BvD_ID_number'] <- 'guo'
+
+data_italy$control <- ifelse(data_italy$guo=="", 0, 1)
+data_italy$nace <- as.factor(data_italy$nace)
+data_italy$area <- as.factor(data_italy$area)
+
+# Convert our 4-digits NACE into 2 digits
+levels(data_italy$nace) <- floor(as.numeric(levels(data_italy$nace))/100) 
+```
+
+
+Preparare data for radar chart plot by industries (NACE 2-digits)
+```{r}
+zombie_compare = data.frame(matrix(NA, ncol = 1, nrow = nrow(train)))
+colnames(zombie_compare) = c("zombie_compare")
+
+# Create categorical variable: 1 = common support, 2 = exclusive XGBoost zombies, 3 = esclusive ICR zombies
+zombie_compare[intersection, ] = 1
+zombie_compare[XGB_exclusive_zombie, ] = 2
+zombie_compare[ICR_exclusive_zombie, ] = 3
+
+# Merge the categorical variable to the original data
+NACE_data_zombie_xgb_ICR  = cbind(data_italy, zombie_compare)
+
+# Save zombies catched overall by the two criteria
+NACE_zombies_xgboost_icr = NACE_data_zombie_xgb_ICR[c(intersection, XGB_exclusive_zombie, ICR_exclusive_zombie), ]
+
+
+# Select data of interest for radar plot
+data_plot = NACE_zombies_xgboost_icr[, c("nace", "zombie_compare")]
+
+# Keep only zombies (either indentified by both algorithm or at least one)
+data_plot = data_plot[complete.cases(data_plot), ]
+
+# Convert variables into factor
+data_plot$region = as.factor(data_plot$nace)
+data_plot$zombie_compare = as.factor(data_plot$zombie_compare)
+
+# Create contingency table: how many zombies fall in each region, for each category (common support / only XGBoost / only ICR)
+table = table(data_plot$zombie_compare, data_plot$nace)
+
+# Convert into frequency by region 
+data_plot = data.frame(prop.table(table, m=2))
+data_plot = data_plot[4:nrow(data_plot), ]
+
+# Reshape data for radarchart requirements
+data_plot = reshape(data_plot, varying = levels(data_plot$Var2), idvar = "Var1", timevar = "Var2", direction = "wide")
+
+# Remove the first column (useless)
+data_plot = data_plot[ , 2:ncol(data_plot)] 
+
+# Rename rows
+row.names(data_plot) = c("Intersection", "Only XGBoost", "Only ICR")
+
+# Add upper and lower bounds of the radar by adding two lines
+data_plot <- rbind(rep(1, ncol(data_plot)) , rep(0,ncol(data_plot)) , data_plot)
+data_plot <- round(data_plot, digits = 2)
+
+
+# Set up colors
+colors_border=c( rgb(0.2,0.5,0.5,0.9), rgb(0.8,0.2,0.5,0.9) , rgb(0.7,0.5,0.1,0.9) )
+colors_in=c( rgb(0.2,0.5,0.5,0.4), rgb(0.8,0.2,0.5,0.4) , rgb(0.7,0.5,0.1,0.4) )
+```
+
+Plot radar chart
+```{r}
+radarchart(data_plot, 
+           axistype = 1, 
+           #custom polygon
+           pcol=colors_border , pfcol=colors_in , plwd = 1 , plty = 1, pty = c(15,16,17),
+           #custom the grid
+           cglcol="grey", cglty=1, axislabcol="grey", 
+           caxislabels = seq(from = 0, to = 1, by = 0.25),
+           cglwd=0.8,
+           #custom labels
+           vlcex=0.8)
+
+legend(x = 1, y = 1.4, legend = c("Common support", "MA-XGBoost", "ICR"), bty = "n", pch = c(15,16,17) , col=colors_in , text.col = "black", cex=0.7, pt.cex=1.5)
+```
+
+
+
+
+
+## Negative value added (Bank of Korea, 2013)
+
+### Geography (NUTS 2) 
+
+Identify zombie firms: negative value added in a year, without failure (we get zombies for years 2011-2016 since our last available value added is on 2016)
+```{r}
+years <- c(2011:2016)
+
+zombie_NEG_VA <- data.frame(matrix(NA, ncol = length(years), nrow = nrow(train)))
+
+# Identifying negative added value-based zombies: firms with negative value added who did not fail (put NA if the condition is not met) 
+for (i in years) {
+  zombie_NEG_VA[ , which(years ==i)] <- ifelse(train[ , paste("NEG_VA", sep = "_", c(i))] == 1 &
+                                            #  train[ , paste("NEG_VA", sep = "_", c(i-2))] == 1 &
+                                            #  train[ , paste("NEG_VA", sep = "_", c(i-1))] == 1 &
+                                               train[ , paste("failure", sep = "_", c(i))] == 0, 1, NA)
+  
+}
+
+# Identifying NO zombies: firms no satisfying the condition: (NEG_VA = 1 & not failed) 
+# (sono imprese che so per certo non soddisfino questa condizione ma non sono missing in NEG_VA e in failure
+for (i in years) {
+  zombie_NEG_VA_index = which(zombie_NEG_VA[, which(years ==i)] == 1)
+  
+  no_missing_index = which(!is.na(train[ , paste("NEG_VA", sep = "_", c(i))  ]) &
+                       #   !is.na(train[ , paste("NEG_VA", sep = "_", c(i-2))]) &
+                       #   !is.na(train[ , paste("NEG_VA", sep = "_", c(i-1))]) &
+                            (train[ , paste("failure", sep = "_", c(i))] == 0 | train[ , paste("failure", sep = "_", c(i))] == 1) # & !is.na(train[ , "age"])
+                            )
+  
+
+  
+  overall_index = no_missing_index[!(no_missing_index %in% zombie_NEG_VA_index)]
+  
+  
+  zombie_NEG_VA[overall_index, which(years ==i)] <- 0
+}
+
+
+
+# Rename columns
+names = c()
+for (i in years) {
+  names = append(names, paste("zombie_NEG_VA", sep = "_", i))
+  
+}
+colnames(zombie_NEG_VA) = names
+```
+
+
+
+```{r}
+print("Number of NEG_VA zombie firms")
+sapply(zombie_NEG_VA, function(x) sum(x == 1, na.rm = TRUE))
+
+# non uso sapply(zombie, percent.table) perché percent.table mi da delle % che non sommano a 1 perché la parte rimanente sono missing values: sottostima pertanto la quota di imprese zombie rispetto alle imprese di cui osserviamo lo status zombie/non-zombie in un certo anno
+
+print("Share of NEG_VA zombie firms")
+sapply(zombie_NEG_VA, function(x) length(which(x ==1)) / length(which(!is.na(x)))   ) * 100
+
+print("Non-missing NEG_VA")
+sapply(zombie_NEG_VA, function(x) length(which(!is.na(x)))  )
+```
+
+Get firms at least one year zombies
+```{r}
+zombie_NEG_VA_1_year = which(rowSums(zombie_NEG_VA, na.rm = TRUE) > 0)
+zombie_xgboost_1_year = which(rowSums(zombie, na.rm = TRUE) > 0)
+
+# Zombies detected by both criteria (XGBoost and NEG_VA)
+intersection = zombie_xgboost_1_year[zombie_xgboost_1_year %in% zombie_NEG_VA_1_year]
+
+# XGBoost zombies not detected by NEG_VA criterion
+XGB_exclusive_zombie = zombie_xgboost_1_year[!(zombie_xgboost_1_year %in% zombie_NEG_VA_1_year)]
+
+# NEG_VA zombies not detected by XGBoost
+NEG_VA_exclusive_zombie = zombie_NEG_VA_1_year[!(zombie_NEG_VA_1_year %in% zombie_xgboost_1_year)]
+```
+
+Create categorical variable:
+
+- 1 if you have been detected from both XGBoost and NEG_VA
+
+- 2 only XGBoost
+
+- 3 only negative value-added
+```{r}
+zombie_compare = data.frame(matrix(NA, ncol = 1, nrow = nrow(train)))
+colnames(zombie_compare) = c("zombie_compare")
+
+# Create categorical variable: 1 = common support, 2 = exclusive XGBoost zombies, 3 = esclusive NEG_VA zombies
+zombie_compare[intersection, ] = 1
+zombie_compare[XGB_exclusive_zombie, ] = 2
+zombie_compare[NEG_VA_exclusive_zombie, ] = 3
+
+# Merge the categorical variable to the original data
+data_zombie_xgb_NEG_VA = cbind(train, zombie_compare)
+
+# Get zombie data
+zombies_xgboost_NEG_VA = train[c(intersection, XGB_exclusive_zombie, NEG_VA_exclusive_zombie), ]
+```
+
+
+Preparare data for radarchart (see https://r-graph-gallery.com/143-spider-chart-with-saveral-individuals.html)
+```{r}
+# Select data of interest for radar plot
+data_plot = data_zombie_xgb_NEG_VA[ , c("region", "zombie_compare")]
+
+# Keep only zombies (either indentified by both algorithm or at least one)
+data_plot = data_plot[complete.cases(data_plot), ]
+
+# Convert variables into factor
+data_plot$region = as.factor(data_plot$region)
+data_plot$zombie_compare = as.factor(data_plot$zombie_compare)
+
+# Create contingency table: how many zombies fall in each region, for each category (common support / only XGBoost / only ICR)
+table = table(data_plot$zombie_compare, data_plot$region)
+
+# Convert into frequency by region 
+data_plot = data.frame(prop.table(table, m=2))
+
+# Reshape data for radarchart requirements
+data_plot = reshape(data_plot, varying = levels(data_plot$Var2), idvar = "Var1", timevar = "Var2", direction = "wide")
+
+# Remove the first column (useless)
+data_plot = data_plot[ , 2:ncol(data_plot)] 
+
+# Rename rows 
+row.names(data_plot) = c("Intersection", "Only XGBoost", "Only NEG_VA")
+
+# Add upper and lower bounds of the radar by adding two lines
+data_plot <- rbind(rep(1, ncol(data_plot)) , rep(0,ncol(data_plot)) , data_plot)
+data_plot <- round(data_plot, digits = 2)
+
+# Rename regions
+colnames(data_plot) = c("ITF1", "ITF5", "ITF6", "ITF3", "ITH5", "ITH4","ITI4","ITC3","ITC4","ITI3","ITF2","ITC1","ITF4","ITG2","ITG1", "ITH1/2", "ITI1", "ITI2", "ITC2", "ITH3")
+#colnames(data_plot) = c("ABR", "BAS", "CAL", "CAM", "EMR", "FVG", "LAZ", "LIG", "LOM", "MAR", "MOL", "PIE", "PUG", "SAR", "SIC", "TAA", "TOS", "UMB", "VDA", "VEN")
+
+# Set up colors 
+colors_border=c( rgb(0.2,0.5,0.5,0.9), rgb(0.8,0.2,0.5,0.9) , rgb(0.7,0.5,0.1,0.9) )
+colors_in=c( rgb(0.2,0.5,0.5,0.4), rgb(0.8,0.2,0.5,0.4) , rgb(0.7,0.5,0.1,0.4) )
+```
+
+Plot radarchart comparison of zombies among regions
+```{r}
+radarchart(data_plot, 
+           axistype = 1, 
+           #custom polygon
+           pcol=colors_border , pfcol=colors_in , plwd = 1 , plty = 1, pty = c(15,16,17),
+           #custom the grid
+           cglcol="grey", cglty=1, axislabcol="grey", 
+           caxislabels = seq(from = 0, to = 1, by = 0.25),
+           cglwd=0.8,
+           #custom labels
+           vlcex=0.8)
+
+legend(x = 1, y = 1.4, legend = c("Common support", "MA-XGBoost", "Negative value added"), bty = "n", pch = c(15,16,17) , col=colors_in , text.col = "black", cex=0.7, pt.cex=1.3)
+```
+
+```{r}
+colnames(data_plot)[16] <- "ITH1_2"
+write_dta(data_plot[3:5, ], "C:/Users/fabio/OneDrive/Desktop/zombie_nace_NEG_VA.dta")
+```
+
+
+
+### Industries 
+```{r}
+zombie_compare = data.frame(matrix(NA, ncol = 1, nrow = nrow(train)))
+colnames(zombie_compare) = c("zombie_compare")
+
+# Create categorical variable: 1 = common support, 2 = exclusive XGBoost zombies, 3 = esclusive ICR zombies
+zombie_compare[intersection, ] = 1
+zombie_compare[XGB_exclusive_zombie, ] = 2
+zombie_compare[NEG_VA_exclusive_zombie, ] = 3
+
+# Merge the categorical variable to the original data
+NACE_data_zombie_xgb_NEG_VA  = cbind(data_italy, zombie_compare)
+
+# Save zombies catched overall by the two criteria
+NACE_zombies_xgboost_NEG_VA = NACE_data_zombie_xgb_NEG_VA[c(intersection, XGB_exclusive_zombie, NEG_VA_exclusive_zombie), ]
+
+
+# Select data of interest for radar plot
+data_plot = NACE_zombies_xgboost_NEG_VA[, c("nace", "zombie_compare")]
+
+# Keep only zombies (either indentified by both algorithm or at least one)
+data_plot = data_plot[complete.cases(data_plot), ]
+
+# Convert variables into factor
+data_plot$region = as.factor(data_plot$nace)
+data_plot$zombie_compare = as.factor(data_plot$zombie_compare)
+
+# Create contingency table: how many zombies fall in each region, for each category (common support / only XGBoost / only ICR)
+table = table(data_plot$zombie_compare, data_plot$nace)
+
+# Convert into frequency by region 
+data_plot = data.frame(prop.table(table, m=2))
+data_plot = data_plot[4:nrow(data_plot), ]
+
+# Reshape data for radarchart requirements
+data_plot = reshape(data_plot, varying = levels(data_plot$Var2), idvar = "Var1", timevar = "Var2", direction = "wide")
+
+# Remove the first column (useless)
+data_plot = data_plot[ , 2:ncol(data_plot)] 
+
+# Rename rows
+row.names(data_plot) = c("Intersection", "Only XGBoost", "Only NEG_VA")
+
+# Add upper and lower bounds of the radar by adding two lines
+data_plot <- rbind(rep(1, ncol(data_plot)) , rep(0,ncol(data_plot)) , data_plot)
+data_plot <- round(data_plot, digits = 2)
+
+# Rename regions
+#colnames(data_plot) = c("Food products", "Beverages", "Tobacco products", "Textiles", "Wearing apparel", "Leather and related products","Wood ecc.","Paper products","","ITI3","ITF2","ITC1","ITF4","ITG2","ITG1", "ITH1/2", "ITI1", "ITI2", "ITC2", "ITH3")
+
+
+# Set up colors
+colors_border=c( rgb(0.2,0.5,0.5,0.9), rgb(0.8,0.2,0.5,0.9) , rgb(0.7,0.5,0.1,0.9) )
+colors_in=c( rgb(0.2,0.5,0.5,0.4), rgb(0.8,0.2,0.5,0.4) , rgb(0.7,0.5,0.1,0.4) )
+```
+
+
+```{r}
+radarchart(data_plot, 
+           axistype = 1, 
+           #custom polygon
+           pcol=colors_border , pfcol=colors_in , plwd = 1 , plty = 1, pty = c(15,16,17),
+           #custom the grid
+           cglcol="grey", cglty=1, axislabcol="grey", 
+           caxislabels = seq(from = 0, to = 1, by = 0.25),
+           cglwd=0.8,
+           #custom labels
+           vlcex=0.8)
+
+legend(x = 1, y = 1.4, legend = c("Common support", "MA-XGBoost", "Negative value added"), bty = "n", pch = c(15,16,17) , col=colors_in , text.col = "black", cex=0.7, pt.cex=1.5)
+```
+Save the radar chart in table format
+```{r}
+data_plot = t(data_plot)
+write.csv(data_plot[,3:5], "C:/Users/fabio/OneDrive/Desktop/zombie_nace_NEG_VA.csv")
+```
+
+
+
+
+
+## Additional analysis: ICR and Negative value-added missingness across Italy
+```{r}
+data_count1 <- aggregate(cbind(ICR_failure_2008, ICR_failure_2009, ICR_failure_2010, 
+                               ICR_failure_2011, ICR_failure_2012, ICR_failure_2013, 
+                               ICR_failure_2014, ICR_failure_2015, ICR_failure_2016) ~ zone,                        # Count NA by group`
+                         train,
+                         function(x) { sum(is.na(x)) / length(x) },
+                         na.action = NULL)
+
+rownames(data_count1) <- c("Islands", "Center", "North", "South")
+
+rowMeans(data_count1[, 2:ncol(data_count1)]) * 100
+```
+
+
+```{r}
+data_count1 <- aggregate(cbind(NEG_VA_2008, NEG_VA_2009, NEG_VA_2010, 
+                               NEG_VA_2011, NEG_VA_2012, NEG_VA_2013, 
+                               NEG_VA_2014, NEG_VA_2015, NEG_VA_2016) ~ zone,                        # Count NA by group`
+                         train,
+                         function(x) { sum(is.na(x)) / length(x) },
+                         na.action = NULL)
+
+rownames(data_count1) <- c("Islands", "Center", "North", "South")
+
+rowMeans(data_count1[, 2:ncol(data_count1)]) * 100
+```
+
+
+
+
+
 
 

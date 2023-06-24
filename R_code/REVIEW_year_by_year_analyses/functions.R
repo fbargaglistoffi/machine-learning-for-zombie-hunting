@@ -184,22 +184,22 @@ failure_yearly <- function(data){
   for (i in (years)){
     if(i==2009){  
       
-      # Se l'anno di costituzione <= 2012: 0 --> failure_2012
+      # Se l'anno di costituzione <= 2009: 0 --> failure_2009
       failed[ , which(years==i)][which(!is.na(data$year_of_incorporation) 
                                        & data$year_of_incorporation <= i)] <- 0 
       
-      # Se l'anno di costituzione <= 2012 + anno di status=2012 : 1 --> failure_2012 
+      # Se l'anno di costituzione <= 2009 + anno di status=2009 : 1 --> failure_2009
       failed[,which(years==i)][which(!is.na(data$year_of_incorporation) 
                                      & data$year_of_status == i 
                                      & data$year_of_incorporation<= i)] <- 1 
-      # NB: if year of incorporation is after 2012: failed_2012 = NaN
+      # NB: if year of incorporation is after 2009: failed_2012 = NaN
     }
     
     
     if(i==2010){  
       
       failed[,which(years==i)][which(!is.na(data$year_of_incorporation) # Check you're not missing in the year of incorporation 
-                                     & data$year_of_incorporation <= i  # Check year of incorporation is not after 2013
+                                     & data$year_of_incorporation <= i  # Check year of incorporation is not after 2010
                                      & (failed[,which(years==i-1)]!=1 | is.na(failed[,which(years==i-1)])) )]  <- 0 
       # Check you're not failed in 2010
       # or you're born in subsequent years, i.e. you're NaN in failed_2010
@@ -212,7 +212,7 @@ failure_yearly <- function(data){
     if(i==2011){  
       
       failed[,which(years==i)][which(!is.na(data$year_of_incorporation)    # Check you're not missing in the year of incorporation 
-                                     & data$year_of_incorporation <= i     # Check year of incorporation is not after 2014
+                                     & data$year_of_incorporation <= i     # Check year of incorporation is not after 2011
                                      & (failed[,which(years==i-1)]!=1 | is.na(failed[,which(years==i-1)])) 
                                      & (failed[,which(years==i-2)]!=1 | is.na(failed[,which(years==i-2)]))  )]    <- 0
       
