@@ -57,7 +57,7 @@ After running the files in the <tt>`creating_indicators_and_cleaning_data`</tt> 
 * <tt>`capital_intensity`</tt>: ratio of fixed assets over employees;
 * <tt>`labour_productivity`</tt>: ratio of added value over employees;
 * <tt>`fin_cons`</tt>: financial constraint indicator by [Nickell and Nicolitsas, 1999](https://econpapers.repec.org/article/eeeeecrev/v_3a43_3ay_3a1999_3ai_3a8_3ap_3a1435-1456.html);
-* <tt>`inv`</tt>: investments indicator computed as the sum between depreciation at time t and the difference between fixed assets at time t and t-1 ;
+* <tt>`inv`</tt>: investments indicator computed as the sum between depreciation at time t and the difference between fixed assets at time t and t-1;
 * <tt>`ICR`</tt>: interest coverage ratio computed as the ratio between EBIT and interests paid;
 * <tt>`ICR_failure`</tt>: indicator variable equal to 1 if <tt>`ICR`</tt><= 1 by [Bank of England, 2013](https://www.bankofengland.co.uk/inflation-report/2013/august-2013);
 * <tt>`interest_diff`</tt>: benchmark interest difference indicator by [Caballero, 2008](https://www.aeaweb.org/articles?id=10.1257/aer.98.5.1943);
@@ -81,7 +81,8 @@ The <tt>`Stata`</tt> code files can be found </b>[<a href="https://github.com/ba
 * <tt>`creating_indicators_and_cleaning_data`</tt>;
 * <tt>`lasso_analyses`</tt>;
 * <tt>`logit_missingness_analyses`</tt>;
-* <tt>`productivity_zombie`</tt>;
+* <tt>`productivity_zombie`</tt>.
+
 The files in the first two folders can be run following their numbering to create the dataset used for the ML analysis.
 
 Within the <tt>`generating_and_merging_data`</tt> folder you can find the following files:
@@ -122,7 +123,7 @@ The <tt>`R`</tt> code files can be found </b> [<a href="https://github.com/barst
 * <tt>`year_by_year_analyses`</tt>.
 
 Within the <tt>`functions`</tt> folder you can find the following files:
-* <tt>`function.R`</tt>: R code with main function used in the analyses (Distance-to-Default, F1-Score, Balanced Accuracy, Models Comparisons);
+* <tt>`function.R`</tt>: R code with main function used in the analyses (Distance-to-Default, F1-Score, Balanced Accuracy, Models Comparisons and others);
 
 Within the <tt>`lagged_analysis`</tt> folder you can find the following files:
 * <tt>`lagged_analyses_liq_and_non_liq.Rmd`</tt>: Rmarkdown code to reproduce the lagged machine learning analyses (Tables 3, 4, D.1, D.2; Figures 4);
@@ -130,7 +131,7 @@ Within the <tt>`lagged_analysis`</tt> folder you can find the following files:
 
 Within the <tt>`year_by_year_analyses`</tt> folder you can find the following files:
 * <tt>`year_by_year.R`</tt>: R code to reproduce the yearly machine learning analysis (Tables A.3, A.4; Figures 9, 10, A.2);
-* <tt>`generate_categories.R`</tt>: R code to generate transitions across deciles and zombie status (Table 5; Figure 8), and to create the panel dataset for Table 6
+* <tt>`generate_categories.R`</tt>: R code to generate transitions across deciles and zombie status (Table 5; Figure 8) and to create the panel dataset for Table 6
 
 
 
