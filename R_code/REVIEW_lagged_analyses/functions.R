@@ -140,6 +140,7 @@ DtD <- function(mcap, debt, vol, r){
 
 corr_simple <- function(data, sig){
   #convert data to numeric in order to run correlations
+  #
   #convert to factor first to keep the integrity of the data - each value will become a number rather than turn into NA
   df_cor <- data %>% mutate_if(is.character, as.factor)
   df_cor <- df_cor %>% mutate_if(is.factor, as.numeric)  #run a correlation and drop the insignificant ones
@@ -164,47 +165,6 @@ corr_simple <- function(data, sig){
 
 
 
-
-######## Create SL.bartMachine.better because the oridinal library SL.bartMachine does not work
-SL.bartMachine.better <- function(Y, X, newX, family, obsWeights, id,
-                                  num_trees = 50, num_burn_in = 250, verbose = TRUE,
-                                  alpha = 0.95, beta = 2, k = 2, q = 0.9, nu = 3,
-                                  num_iterations_after_burn_in = 1000, ...) {
-  #.SL.require("bartMachine")
-
-  # Get TRAINING outcome Vector
-  options(java.parameters = "-Xmx1000g")
-  tic()
-  model = bartMachine(X, Y, use_missing_data = FALSE)
-  toc = toc()
-  # pred returns predicted responses (on the scale of the outcome)
-  pred <- predict(model, newX)
-  # fit returns all objects needed for predict.SL.template
-  fit <- list(object = model)
-  #fit <- vector("list", length=0)
-  class(fit) <- c("SL.bartMachine")
-  out <- list(pred = pred, fit = fit, toc = toc)
-  return(out)
-
-}
-
-#' bartMachine prediction
-#' @param object SuperLearner object
-#' @param newdata Dataframe to predict the outcome
-#' @param family "gaussian" for regression, "binomial" for binary
-#'   classification. (Not used)
-#' @param Y Outcome variable (not used)
-#' @param X Covariate dataframe (not used)
-#' @param ... Additional arguments (not used)
-#'
-#' @export
-
-
-predict.SL.bartMachine <- function(object, newdata, family, X = NULL, Y = NULL,...) {
-  .SL.require("bartMachine")
-  pred <- predict(object$object, newdata)
-  return(pred)
-}
 
 
 

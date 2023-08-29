@@ -469,4 +469,4 @@ forval j = 2009/2015 {
 	replace pension_tax_debts = pension_tax_debts_`j' if year_of_status==(`j' + 1) 
 }
 
-save analysis_data_indicators.dta, replace
+save analysis_data_indicat.dta, replace

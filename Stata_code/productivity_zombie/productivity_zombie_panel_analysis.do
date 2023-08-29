@@ -33,7 +33,7 @@ save "data_zombie_indicator_time_variant_long_format.dta"
 
 use "data_zombie_indicator_time_variant_long_format.dta", clear
 
-********************************* TFP *******************************************************************
+********************************* TFP ****************************
 
 preserve 
 
@@ -62,7 +62,7 @@ N. obs             600771
 */
 
 
-********************************** LABOUR PRODUCTIVITY *************************************************** 
+************************** LABOUR PRODUCTIVITY ****************** 
 preserve
 
 * Drop observations missing in labour productivity
@@ -92,7 +92,7 @@ Standard errors in parentheses
 
 
 
-********************************************** SALES *****************************************************  
+********************************** SALES *************************** 
 preserve 
 
 * Drop observations missing in sales
@@ -125,7 +125,7 @@ Standard errors in parentheses
 
 
 
-******************************************** EMPLOYEES *****************************************
+***************************** EMPLOYEES *********************************
 preserve
 
 * Drop observations missing in sales
