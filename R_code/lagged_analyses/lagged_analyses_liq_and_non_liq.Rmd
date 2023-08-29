@@ -69,7 +69,12 @@ library(parallel)
 library(parallelMap) 
 library(sur)
 library(ROCR)
-source('/home/fabio.incerti/Desktop/Review Falco/functions.R')
+
+# Server
+# source('/home/fabio.incerti/Desktop/Review Falco/functions.R')
+
+# Local
+source('C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/functions/functions.R')
 ```
 
 ## Data Upload

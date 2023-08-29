@@ -10,3 +10,8 @@ R_code/REVIEW_lagged_analyses/xgboost_vs_merton_dtd_fit.csv
 R_code/REVIEW_lagged_analyses/z_score_dtd.csv
 R_code/REVIEW_lagged_analyses/z_score_metrics.csv
 R_code/REVIEW_Shapley/shapley.csv
+*.csv
+R_code/lagged_analyses/.RData
+R_code/lagged_analyses/.Rhistory
+R_code/lagged_analyses/.Rhistory
+R_code/lagged_analyses/.Rhistory

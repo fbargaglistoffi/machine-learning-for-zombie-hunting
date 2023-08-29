@@ -32,7 +32,12 @@ library(plotrix)
 library(ggplot2)
 library(fmsb)
 library(reshape2)
-source('C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/functions.R')
+
+# Server
+# source('/home/fabio.incerti/Desktop/Review Falco/functions.R')
+
+# Local
+source('C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/functions/functions.R')
 ```
 
 Upload data
