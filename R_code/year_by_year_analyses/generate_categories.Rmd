@@ -78,7 +78,7 @@ data = cbind(data, categories)
 
 
 
-(Table 6): Compute the average transition (t --> t+1) across deciles over years 2015 - 2017 
+(Table 5): Compute the average transition (t --> t+1) across deciles over years 2015 - 2017 
 ```{r}
 # Compute transition matrices year by year
 trn_mtrx_2010 <- with(categories, table(cat_decile_2009, cat_decile_2010, useNA = "no"))

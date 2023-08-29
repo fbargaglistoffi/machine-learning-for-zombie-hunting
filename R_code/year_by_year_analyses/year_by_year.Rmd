@@ -97,13 +97,14 @@ print("Failures share per category")
 percent.table(x = as.factor(status_aggregated[status_aggregated!="Active"]), y = NULL)
 ```
 
-Remove firms in liquidation: NO, WE KEEP THEM 
+Print the number of liquidations
 ```{r}
 print("Number of firms in liquidation")
 nrow(data_italy[which(data_italy$Status == "In liquidation"), ])
 
 # Save firms in liquidation
 data_italy_liq = data_italy[which(data_italy$Status == "In liquidation"), ]
+
 # Save bankruptcy and dissolved firms
 data_italy_non_liq = data_italy[which(data_italy$Status == "Bankruptcy" | data_italy$Status == "Dissolved"), ] 
 
@@ -116,16 +117,16 @@ data_italy_non_liq = data_italy[which(data_italy$Status == "Bankruptcy" | data_i
 Construct yearly failure Indicator
 ```{r}
 data_italy <- failure_yearly(data_italy)
-write_dta(data_italy, "data_failure.dta")
+#write_dta(data_italy, "data_failure.dta")
 ```
 
 
-Get failures over time without liquidations (i.e. bankruptcies and dissolved firms)
+Get number of (overall) failures over time
 ```{r}
-#colSums(data_italy[which(colnames(data_italy) == "failure_2009"):which(colnames(data_italy) == "failure_2017")], na.rm = TRUE)
+colSums(data_italy[which(colnames(data_italy) == "failure_2009"):which(colnames(data_italy) == "failure_2017")], na.rm = TRUE)
 ```
 
-Liquidations over time
+Get number of liquidations over time
 ```{r}
 data_italy_liq <- failure_yearly(data_italy_liq)
 colSums(data_italy_liq[which(colnames(data_italy_liq) == "failure_2009"):which(colnames(data_italy_liq) == "failure_2017")], na.rm = TRUE)
@@ -169,7 +170,7 @@ predictors <- c("control", "nace", "consdummy", "area", "dummy_patents", "dummy_
 ```
 
 
-# Missingness patterns
+# Missingness patterns (Figure A.1)
 
 ```{r}
 # Define new labels for ggplot
@@ -218,7 +219,7 @@ new.names <-  c(control = "Corporate control",
 ```
 
 
-Non-failing firms (N=287587)
+Plot missingness patterns for non-failing firms (N = 287587)
 ```{r}
 # Replace "_" with "." for reshaping data from wide to long format (e.g. shareholders_funds_2008 --> shareholders_funds.2009)
 prova = data_italy[ which(status_aggregated=="Active"), c("id", dyn_predictors)]
@@ -424,18 +425,22 @@ colnames(train) = gsub("nace.", "nace_", colnames(train))
 colnames(train) = gsub("area.", "area_", colnames(train))
 
 # Save new data
-# Without liquidations: write_dta(train, "C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/data_year_by_year.dta")
-write_dta(train, "C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/data_liq_year_by_year.dta")
+
+# Uncomment if liquidations have been dropped 
+# write_dta(train, "C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/data_year_by_year.dta")
+
+# Liquidations included
+write_dta(train, "C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/year_by_year_analyses/data_liq_year_by_year.dta")
 ```
 
 Load previously saved data
 ```{r}
-train <- read_dta("C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/REVIEW_year_by_year_analyses/data_liq_year_by_year.dta")
+train <- read_dta("C:/Users/fabio/OneDrive/Documenti/GitHub/machine-learning-for-zombie-hunting/R_code/year_by_year_analyses/data_liq_year_by_year.dta")
 ```
 
 
 # Statistics: in-sample performance over years
-```{r}
+```{r eval=FALSE}
 
 years <- c(2014:2017)
 for (i in (years)) {
@@ -509,9 +514,10 @@ xgboost_fit
 
 
 
+
 # Out-of-range values imputation: check yearly performances
 
-```{r}
+```{r eval=FALSE}
 # Get one-hot encoded data.frame
 dummy = dummyVars(" ~ nace + area", data = data_italy)
 temp = data.frame(predict(dummy, newdata = data_italy))
@@ -532,7 +538,7 @@ new_train = cbind(train[labels], temp)
 
 ```
 
-```{r}
+```{r eval=FALSE}
 years <- c(2008:2016)
 prob <- matrix(NA, ncol = length(years), nrow = nrow(new_train))
 
@@ -604,7 +610,7 @@ new_train$prob_2017 <- prob[,9]
 
 
 Statistics
-```{r}
+```{r eval=FALSE}
 years <- c(2014:2017)
 for (i in (years)) {
 
@@ -670,6 +676,7 @@ else{
 colnames(xgboost_fit) <- c("Year", "Area under the ROC", "Area under the PR", "F1-Score", "BACC", "R squared")
 xgboost_fit
 ```
+
 
 
 
@@ -753,10 +760,10 @@ for (i in years) {
 }
 
 # Identifying NO ZOMBIES: firms not lying in the 9th decile AND non-missing in the decile category for 3 consecutive years 
-# (sono imprese che so per certo non soddisfino le condizioni di "zombieness" poiché hanno per es (1,1,4), (2,3,4) o altre combinazioni
-# ma non sono missing nelle 3 categorie decili coinvolte per la zombieness di un certo anno)
 # 
-# (I am sure these firms do not meet the "zombieness)
+# NB: These are companies that we know for sure do not meet the "zombieness" conditions, as they have, for example, (1,1,4), (2,3,4), or other combinations, but they are not missing in any of the 3 decile categories involved in the zombieness of a certain year.
+
+
 for (i in years) {
   zombie_index = which(zombie[, which(years ==i)] == 1)
   
@@ -787,7 +794,8 @@ Number and share of zombie firms overtime
 print("Number of zombie firms")
 sapply(zombie, function(x) sum(x == 1, na.rm = TRUE))
 
-# non uso sapply(zombie, percent.table) perché percent.table mi da delle % che non sommano a 1 perché la parte rimanente sono missing values: sottostima pertanto la quota di imprese zombie rispetto alle imprese di cui osserviamo lo status zombie/non-zombie in un certo anno
+# We don't use the command sapply(zombie, percent.table) because percent.table returns percentages that don't add up to 1, as the remaining part consists of missing values. 
+# Therefore, it underestimates the share of zombies compared to firms for which we observe the zombie/non-zombie status in a certain year.
 
 print("Share of zombie firms")
 sapply(zombie, function(x) length(which(x ==1)) / length(which(!is.na(x)))   ) * 100
@@ -844,7 +852,7 @@ twoord.plot(lx = years, ly = zombie_share,
 
 ### Geography (NUTS 2)
 
-Identify zombie firms: ICR < 1 for 3 consecutive years (we get zombies for years 2011-2016 since our last available ICR is on 2016
+Identify firms ICR < 1 for 3 consecutive years (we get zombies for years 2011-2016 since our last available ICR is on 2016)
 ```{r}
 years <- c(2011:2016)
 
@@ -890,19 +898,17 @@ colnames(zombie_icr) = names
 
 
 ```{r}
-print("Number of ICR zombie firms")
+print("Number of firms with critical ICR")
 sapply(zombie_icr, function(x) sum(x == 1, na.rm = TRUE))
 
-# non uso sapply(zombie, percent.table) perché percent.table mi da delle % che non sommano a 1 perché la parte rimanente sono missing values: sottostima pertanto la quota di imprese zombie rispetto alle imprese di cui osserviamo lo status zombie/non-zombie in un certo anno
-
-print("Share of ICR zombie firms")
+print("Share of of firms with critical ICR")
 sapply(zombie_icr, function(x) length(which(x ==1)) / length(which(!is.na(x)))   ) * 100
 
 print("Non-missing ICR")
 sapply(zombie_icr, function(x) length(which(!is.na(x)))  )
 ```
 
-Get firms at least one year zombies
+Get firms that are for at least one year either zombies or with critical ICR
 ```{r}
 zombie_icr_1_year = which(rowSums(zombie_icr, na.rm = TRUE) > 0)
 zombie_xgboost_1_year = which(rowSums(zombie, na.rm = TRUE) > 0)
@@ -936,7 +942,7 @@ zombie_compare[ICR_exclusive_zombie, ] = 3
 # Merge the categorical variable to the original data
 data_zombie_xgb_ICR  = cbind(train, zombie_compare)
 
-# Save zombies catched overall by the two criteria
+# Save firms catched overall by the two criteria
 zombies_xgboost_icr = data_zombie_xgb_ICR[c(intersection, XGB_exclusive_zombie, ICR_exclusive_zombie), ]
 ```
 
@@ -1041,9 +1047,8 @@ zombie_compare[ICR_exclusive_zombie, ] = 3
 # Merge the categorical variable to the original data
 NACE_data_zombie_xgb_ICR  = cbind(data_italy, zombie_compare)
 
-# Save zombies catched overall by the two criteria
+# Save firms catched overall by the two criteria
 NACE_zombies_xgboost_icr = NACE_data_zombie_xgb_ICR[c(intersection, XGB_exclusive_zombie, ICR_exclusive_zombie), ]
-
 
 # Select data of interest for radar plot
 data_plot = NACE_zombies_xgboost_icr[, c("nace", "zombie_compare")]
@@ -1105,33 +1110,27 @@ legend(x = 1, y = 1.4, legend = c("Common support", "MA-XGBoost", "ICR"), bty = 
 
 ### Geography (NUTS 2) 
 
-Identify zombie firms: negative value added in a year, without failure (we get zombies for years 2011-2016 since our last available value added is on 2016)
+Identify firms with negative value added in a year, without failure (we get them for years 2011-2016 since our last available value added is on 2016)
 ```{r}
 years <- c(2011:2016)
 
 zombie_NEG_VA <- data.frame(matrix(NA, ncol = length(years), nrow = nrow(train)))
 
-# Identifying negative added value-based zombies: firms with negative value added who did not fail (put NA if the condition is not met) 
+# Identifying negative added value-based firms: those with negative value added who did not fail (put NA if the condition is not met) 
 for (i in years) {
   zombie_NEG_VA[ , which(years ==i)] <- ifelse(train[ , paste("NEG_VA", sep = "_", c(i))] == 1 &
-                                            #  train[ , paste("NEG_VA", sep = "_", c(i-2))] == 1 &
-                                            #  train[ , paste("NEG_VA", sep = "_", c(i-1))] == 1 &
                                                train[ , paste("failure", sep = "_", c(i))] == 0, 1, NA)
   
 }
 
-# Identifying NO zombies: firms no satisfying the condition: (NEG_VA = 1 & not failed) 
-# (sono imprese che so per certo non soddisfino questa condizione ma non sono missing in NEG_VA e in failure
+# Identifying NO critical value added firms: firms no satisfying the condition: (NEG_VA = 1 & not failed) 
+# These are companies that we are certain do not meet the crucial negative value added condition, even though they are not missing in NEG_VA and failure.
 for (i in years) {
   zombie_NEG_VA_index = which(zombie_NEG_VA[, which(years ==i)] == 1)
   
   no_missing_index = which(!is.na(train[ , paste("NEG_VA", sep = "_", c(i))  ]) &
-                       #   !is.na(train[ , paste("NEG_VA", sep = "_", c(i-2))]) &
-                       #   !is.na(train[ , paste("NEG_VA", sep = "_", c(i-1))]) &
-                            (train[ , paste("failure", sep = "_", c(i))] == 0 | train[ , paste("failure", sep = "_", c(i))] == 1) # & !is.na(train[ , "age"])
-                            )
+                            (train[ , paste("failure", sep = "_", c(i))] == 0 | train[ , paste("failure", sep = "_", c(i))] == 1) )
   
-
   
   overall_index = no_missing_index[!(no_missing_index %in% zombie_NEG_VA_index)]
   
@@ -1165,7 +1164,7 @@ print("Non-missing NEG_VA")
 sapply(zombie_NEG_VA, function(x) length(which(!is.na(x)))  )
 ```
 
-Get firms at least one year zombies
+Get firms that are for at least one year either zombies or with negative value added
 ```{r}
 zombie_NEG_VA_1_year = which(rowSums(zombie_NEG_VA, na.rm = TRUE) > 0)
 zombie_xgboost_1_year = which(rowSums(zombie, na.rm = TRUE) > 0)
@@ -1349,6 +1348,7 @@ write.csv(data_plot[,3:5], "C:/Users/fabio/OneDrive/Desktop/zombie_nace_NEG_VA.c
 
 
 ## Additional analysis: ICR and Negative value-added missingness across Italy
+
 ```{r}
 data_count1 <- aggregate(cbind(ICR_failure_2008, ICR_failure_2009, ICR_failure_2010, 
                                ICR_failure_2011, ICR_failure_2012, ICR_failure_2013, 
