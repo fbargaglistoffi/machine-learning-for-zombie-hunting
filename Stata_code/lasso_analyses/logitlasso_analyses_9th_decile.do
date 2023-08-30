@@ -1,445 +1,386 @@
 ********************************************************************************
-*Zombie prediction with LASSO
-clear all 
-cd "G:\Il mio Drive\Research\Italian Firms\Zombie Hunting New Data"  
-
-********************************************************************************
 *                                                                              *
 *     Logit-Lasso Analyses for "Machine Learning for Zombie Hunting" paper     *
 *                                                                              *
 ********************************************************************************
 
-* Upload Data
-use zombie_data, clear
+* Change path accordingly
+cd "H:\.shortcut-targets-by-id\1keYb51HXkcQwzkU2kBgbnguQaqUy3umX\Zombie Hunting New Data"
 
-* Keep just Italian Data
-keep if iso=="IT"
+* Load data from yeay-by-year analysis 
+use "data_failure.dta", clear
 
 
-*Zombies 2015/2017
-*LASSO REGRESSION
-lassologit dummy_hrz_2017 control consdummy area dummy_patents dummy_trademark tfp_acf_2014 shareholders_funds_2014 added_value_2014 cash_flow_2014 ebitda_2014 fin_rev_2014 liquidity_ratio_2014 total_assets_2014 depr_2014 long_term_debt_2014 employees_2014 materials_2014 loans_2014 wage_bill_2014 fixed_assets tax_2014 current_liabilities_2014 current_assets_2014 fin_expenses_2014 int_paid_2014 solvency_ratio_2014 net_income_2014 revenue_2014 capital_intensity_2014 fin_cons_2014 ICR_failure_2014 interest_diff_2014 NEG_VA_2014 real_SA_2014 profitability_2014 misallocated_fixed_2014 financial_sustainability_2014 liquidity_return_2014 int_fixed_assets_2014 
-*lassologit, plotpath(lambda) plotvar(control consdummy dummy_trademark tfp_acf_2014 liquidity_ratio_2014 fin_cons_2014 ICR_failure_2014 interest_diff_2014 real_SA_2014) plotlabel plotopt(legend(off))plotpath(lambda)
-rlassologit dummy_hrz_2017 control consdummy area dummy_patents dummy_trademark tfp_acf_2014 shareholders_funds_2014 added_value_2014 cash_flow_2014 ebitda_2014 fin_rev_2014 liquidity_ratio_2014 total_assets_2014 depr_2014 long_term_debt_2014 employees_2014 materials_2014 loans_2014 wage_bill_2014 fixed_assets tax_2014 current_liabilities_2014 current_assets_2014 fin_expenses_2014 int_paid_2014 solvency_ratio_2014 net_income_2014 revenue_2014 capital_intensity_2014 fin_cons_2014 ICR_failure_2014 interest_diff_2014 NEG_VA_2014 real_SA_2014 profitability_2014 misallocated_fixed_2014 financial_sustainability_2014 liquidity_return_2014 int_fixed_assets_2014
+*****************************   Failure 2017    ********************************
 
+* Perform logistic lasso and select the tuning parameter λ as the value that minimizes the EBIC
+lassologit failure_2017 control consdummy area dummy_patents dummy_trademark tfp_acf_2016 shareholders_funds_2016 added_value_2016 cash_flow_2016 ebitda_2016 fin_rev_2016 liquidity_ratio_2016 total_assets_2016 depr_2016 long_term_debt_2016 employees_2016 materials_2016 loans_2016 wage_bill_2016 fixed_assets tax_2016 current_liabilities_2016 current_assets_2016 fin_expenses_2016 int_paid_2016 solvency_ratio_2016 net_income_2016 revenue_2016 capital_intensity_2016 fin_cons_2016 ICR_failure_2016 interest_diff_2016 NEG_VA_2016 real_SA_2016 profitability_2016 misallocated_fixed_2016 financial_sustainability_2016 liquidity_return_2016 int_fixed_assets_2016 
 /*
   Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
 ------+---------------------------------------------------------+----------------
-     1|   1 1550.86832     0     3.96294  13465.20263   0.0000  | Added fin_cons_2014 _cons.
-     2|   2 1411.75261     2     4.41086  13011.62240   0.0337  | Added control.
-     3|   3 1285.11583     4     4.83352  12527.49158   0.0696  | Added ICR_failure_2014
-      |                                                         | NEG_VA_2014.
-     4|   4 1169.83860     5     5.10799  11979.88127   0.1103  | Added real_SA_2014.
-     5|  10  665.62249     6     4.07266   9878.94057   0.2663  | Added liquidity_return_2014.
-     6|  13  502.08703     7     5.71343   9344.38589   0.3060  | Added solvency_ratio_2014.
-     7|  16  378.73028     6     7.38523   8965.16312   0.3341  | Removed liquidity_return_2014.
-     8|  21  236.72733     8     9.75905   8586.14911   0.3623  | Added interest_diff_2014
-      |                                                         | profitability_2014.
-     9|  24  178.56627    10    10.94015   8430.18732   0.3738  | Added capital_intensity_2014
-      |                                                         | liquidity_ratio_2014.
-    10|  28  122.61232    11    12.32731   8266.48861   0.3860  | Added tfp_acf_2014.
-    11|  32   84.19161    12    13.54985   8172.74800   0.3929  | Added dummy_trademark.
-    12|  34   69.76477    13    14.22171   8135.92863   0.3957  | Added misallocated_fixed_2014.
-    13|  35   63.50674    14    14.57758   8114.32362   0.3973  | Added loans_2014.
-    14|  39   43.60683    14    15.79044   8064.48329   0.4010  | Added materials_2014.
-    15|  41   36.13448    17    16.35184   8039.18993   0.4028  | Added dummy_patents depr_2014
-      |                                                         | net_income_2014.
-    16|  42   32.89316    18    16.67009   8030.47126   0.4034  | Added consdummy.
-    17|  44   27.25668    19    18.03801   8000.20299   0.4057  | Added liquidity_return_2014.
-    18|  45   24.81170    20    18.53985   7989.52570   0.4065  | Added employees_2014.
-    19|  46   22.58605    20    19.00329   7981.32913   0.4071  | Added fin_expenses_2014. Removed
-      |                                                         | depr_2014.
-    20|  48   18.71576    20    19.74256   7970.05719   0.4079  | Removed materials_2014.
+     1|   1 2642.54763     0     3.99248  17525.77223  -0.0000  | Added _cons.
+     2|   2 2405.50630     1     4.74277  17058.49095   0.0266  | Added liquidity_return_2016.
+     3|   4 1993.30541     2     5.70054  16544.75950   0.0559  | Added NEG_VA_2016.
+     4|   6 1651.73812     3     6.49071  16062.54699   0.0834  | Added control.
+     5|   7 1503.57420     5     6.82195  15622.78318   0.1085  | Added fin_cons_2016 ICR_failure_2016.
+     6|   8 1368.70086     6     7.14787  15235.23495   0.1306  | Added profitability_2016.
+     7|  14  778.77245     7     8.63705  13937.18794   0.2046  | Added solvency_ratio_2016.
+     8|  22  367.18080     8     9.33878  13295.68910   0.2412  | Added real_SA_2016.
+     9|  27  229.50827     9     9.18283  13115.43900   0.2514  | Added liquidity_ratio_2016.
+    10|  40   67.63727    11     9.12544  12972.42607   0.2595  | Added capital_intensity_2016 interest_diff_2016.
+    11|  46   38.48470    12     9.18392  12958.28882   0.2603  | Added financial_sustainability_2016.
+    12|  50   26.42548    13     9.21599  12953.95676   0.2606  | Added misallocated_fixed_2016.
+
+*/
 
 
+* Perform logistic lasso implementing theory-driven penalization (see e.g. Belloni, Chernozhukov & Wei, 2016).
+rlassologit failure_2017 control consdummy area dummy_patents dummy_trademark tfp_acf_2016 shareholders_funds_2016 added_value_2016 cash_flow_2016 ebitda_2016 fin_rev_2016 liquidity_ratio_2016 total_assets_2016 depr_2016 long_term_debt_2016 employees_2016 materials_2016 loans_2016 wage_bill_2016 fixed_assets tax_2016 current_liabilities_2016 current_assets_2016 fin_expenses_2016 int_paid_2016 solvency_ratio_2016 net_income_2016 revenue_2016 capital_intensity_2016 fin_cons_2016 ICR_failure_2016 interest_diff_2016 NEG_VA_2016 real_SA_2016 profitability_2016 misallocated_fixed_2016 financial_sustainability_2016 liquidity_return_2016 int_fixed_assets_2016
+/*
 ---------------------------------------------------
          Selected |       Logistic       Post
                   |       Lasso          logit
 ------------------+--------------------------------
-          control |      -2.0961619     -7.0645446
-solvency_rat~2014 |      -0.0038138     -0.0125379
-    fin_cons_2014 |       0.8322937      0.9287815
- ICR_failure_2014 |       0.9234972      1.3466502
-      NEG_VA_2014 |       0.9512595      1.3031733
-     real_SA_2014 |       0.5843695      1.0153329
-            _cons |       2.3129568      6.7079607
+          control |      -1.7002682     -2.8535693
+solvency_rat~2016 |      -0.0053334     -0.0111485
+    fin_cons_2016 |       0.3914565      0.4722172
+ ICR_failure_2016 |       0.7673899      1.0373748
+      NEG_VA_2016 |       0.6877306      0.7815717
+profitabilit~2016 |       0.3892122      0.4171551
+liquidity_re~2016 |      -1.6383041     -1.3941074
+            _cons |      -3.6694054     -3.6114011
 ---------------------------------------------------
 */
 
-* Logit Regression
+
+* Logistic regression
 preserve
-keep dummy_hrz_2017 control real_SA_2014 fin_cons_2014 ICR_failure_2014 solvency_ratio_2014 NEG_VA_2014 nace
-rename dummy_hrz_2017 dummy_hrz_zombie
-rename real_SA_2014 real_SA
+keep failure_2017 control solvency_ratio_2016 fin_cons_2016 ICR_failure_2016 NEG_VA_2016 profitability_2016 liquidity_return_2016 nace
+rename failure_2017 failure
+rename solvency_ratio_2016 solvency_ratio
+rename fin_cons_2016 fin_cons
+rename ICR_failure_2016 ICR_failure
+rename NEG_VA_2016 NEG_VA
+rename profitability_2016 profitability
+rename liquidity_return_2016 liquidity_return
+eststo: logit failure control solvency_ratio fin_cons ICR_failure NEG_VA profitability liquidity_return, cluster(nace) robust
+restore
+/*
+Logistic regression                                    Number of obs =  99,622
+                                                       Wald chi2(7)  = 3860.58
+                                                       Prob > chi2   =  0.0000
+Log pseudolikelihood = -7081.7274                      Pseudo R2     =  0.2585
+
+                                      (Std. err. adjusted for 24 clusters in nace)
+----------------------------------------------------------------------------------
+                 |               Robust
+         failure | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-----------------+----------------------------------------------------------------
+         control |  -2.861979   .0920447   -31.09   0.000    -3.042383   -2.681575
+  solvency_ratio |  -.0107607   .0013158    -8.18   0.000    -.0133396   -.0081817
+        fin_cons |   .5304546   .1470435     3.61   0.000     .2422546    .8186546
+     ICR_failure |   1.004094   .1159239     8.66   0.000     .7768877    1.231301
+          NEG_VA |   .8044747   .0920392     8.74   0.000     .6240812    .9848683
+   profitability |   .4572739   .0891563     5.13   0.000     .2825307    .6320171
+liquidity_return |  -1.200419   .1789455    -6.71   0.000    -1.551146   -.8496927
+           _cons |  -3.580041   .0735192   -48.70   0.000    -3.724136   -3.435946
+----------------------------------------------------------------------------------
+(est1 stored)
+*/
+
+
+
+
+
+
+
+
+
+
+*****************************   Failure 2016    ********************************
+
+* Perform logistic lasso and select the tuning parameter λ as the value that minimizes the EBIC
+lassologit failure_2016 control consdummy area dummy_patents dummy_trademark tfp_acf_2016 shareholders_funds_2016 added_value_2016 cash_flow_2016 ebitda_2016 fin_rev_2016 liquidity_ratio_2016 total_assets_2016 depr_2016 long_term_debt_2016 employees_2016 materials_2016 loans_2016 wage_bill_2016 fixed_assets tax_2016 current_liabilities_2016 current_assets_2016 fin_expenses_2016 int_paid_2016 solvency_ratio_2016 net_income_2016 revenue_2016 capital_intensity_2016 fin_cons_2016 ICR_failure_2016 interest_diff_2016 NEG_VA_2016 real_SA_2016 profitability_2016 misallocated_fixed_2016 financial_sustainability_2016 liquidity_return_2016 int_fixed_assets_2016 
+/*
+  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
+------+---------------------------------------------------------+----------------
+     1|   1  506.89163     0     6.10864   3057.19187   0.0000  | Added NEG_VA_2016 _cons.
+     2|   8  262.54323     2     8.74429   2758.38036   0.0975  | Added fin_cons_2016.
+     3|  10  217.55455     3     9.22758   2690.45858   0.1196  | Added ICR_failure_2016.
+     4|  11  198.03951     5     9.44984   2645.75439   0.1339  | Added control solvency_ratio_2016.
+     5|  27   44.02411     6    11.40859   2319.33267   0.2405  | Added real_SA_2016.
+     6|  28   40.07507     7    11.39808   2313.57494   0.2423  | Added liquidity_ratio_2016.
+     7|  29   36.48026     8    11.42502   2307.59373   0.2441  | Added liquidity_return_2016.
+     8|  35   20.75678     9    12.02854   2281.94688   0.2524  | Added capital_intensity_2016.
+     9|  40   12.97413    10    12.37026   2272.28337   0.2554  | Added tfp_acf_2016.
+    10|  44    8.90867    11    12.59908   2267.83259   0.2567  | Added loans_2016 net_income_2016.
+    11|  47    6.71992    13    12.77297   2264.35591   0.2576  | Added financial_sustainability_2016.
+    12|  49    5.56841    14    12.88234   2262.57848   0.2580  | Added dummy_patents.
+
+*/
+
+
+* Perform logistic lasso implementing theory-driven penalization (see e.g. Belloni, Chernozhukov & Wei, 2016).
+rlassologit failure_2016 control consdummy area dummy_patents dummy_trademark tfp_acf_2015 shareholders_funds_2015 added_value_2015 cash_flow_2015 ebitda_2015 fin_rev_2015 liquidity_ratio_2015 total_assets_2015 depr_2015 long_term_debt_2015 employees_2015 materials_2015 loans_2015 wage_bill_2015 fixed_assets tax_2015 current_liabilities_2015 current_assets_2015 fin_expenses_2015 int_paid_2015 solvency_ratio_2015 net_income_2015 revenue_2015 capital_intensity_2015 fin_cons_2015 ICR_failure_2015 interest_diff_2015 NEG_VA_2015 real_SA_2015 profitability_2015 misallocated_fixed_2015 financial_sustainability_2015 liquidity_return_2015 int_fixed_assets_2015
+/*
+---------------------------------------------------
+         Selected |       Logistic       Post
+                  |       Lasso          logit
+------------------+--------------------------------
+          control |      -1.5545759     -3.7495205
+solvency_rat~2015 |      -0.0026245     -0.0106130
+    fin_cons_2015 |       0.4717151      0.5227142
+ ICR_failure_2015 |       0.5224815      0.9491754
+      NEG_VA_2015 |       0.9180250      0.8831138
+profitabilit~2015 |       0.2288277      0.3147237
+liquidity_re~2015 |      -0.6657376     -0.5116820
+            _cons |      -4.1187231     -4.0245945
+---------------------------------------------------
+
+*/
+
+
+* Logistic regression
+preserve
+keep failure_2016 control solvency_ratio_2015 fin_cons_2015 ICR_failure_2015 NEG_VA_2015 profitability_2015 liquidity_return_2015 nace
+rename failure_2016 failure
+rename solvency_ratio_2015 solvency_ratio
+rename fin_cons_2015 fin_cons
+rename ICR_failure_2015 ICR_failure
+rename NEG_VA_2015 NEG_VA
+rename profitability_2015 profitability
+rename liquidity_return_2015 liquidity_return
+eststo: logit failure control solvency_ratio fin_cons ICR_failure NEG_VA profitability liquidity_return, cluster(nace) robust
+restore
+/*
+Logistic regression                                    Number of obs = 102,046
+                                                       Wald chi2(7)  = 2550.47
+                                                       Prob > chi2   =  0.0000
+Log pseudolikelihood = -5424.6524                      Pseudo R2     =  0.2151
+
+                                      (Std. err. adjusted for 24 clusters in nace)
+----------------------------------------------------------------------------------
+                 |               Robust
+         failure | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-----------------+----------------------------------------------------------------
+         control |  -3.714387   .1415079   -26.25   0.000    -3.991738   -3.437037
+  solvency_ratio |  -.0080209   .0012238    -6.55   0.000    -.0104195   -.0056223
+        fin_cons |   .6463131   .1237746     5.22   0.000     .4037194    .8889068
+     ICR_failure |   .8843364   .0992818     8.91   0.000     .6897476    1.078925
+          NEG_VA |   .8949047   .0777401    11.51   0.000      .742537    1.047272
+   profitability |   .3115016   .0963724     3.23   0.001     .1226151     .500388
+liquidity_return |  -.0000107   .0000101    -1.06   0.291    -.0000305    9.13e-06
+           _cons |  -4.147842   .0743607   -55.78   0.000    -4.293586   -4.002097
+----------------------------------------------------------------------------------
+(est2 stored)
+*/
+
+
+
+
+
+
+
+
+
+*****************************   Failure 2015    ********************************
+
+* Perform logistic lasso implementing theory-driven penalization (see e.g. Belloni, Chernozhukov & Wei, 2015).
+rlassologit failure_2015 control consdummy area dummy_patents dummy_trademark tfp_acf_2014 shareholders_funds_2014 added_value_2014 cash_flow_2014 ebitda_2014 fin_rev_2014 liquidity_ratio_2014 total_assets_2014 depr_2014 long_term_debt_2014 employees_2014 materials_2014 loans_2014 wage_bill_2014 fixed_assets tax_2014 current_liabilities_2014 current_assets_2014 fin_expenses_2014 int_paid_2014 solvency_ratio_2014 net_income_2014 revenue_2014 capital_intensity_2014 fin_cons_2014 ICR_failure_2014 interest_diff_2014 NEG_VA_2014 real_SA_2014 profitability_2014 misallocated_fixed_2014 financial_sustainability_2014 liquidity_return_2014 int_fixed_assets_2014
+/*
+---------------------------------------------------
+         Selected |       Logistic       Post
+                  |       Lasso          logit
+------------------+--------------------------------
+          control |      -1.3403385     -3.3479423
+solvency_rat~2014 |      -0.0038028     -0.0119586
+    fin_cons_2014 |       0.3511827      0.4052215
+ ICR_failure_2014 |       0.5736445      1.0684642
+      NEG_VA_2014 |       1.1499400      1.0049681
+profitabilit~2014 |       0.4204097      0.4465146
+            _cons |      -4.2663699     -4.2017847
+---------------------------------------------------
+
+*/
+
+
+* Logistic regression
+preserve
+keep failure_2015 control solvency_ratio_2014 fin_cons_2014 ICR_failure_2014 NEG_VA_2014 profitability_2014 nace
+rename failure_2015 failure
+rename solvency_ratio_2014 solvency_ratio
 rename fin_cons_2014 fin_cons
 rename ICR_failure_2014 ICR_failure
-rename solvency_ratio_2014 solvency_ratio
 rename NEG_VA_2014 NEG_VA
-eststo: logit dummy_hrz_zombie control real_SA fin_cons ICR_failure solvency_ratio NEG_VA, cluster(nace) robust
+rename profitability_2014 profitability
+eststo: logit failure control solvency_ratio fin_cons ICR_failure NEG_VA profitability, cluster(nace) robust
 restore
-
-*Zombies 2014/2016
-*LASSO REGRESSION
-lassologit dummy_hrz_2016 control consdummy area dummy_patents dummy_trademark tfp_acf_2013 shareholders_funds_2013 added_value_2013 cash_flow_2013 ebitda_2013 fin_rev_2013 liquidity_ratio_2013 total_assets_2013 depr_2013 long_term_debt_2013 employees_2013 materials_2013 loans_2013 wage_bill_2013 fixed_assets tax_2013 current_liabilities_2013 current_assets_2013 fin_expenses_2013 int_paid_2013 solvency_ratio_2013 net_income_2013 revenue_2013 capital_intensity_2013 fin_cons_2013 ICR_failure_2013 interest_diff_2013 NEG_VA_2013 real_SA_2013 profitability_2013 misallocated_fixed_2013 financial_sustainability_2013 liquidity_return_2013 int_fixed_assets_2013 
-rlassologit dummy_hrz_2016 control consdummy area dummy_patents dummy_trademark tfp_acf_2013 shareholders_funds_2013 added_value_2013 cash_flow_2013 ebitda_2013 fin_rev_2013 liquidity_ratio_2013 total_assets_2013 depr_2013 long_term_debt_2013 employees_2013 materials_2013 loans_2013 wage_bill_2013 fixed_assets tax_2013 current_liabilities_2013 current_assets_2013 fin_expenses_2013 int_paid_2013 solvency_ratio_2013 net_income_2013 revenue_2013 capital_intensity_2013 fin_cons_2013 ICR_failure_2013 interest_diff_2013 NEG_VA_2013 real_SA_2013 profitability_2013 misallocated_fixed_2013 financial_sustainability_2013 liquidity_return_2013 int_fixed_assets_2013 
-
-/* 
-  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
-------+---------------------------------------------------------+----------------
-     1|   1 2260.91613     0     3.62124  17722.31635   0.0000  | Added _cons.
-     2|   2 2058.10784     3     4.35173  17231.44555   0.0277  | Added control fin_cons_2013
-      |                                                         | NEG_VA_2013.
-     3|   5 1552.45545     5     5.56623  15270.94258   0.1383  | Added real_SA_2013
-      |                                                         | liquidity_return_2013.
-     4|   6 1413.19737     6     5.43152  14651.69795   0.1732  | Added ICR_failure_2013.
-     5|  10  970.37034     7     4.71345  12896.42892   0.2723  | Added solvency_ratio_2013.
-     6|  14  666.30367     8     6.33862  11819.70011   0.3330  | Added profitability_2013.
-     7|  20  379.11786     9     9.55972  10953.42557   0.3819  | Added interest_diff_2013.
-     8|  24  260.32084    10    11.27338  10612.70006   0.4011  | Added capital_intensity_2013.
-     9|  33  111.72799    12    14.37551  10234.41911   0.4224  | Added area tfp_acf_2013.
-    10|  34  101.70579    13    14.71011  10210.03636   0.4238  | Added net_income_2013
-      |                                                         | misallocated_fixed_2013.
-    11|  36   84.27777    13    13.97087  10378.03344   0.4143  | Added liquidity_ratio_2013.
-      |                                                         | Removed NEG_VA_2013
-      |                                                         | liquidity_return_2013.
-    12|  37   76.71790    15    15.68169  10141.93919   0.4276  | Added NEG_VA_2013
-      |                                                         | liquidity_return_2013.
-    13|  39   63.57173    16    16.24977  10106.27203   0.4296  | Added depr_2013.
-    14|  42   47.95292    17    17.00845  10072.61240   0.4315  | Added dummy_trademark.
-    15|  44   39.73584    17    17.52614  10048.24467   0.4329  | Added fin_rev_2013. Removed
-      |                                                         | liquidity_return_2013.
-    16|  49   24.83709    17    18.65900  10009.31741   0.4351  | Added materials_2013.
-
-
-
----------------------------------------------------
-         Selected |       Logistic       Post
-                  |       Lasso          logit
-------------------+--------------------------------
-          control |      -2.4530859     -7.4393086
-solvency_rat~2013 |      -0.0084824     -0.0166040
-    fin_cons_2013 |       0.9439983      1.1350608
- ICR_failure_2013 |       0.8141299      1.1099664
-interest_dif~2013 |       0.0643426      0.5502813
-      NEG_VA_2013 |       1.3221602      1.7378589
-     real_SA_2013 |       0.6481496      0.9925701
-profitabilit~2013 |       0.1030695      0.2708225
-liquidity_re~2013 |      -0.1797320      0.0134622
-            _cons |       3.2747238      6.5315912
----------------------------------------------------
-*/ 
-
-* Logit Regression
-preserve
-keep dummy_hrz_2016 control real_SA_2013 ICR_failure_2013 fin_cons_2013 interest_diff_2013 NEG_VA_2013 profitability_2013 solvency_ratio_2013 liquidity_return_2013 nace
-rename dummy_hrz_2016 dummy_hrz_zombie
-rename real_SA_2013 real_SA
-rename ICR_failure_2013 ICR_failure
-rename fin_cons_2013 fin_cons
-rename interest_diff_2013 interest_diff
-rename NEG_VA_2013 NEG_VA
-rename profitability_2013 profitability
-rename solvency_ratio_2013 solvency_ratio
-rename liquidity_return_2013 liquidity_return
-eststo: quietly logit dummy_hrz_zombie control real_SA ICR_failure fin_cons interest_diff NEG_VA profitability solvency_ratio liquidity_return, cluster(nace) robust
-restore
-
-*Zombies 2013/2015
-*LASSO REGRESSION
-lassologit dummy_hrz_2015 control consdummy area dummy_patents dummy_trademark tfp_acf_2012 shareholders_funds_2012 added_value_2012 cash_flow_2012 ebitda_2012 fin_rev_2012 liquidity_ratio_2012 total_assets_2012 depr_2012 long_term_debt_2012 employees_2012 materials_2012 loans_2012 wage_bill_2012 fixed_assets tax_2012 current_liabilities_2012 current_assets_2012 fin_expenses_2012 int_paid_2012 solvency_ratio_2012 net_income_2012 revenue_2012 capital_intensity_2012 fin_cons_2012 ICR_failure_2012 interest_diff_2012 NEG_VA_2012 real_SA_2012 profitability_2012 misallocated_fixed_2012 financial_sustainability_2012 liquidity_return_2012 int_fixed_assets_2012 
-rlassologit dummy_hrz_2015 control consdummy area dummy_patents dummy_trademark tfp_acf_2012 shareholders_funds_2012 added_value_2012 cash_flow_2012 ebitda_2012 fin_rev_2012 liquidity_ratio_2012 total_assets_2012 depr_2012 long_term_debt_2012 employees_2012 materials_2012 loans_2012 wage_bill_2012 fixed_assets tax_2012 current_liabilities_2012 current_assets_2012 fin_expenses_2012 int_paid_2012 solvency_ratio_2012 net_income_2012 revenue_2012 capital_intensity_2012 fin_cons_2012 ICR_failure_2012 interest_diff_2012 NEG_VA_2012 real_SA_2012 profitability_2012 misallocated_fixed_2012 financial_sustainability_2012 liquidity_return_2012 int_fixed_assets_2012 
-
 /*
-  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
-------+---------------------------------------------------------+----------------
-     1|   1 2919.03636     0     3.30000  22938.36680   0.0000  | Added _cons.
-     2|   2 2657.19348     3     4.24609  22094.07634   0.0368  | Added control fin_cons_2012
-      |                                                         | liquidity_return_2012.
-     3|   5 2004.35294     5     5.55860  19604.26947   0.1453  | Added NEG_VA_2012 real_SA_2012.
-     4|   8 1511.90749     6     5.24184  17570.38107   0.2340  | Added profitability_2012.
-     5|   9 1376.28663     7     5.12672  17050.43691   0.2566  | Added ICR_failure_2012.
-     6|  14  860.25511     8     7.62097  15252.36386   0.3350  | Added solvency_ratio_2012.
-     7|  27  253.52163     9    13.75394  13536.44423   0.4098  | Added interest_diff_2012.
-     8|  29  210.07886    11    14.43977  13431.88763   0.4144  | Added tfp_acf_2012
-      |                                                         | capital_intensity_2012.
-     9|  36  108.80982    12    16.51352  13202.84322   0.4243  | Added dummy_patents.
-    10|  37   99.04938    13    16.79231  13182.03898   0.4252  | Added misallocated_fixed_2012.
-    11|  41   68.01214    15    17.82890  13119.70070   0.4279  | Added area liquidity_ratio_2012.
-    12|  42   61.91133    16    18.05798  13104.53388   0.4286  | Added net_income_2012.
-    13|  46   42.51134    17    18.87764  13069.23120   0.4301  | Added
-      |                                                         | financial_sustainability_2012.
-    14|  49   32.06682    18    19.37770  13051.39792   0.4309  | Added fin_rev_2012.
+Logistic regression                                    Number of obs =  99,769
+                                                       Wald chi2(6)  = 3906.44
+                                                       Prob > chi2   =  0.0000
+Log pseudolikelihood = -5124.4574                      Pseudo R2     =  0.2043
+
+                                    (Std. err. adjusted for 24 clusters in nace)
+--------------------------------------------------------------------------------
+               |               Robust
+       failure | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+---------------+----------------------------------------------------------------
+       control |  -3.329012   .1484754   -22.42   0.000    -3.620018   -3.038005
+solvency_ratio |  -.0066683   .0010081    -6.61   0.000    -.0086442   -.0046925
+      fin_cons |   .4516798   .1535914     2.94   0.003     .1506463    .7527133
+   ICR_failure |    .948433   .1011568     9.38   0.000     .7501694    1.146697
+        NEG_VA |   1.049704   .0927686    11.32   0.000     .8678813    1.231527
+ profitability |   .4439957   .1074198     4.13   0.000     .2334567    .6545347
+         _cons |  -4.327756   .0747274   -57.91   0.000    -4.474219   -4.181293
+--------------------------------------------------------------------------------
+(est4 stored)
+*/
 
 
+
+
+
+*****************************   Failure 2014  ********************************
+
+* Perform logistic lasso implementing theory-driven penalization (see e.g. Belloni, Chernozhukov & Wei, 2014).
+rlassologit failure_2014 control consdummy area dummy_patents dummy_trademark tfp_acf_2013 shareholders_funds_2013 added_value_2013 cash_flow_2013 ebitda_2013 fin_rev_2013 liquidity_ratio_2013 total_assets_2013 depr_2013 long_term_debt_2013 employees_2013 materials_2013 loans_2013 wage_bill_2013 fixed_assets tax_2013 current_liabilities_2013 current_assets_2013 fin_expenses_2013 int_paid_2013 solvency_ratio_2013 net_income_2013 revenue_2013 capital_intensity_2013 fin_cons_2013 ICR_failure_2013 interest_diff_2013 NEG_VA_2013 real_SA_2013 profitability_2013 misallocated_fixed_2013 financial_sustainability_2013 liquidity_return_2013 int_fixed_assets_2013
+/*
 ---------------------------------------------------
          Selected |       Logistic       Post
                   |       Lasso          logit
 ------------------+--------------------------------
-          control |      -2.8319625     -6.4660323
-solvency_rat~2012 |      -0.0055858     -0.0110760
-    fin_cons_2012 |       1.0882177      1.1933853
- ICR_failure_2012 |       0.6318009      0.9243469
-      NEG_VA_2012 |       0.9868411      1.4811376
-     real_SA_2012 |       0.7141779      1.0411661
-profitabilit~2012 |       0.3487002      0.4596293
-liquidity_re~2012 |      -1.4272856     -1.5106375
-            _cons |       4.2222909      7.4503485
+solvency_rat~2013 |      -0.0004975     -0.0191726
+    fin_cons_2013 |       0.0838330      2.1866083
+      NEG_VA_2013 |       1.7490431      1.1827171
+profitabilit~2013 |       0.3580770      0.3753632
+liquidity_re~2013 |      -0.8673540     -0.2020525
+            _cons |      -5.5258411     -6.4364436
 ---------------------------------------------------
 */
 
-* Logit Regression
+
+* Logistic regression
 preserve
-keep dummy_hrz_2015 nace control real_SA_2012 fin_cons_2012 ICR_failure_2012 NEG_VA_2012 profitability_2012  liquidity_return_2012  solvency_ratio_2012
-rename dummy_hrz_2015 dummy_hrz_zombie
-rename real_SA_2012 real_SA
-rename fin_cons_2012 fin_cons
-rename ICR_failure_2012 ICR_failure
-rename NEG_VA_2012 NEG_VA
+keep failure_2014 solvency_ratio_2013 fin_cons_2013 NEG_VA_2013 profitability_2013 liquidity_return_2013 nace
+rename failure_2014 failure
+rename solvency_ratio_2013 solvency_ratio
+rename fin_cons_2013 fin_cons
+rename NEG_VA_2013 NEG_VA
+rename profitability_2013 profitability
+rename liquidity_return_2013 liquidity_return
+eststo: logit failure solvency_ratio fin_cons NEG_VA profitability liquidity_return, cluster(nace) robust
+restore
+/*
+Logistic regression                                    Number of obs =  95,702
+                                                       Wald chi2(5)  = 1668.99
+                                                       Prob > chi2   =  0.0000
+Log pseudolikelihood = -2305.3063                      Pseudo R2     =  0.1676
+
+                                      (Std. err. adjusted for 24 clusters in nace)
+----------------------------------------------------------------------------------
+                 |               Robust
+         failure | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-----------------+----------------------------------------------------------------
+  solvency_ratio |   -.016785   .0017539    -9.57   0.000    -.0202226   -.0133474
+        fin_cons |   2.091582   .1823738    11.47   0.000     1.734136    2.449029
+          NEG_VA |   1.203933   .1489207     8.08   0.000     .9120534    1.495812
+   profitability |   .3450108    .115707     2.98   0.003     .1182292    .5717924
+liquidity_return |  -.1223442    .157186    -0.78   0.436    -.4304231    .1857348
+           _cons |  -6.474643   .1326971   -48.79   0.000    -6.734725   -6.214562
+----------------------------------------------------------------------------------
+(est5 stored)
+
+*/
+
+
+
+
+
+*****************************   Failure 2013  ********************************
+
+* Perform logistic lasso implementing theory-driven penalization (see e.g. Belloni, Chernozhukov & Wei, 2013).
+rlassologit failure_2013 control consdummy area dummy_patents dummy_trademark tfp_acf_2012 shareholders_funds_2012 added_value_2012 cash_flow_2012 ebitda_2012 fin_rev_2012 liquidity_ratio_2012 total_assets_2012 depr_2012 long_term_debt_2012 employees_2012 materials_2012 loans_2012 wage_bill_2012 fixed_assets tax_2012 current_liabilities_2012 current_assets_2012 fin_expenses_2012 int_paid_2012 solvency_ratio_2012 net_income_2012 revenue_2012 capital_intensity_2012 fin_cons_2012 ICR_failure_2012 interest_diff_2012 NEG_VA_2012 real_SA_2012 profitability_2012 misallocated_fixed_2012 financial_sustainability_2012 liquidity_return_2012 int_fixed_assets_2012
+/*
+---------------------------------------------------
+         Selected |       Logistic       Post
+                  |       Lasso          logit
+------------------+--------------------------------
+      NEG_VA_2012 |       0.7878661      1.1433477
+profitabilit~2012 |       0.0367679      1.4190819
+liquidity_re~2012 |      -1.9095983     -2.4360075
+            _cons |      -5.4671410     -5.7769839
+---------------------------------------------------
+
+*/
+
+
+* Logistic regression
+preserve
+keep failure_2013 profitability_2012 liquidity_return_2012 nace
+rename failure_2013 failure
 rename profitability_2012 profitability
 rename liquidity_return_2012 liquidity_return
-rename solvency_ratio_2012 solvency_ratio
-eststo: quietly logit dummy_hrz_zombie control real_SA fin_cons ICR_failure NEG_VA profitability liquidity_return solvency_ratio, cluster(nace) robust
+set maxiter 10
+eststo: logit failure profitability liquidity_return, cluster(nace) robust 
 restore
-
-*Zombies 2012/2014
-*LASSO REGRESSION
-lassologit dummy_hrz_2014 control consdummy area dummy_patents dummy_trademark tfp_acf_2011 shareholders_funds_2011 added_value_2011 cash_flow_2011 ebitda_2011 fin_rev_2011 liquidity_ratio_2011 total_assets_2011 depr_2011 long_term_debt_2011 employees_2011 materials_2011 loans_2011 wage_bill_2011 fixed_assets tax_2011 current_liabilities_2011 current_assets_2011 fin_expenses_2011 int_paid_2011 solvency_ratio_2011 net_income_2011 revenue_2011 capital_intensity_2011 fin_cons_2011 ICR_failure_2011 interest_diff_2011 NEG_VA_2011 real_SA_2011 profitability_2011 misallocated_fixed_2011 financial_sustainability_2011 liquidity_return_2011 int_fixed_assets_2011 
-rlassologit dummy_hrz_2014 control consdummy area dummy_patents dummy_trademark tfp_acf_2011 shareholders_funds_2011 added_value_2011 cash_flow_2011 ebitda_2011 fin_rev_2011 liquidity_ratio_2011 total_assets_2011 depr_2011 long_term_debt_2011 employees_2011 materials_2011 loans_2011 wage_bill_2011 fixed_assets tax_2011 current_liabilities_2011 current_assets_2011 fin_expenses_2011 int_paid_2011 solvency_ratio_2011 net_income_2011 revenue_2011 capital_intensity_2011 fin_cons_2011 ICR_failure_2011 interest_diff_2011 NEG_VA_2011 real_SA_2011 profitability_2011 misallocated_fixed_2011 financial_sustainability_2011 liquidity_return_2011 int_fixed_assets_2011 
-
 /*
-  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
-------+---------------------------------------------------------+----------------
-     1|   1 4093.82753     0     3.17659  24553.41622   0.0000  | Added fin_cons_2011 _cons.
-     2|   5 2811.02195     2     4.77426  21815.56053   0.1115  | Added control.
-     3|   6 2558.86816     3     5.12507  21018.21993   0.1440  | Added ICR_failure_2011.
-     4|   7 2329.33302     4     5.59062  20265.56741   0.1746  | Added NEG_VA_2011.
-     5|  10 1757.04386     6     6.54156  18560.71957   0.2440  | Added real_SA_2011
-      |                                                         | profitability_2011.
-     6|  15 1098.24939     7     6.12264  16300.97268   0.3361  | Added solvency_ratio_2011.
-     7|  25  429.07944     8     8.54579  14436.60619   0.4120  | Added liquidity_return_2011.
-     8|  29  294.62690     9    10.34112  14122.91742   0.4248  | Added interest_diff_2011.
-     9|  31  244.14045    10    11.14384  14007.36707   0.4295  | Added dummy_patents.
-    10|  34  184.15808    11    12.28285  13869.04684   0.4351  | Added tfp_acf_2011.
-    11|  36  152.60126    13    12.98634  13798.71763   0.4379  | Added area capital_intensity_2011.
-    12|  39  115.10896    14    13.96787  13717.70606   0.4412  | Added
-      |                                                         | financial_sustainability_2011.
-    13|  40  104.78348    15    14.26042  13698.06375   0.4420  | Added dummy_trademark.
-    14|  42   86.82807    16    14.83207  13664.81244   0.4434  | Added misallocated_fixed_2011.
-    15|  44   71.94945    16    15.36621  13638.40577   0.4445  | Added ebitda_2011.
-    16|  47   54.27234    18    16.04290  13607.51803   0.4457  | Added net_income_2011.
-    17|  48   49.40401    18    16.23550  13599.63642   0.4460  | Added cash_flow_2011. Removed
-      |                                                         | ebitda_2011.
-	  
----------------------------------------------------
-         Selected |       Logistic       Post
-                  |       Lasso          logit
-------------------+--------------------------------
-          control |      -2.6559632     -4.4862297
-solvency_rat~2011 |      -0.0085489     -0.0121067
-    fin_cons_2011 |       1.5483212      1.3630814
- ICR_failure_2011 |       1.2014165      1.4641066
-      NEG_VA_2011 |       1.1645400      1.0962365
-     real_SA_2011 |       0.5063261      0.7487522
-profitabilit~2011 |       0.2674672      0.2960786
-liquidity_re~2011 |      -0.2157814     -3.1081548
-            _cons |       1.8251659      4.4422587
----------------------------------------------------
-*/ 
+Logistic regression                                    Number of obs = 101,270
+                                                       Wald chi2(2)  =  444.08
+                                                       Prob > chi2   =  0.0000
+Log pseudolikelihood = -2898.5129                      Pseudo R2     =  0.0653
 
-* Logit Regression
-preserve
-keep dummy_hrz_2014 nace control real_SA_2011 fin_cons_2011 ICR_failure_2011 NEG_VA_2011 solvency_ratio_2011 profitability_2011 liquidity_return_2011
-rename dummy_hrz_2014 dummy_hrz_zombie
-rename real_SA_2011 real_SA
-rename fin_cons_2011 fin_cons
-rename ICR_failure_2011 ICR_failure
-rename NEG_VA_2011 NEG_VA
-rename solvency_ratio_2011 solvency_ratio 
-rename liquidity_return_2011 liquidity_return
-eststo: quietly logit dummy_hrz_zombie control real_SA fin_cons ICR_failure NEG_VA solvency_ratio profitability liquidity_return, cluster(nace) robust
-restore
+                                      (Std. err. adjusted for 24 clusters in nace)
+----------------------------------------------------------------------------------
+                 |               Robust
+         failure | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-----------------+----------------------------------------------------------------
+   profitability |   2.549362    .797802     3.20   0.001     .9856988    4.113025
+liquidity_return |  -.3032606   2.349459    -0.13   0.897    -4.908116    4.301595
+           _cons |  -5.633693   .0904735   -62.27   0.000    -5.811018   -5.456368
+----------------------------------------------------------------------------------
+*/
 
-*Zombies 2011/2013
-*LASSO REGRESSION
-lassologit dummy_hrz_2013  control consdummy area dummy_patents dummy_trademark tfp_acf_2010 shareholders_funds_2010 added_value_2010 cash_flow_2010 ebitda_2010 fin_rev_2010 liquidity_ratio_2010 total_assets_2010 depr_2010 long_term_debt_2010 employees_2010 materials_2010 loans_2010 wage_bill_2010 fixed_assets tax_2010 current_liabilities_2010 current_assets_2010 fin_expenses_2010 int_paid_2010 solvency_ratio_2010 net_income_2010 revenue_2010 capital_intensity_2010 fin_cons_2010 ICR_failure_2010 interest_diff_2010 NEG_VA_2010 real_SA_2010 profitability_2010 misallocated_fixed_2010 financial_sustainability_2010 liquidity_return_2010 int_fixed_assets_2010 
-rlassologit dummy_hrz_2013  control consdummy area dummy_patents dummy_trademark tfp_acf_2010 shareholders_funds_2010 added_value_2010 cash_flow_2010 ebitda_2010 fin_rev_2010 liquidity_ratio_2010 total_assets_2010 depr_2010 long_term_debt_2010 employees_2010 materials_2010 loans_2010 wage_bill_2010 fixed_assets tax_2010 current_liabilities_2010 current_assets_2010 fin_expenses_2010 int_paid_2010 solvency_ratio_2010 net_income_2010 revenue_2010 capital_intensity_2010 fin_cons_2010 ICR_failure_2010 interest_diff_2010 NEG_VA_2010 real_SA_2010 profitability_2010 misallocated_fixed_2010 financial_sustainability_2010 liquidity_return_2010 int_fixed_assets_2010 
 
-/* 
-  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
-------+---------------------------------------------------------+----------------
-     1|   1 2214.23012     0     3.19592  13719.23199   0.0000  | Added fin_cons_2010 _cons.
-     2|   5 1520.39855     3     4.84198  12109.94266   0.1174  | Added control
-      |                                                         | liquidity_return_2010.
-     3|   8 1146.85488     4     6.69754  10967.76927   0.2007  | Added NEG_VA_2010.
-     4|   9 1043.97991     5     7.20050  10690.48702   0.2209  | Added profitability_2010.
-     5|  10  950.33301     6     7.52741  10429.03406   0.2400  | Added real_SA_2010.
-     6|  16  540.72675     7     7.50569   9192.35765   0.3302  | Added ICR_failure_2010.
-     7|  18  448.06931     8     7.49718   8944.24995   0.3483  | Added solvency_ratio_2010.
-     8|  24  254.94544     9     9.02148   8462.40159   0.3835  | Added tfp_acf_2010.
-     9|  26  211.25869    11     9.83300   8351.70254   0.3916  | Added misallocated_fixed_2010
-      |                                                         | financial_sustainability_2010.
-    10|  28  175.05799    12    10.61950   8259.43480   0.3983  | Added dummy_patents.
-    11|  34   99.60565    13    12.66844   8085.10099   0.4111  | Added interest_diff_2010.
-    12|  38   68.39411    14    13.71122   8026.24752   0.4154  | Added dummy_trademark.
-    13|  43   42.75009    15    14.74358   7986.76839   0.4183  | Added capital_intensity_2010.
-    14|  45   35.42455    16    15.08427   7974.91661   0.4192  | Added net_income_2010.
-    15|  46   32.24691    17    15.23187   7969.92778   0.4196  | Added liquidity_ratio_2010.
 
----------------------------------------------------
-         Selected |       Logistic       Post
-                  |       Lasso          logit
-------------------+--------------------------------
-          control |      -2.3864433     -4.3947651
-solvency_rat~2010 |      -0.0034475     -0.0100145
-    fin_cons_2010 |       1.9277193      1.9492289
- ICR_failure_2010 |       0.3492034      0.7195404
-      NEG_VA_2010 |       0.9151594      1.5452409
-     real_SA_2010 |       0.3770297      0.6302212
-profitabilit~2010 |       0.3544224      0.4284554
-liquidity_re~2010 |      -1.8570237     -2.5380091
-            _cons |       0.7066535      3.3801249
---------------------------------------------------
 
-*/ 
-
-* Logit Regression
-preserve 
-keep dummy_hrz_2013 nace control real_SA_2010 fin_cons_2010  ICR_failure_2010 NEG_VA_2010 solvency_ratio_2010 liquidity_return_2010 profitability_2010
-rename dummy_hrz_2013 dummy_hrz_zombie
-rename real_SA_2010 real_SA
-rename fin_cons_2010 fin_cons
-rename profitability_2010 profitability
-rename ICR_failure_2010 ICR_failure
-rename NEG_VA_2010 NEG_VA
-rename solvency_ratio_2010 solvency_ratio
-rename liquidity_return_2010 liquidity_return
-eststo: quietly logit dummy_hrz_zombie control real_SA fin_cons profitability ICR_failure NEG_VA solvency_ratio liquidity_return, cluster(nace) robust
-restore
-
-*Zombies 2010/2012
-*LASSO REGRESSION
-lassologit dummy_hrz_2012 control consdummy area dummy_patents dummy_trademark tfp_acf_2009 shareholders_funds_2009 added_value_2009 cash_flow_2009 ebitda_2009 fin_rev_2009 liquidity_ratio_2009 total_assets_2009 depr_2009 long_term_debt_2009 employees_2009 materials_2009 loans_2009 wage_bill_2009 fixed_assets tax_2009 current_liabilities_2009 current_assets_2009 fin_expenses_2009 int_paid_2009 solvency_ratio_2009 net_income_2009 revenue_2009 capital_intensity_2009 fin_cons_2009 ICR_failure_2009 interest_diff_2009 NEG_VA_2009 real_SA_2009 profitability_2009 misallocated_fixed_2009 financial_sustainability_2009 liquidity_return_2009 int_fixed_assets_2009 
-rlassologit dummy_hrz_2012 control consdummy area dummy_patents dummy_trademark tfp_acf_2009 shareholders_funds_2009 added_value_2009 cash_flow_2009 ebitda_2009 fin_rev_2009 liquidity_ratio_2009 total_assets_2009 depr_2009 long_term_debt_2009 employees_2009 materials_2009 loans_2009 wage_bill_2009 fixed_assets tax_2009 current_liabilities_2009 current_assets_2009 fin_expenses_2009 int_paid_2009 solvency_ratio_2009 net_income_2009 revenue_2009 capital_intensity_2009 fin_cons_2009 ICR_failure_2009 interest_diff_2009 NEG_VA_2009 real_SA_2009 profitability_2009 misallocated_fixed_2009 financial_sustainability_2009 liquidity_return_2009 int_fixed_assets_2009 
-
+* Get table
+esttab est1 est2 est3 est4 est5
 /*
-  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
-------+---------------------------------------------------------+----------------
-     1|   1 2220.78504     0     3.17857  16242.15805  -0.0000  | Added _cons.
-     2|   2 2021.57657     2     4.06494  15741.41928   0.0309  | Added fin_cons_2009
-      |                                                         | liquidity_return_2009.
-     3|   3 1840.23747     3     4.74258  15193.02226   0.0646  | Added control.
-     4|   6 1388.11322     4     6.33247  13699.30309   0.1566  | Added profitability_2009.
-     5|   7 1263.59693     5     6.81905  13317.94579   0.1801  | Added NEG_VA_2009.
-     6|  10  953.14634     6     7.91520  12473.27855   0.2321  | Added solvency_ratio_2009.
-     7|  12  789.81782     7     8.24404  12026.16121   0.2597  | Added real_SA_2009.
-     8|  22  308.57708     8     8.14660  10796.01966   0.3354  | Added ICR_failure_2009.
-     9|  23  280.89715     9     8.14643  10735.70085   0.3392  | Added tfp_acf_2009.
-    10|  25  232.76340    10     8.15631  10624.50140   0.3460  | Added dummy_patents.
-    11|  27  192.87771    11     8.32450  10530.82443   0.3518  | Added dummy_trademark.
-    12|  28  175.57622    12     8.43377  10486.44266   0.3546  | Added capital_intensity_2009.
-    13|  30  145.48997    12     8.64447  10412.48073   0.3591  | Added net_income_2009.
-    14|  33  109.74483    14     9.05619  10335.00814   0.3639  | Added interest_diff_2009.
-    15|  34   99.90052    15     9.29224  10314.39617   0.3652  | Added liquidity_ratio_2009.
-    16|  38   68.59658    16    10.16551  10254.24001   0.3689  | Added area.
-    17|  41   51.74322    17    10.73928  10227.39440   0.3706  | Added
-      |                                                         | financial_sustainability_2009.
-    18|  45   35.52942    18    11.34743  10206.73668   0.3719  | Added misallocated_fixed_2009.
+--------------------------------------------------------------------------------------------
+                      (1)             (2)             (3)             (4)             (5)   
+ Failure             2017           2016             2015            2014           2013   
+--------------------------------------------------------------------------------------------                                                                                    
+control            -2.862***       -3.714***       -3.328***       -3.329***                
+                 (-31.09)        (-26.25)        (-22.45)        (-22.42)                   
 
+solvency_r~o      -0.0108***     -0.00802***     -0.00678***     -0.00667***      -0.0168***
+                  (-8.18)         (-6.55)         (-6.63)         (-6.61)         (-9.57)   
 
----------------------------------------------------
-         Selected |       Logistic       Post
-                  |       Lasso          logit
-------------------+--------------------------------
-          control |      -2.3897154     -4.0154735
-solvency_rat~2009 |      -0.0109088     -0.0177609
-    fin_cons_2009 |       1.8540403      1.9745017
- ICR_failure_2009 |       0.0421092      0.3664711
-      NEG_VA_2009 |       0.9466649      1.3836262
-     real_SA_2009 |       0.2114637      0.3862913
-profitabilit~2009 |       0.3542000      0.3863097
-liquidity_re~2009 |      -1.3362944     -1.2625621
-            _cons |      -1.0103308      0.7358958
----------------------------------------------------
-*/ 
+fin_cons            0.530***        0.646***        0.454**         0.452**         2.092***
+                   (3.61)          (5.22)          (2.97)          (2.94)         (11.47)   
 
-* Logit Regression
-preserve 
-keep dummy_hrz_2012 nace control fin_cons_2009 real_SA_2009 liquidity_return_2009 ICR_failure_2009 NEG_VA_2009 solvency_ratio_2009 profitability_2009
-rename dummy_hrz_2012 dummy_hrz_zombie
-rename fin_cons_2009 fin_cons
-rename real_SA_2009 real_SA
-rename liquidity_return_2009 liquidity_return
-rename profitability_2009 profitability
-rename ICR_failure_2009 ICR_failure
-rename NEG_VA_2009 NEG_VA
-rename solvency_ratio_2009 solvency_ratio
-eststo: quietly logit dummy_hrz_zombie control fin_cons real_SA liquidity_return  ICR_failure  NEG_VA profitability solvency_ratio, cluster(nace) robust
-restore
+ICR_failure         1.004***        0.884***        0.950***        0.948***                
+                   (8.66)          (8.91)          (9.36)          (9.38)                   
 
-*Zombies 2009/2011
-*LASSO REGRESSION
-lassologit dummy_hrz_2011 control consdummy area dummy_patents dummy_trademark tfp_acf_2008 shareholders_funds_2008 added_value_2008 cash_flow_2008 ebitda_2008 fin_rev_2008 liquidity_ratio_2008 total_assets_2008 depr_2008 long_term_debt_2008 employees_2008 materials_2008 loans_2008 wage_bill_2008 fixed_assets tax_2008 current_liabilities_2008 current_assets_2008 fin_expenses_2008 int_paid_2008 solvency_ratio_2008 net_income_2008 revenue_2008 capital_intensity_2008 fin_cons_2008 ICR_failure_2008 NEG_VA_2008 real_SA_2008 profitability_2008 misallocated_fixed_2008 financial_sustainability_2008 liquidity_return_2008 int_fixed_assets_2008 
-rlassologit dummy_hrz_2011 control consdummy area dummy_patents dummy_trademark tfp_acf_2008 shareholders_funds_2008 added_value_2008 cash_flow_2008 ebitda_2008 fin_rev_2008 liquidity_ratio_2008 total_assets_2008 depr_2008 long_term_debt_2008 employees_2008 materials_2008 loans_2008 wage_bill_2008 fixed_assets tax_2008 current_liabilities_2008 current_assets_2008 fin_expenses_2008 int_paid_2008 solvency_ratio_2008 net_income_2008 revenue_2008 capital_intensity_2008 fin_cons_2008 ICR_failure_2008 NEG_VA_2008 real_SA_2008 profitability_2008 misallocated_fixed_2008 financial_sustainability_2008 liquidity_return_2008 int_fixed_assets_2008 
+NEG_VA              0.804***        0.895***        1.052***        1.050***        1.204***
+                   (8.74)         (11.51)         (11.20)         (11.32)          (8.08)   
 
-/*
-  Knot|  ID     Lambda    s      L1-Norm     EBIC     Pseudo-R2 | Entered/removed
-------+---------------------------------------------------------+----------------
-     1|   1 3504.73659     0     3.07557  20016.10493  -0.0000  | Added _cons.
-     2|   2 3190.35533     1     3.60558  19166.63128   0.0424  | Added fin_cons_2008.
-     3|   6 2190.65380     3     5.34875  17159.23669   0.1427  | Added control
-      |                                                         | liquidity_return_2008.
-     4|   8 1815.26944     4     6.50765  15967.31265   0.2023  | Added NEG_VA_2008.
-     5|   9 1652.43647     5     7.01381  15499.51017   0.2257  | Added profitability_2008.
-     6|  13 1134.64359     6     8.64994  14227.10751   0.2892  | Added solvency_ratio_2008.
-     7|  14 1032.86399     7     8.80905  13948.12681   0.3032  | Added real_SA_2008.
-     8|  25  367.33605     8     8.75952  12202.12593   0.3904  | Added ICR_failure_2008.
-     9|  27  304.39036     9     8.82417  12077.03649   0.3967  | Added dummy_trademark.
-    10|  28  277.08599    10     8.90910  12017.97071   0.3996  | Added area.
-    11|  31  209.00929    11     9.14255  11875.23797   0.4068  | Added dummy_patents.
-    12|  32  190.26077    12     9.25101  11837.06726   0.4087  | Added capital_intensity_2008.
-    13|  33  173.19404    13     9.34303  11798.50020   0.4106  | Added
-      |                                                         | financial_sustainability_2008.
-    14|  38  108.25583    14    10.42238  11679.70816   0.4165  | Added net_income_2008
-      |                                                         | misallocated_fixed_2008.
-    15|  46   51.04118    16    11.84819  11599.77858   0.4205  | Added tfp_acf_2008.
-    16|  49   38.50097    16    12.21550  11588.06359   0.4211  | Added loans_2008.
-    17|  50   35.04737    17    12.32159  11584.13593   0.4213  | Added cash_flow_2008.
+profitabil~y        0.457***        0.312**         0.443***        0.444***        0.345** 
+                   (5.13)          (3.23)          (4.14)          (4.13)          (2.98)   
 
+liquidity_~n       -1.200***   -0.0000107          0.0165**                        -0.122   
+                  (-6.71)         (-1.06)          (2.92)                         (-0.78)   
 
----------------------------------------------------
-         Selected |       Logistic       Post
-                  |       Lasso          logit
-------------------+--------------------------------
-          control |      -2.3317296     -3.5729902
-  dummy_trademark |      -0.0127776     -0.9427824
-solvency_rat~2008 |      -0.0118846     -0.0198629
-    fin_cons_2008 |       2.9659077      3.2409645
- ICR_failure_2008 |       0.0370578      0.2410516
-      NEG_VA_2008 |       0.9354614      1.4121771
-     real_SA_2008 |       0.2639898      0.4107156
-profitabilit~2008 |       0.1498058      0.1558566
-liquidity_re~2008 |      -1.2470065     -1.5054369
-            _cons |      -0.8533344      0.6655656
----------------------------------------------------
-*/ 
+_cons              -3.580***       -4.148***       -4.329***       -4.328***       -6.475***
+                 (-48.70)        (-55.78)        (-58.11)        (-57.91)        (-48.79)   
+--------------------------------------------------------------------------------------------
+N                   99622          102046           99769           99769           95702   
+--------------------------------------------------------------------------------------------
+t statistics in parentheses
+* p<0.05, ** p<0.01, *** p<0.001
+*/
 
-* Logit Regression
-preserve 
-keep dummy_hrz_2011 nace control fin_cons_2008 real_SA_2008 ICR_failure_2008 liquidity_return_2008 NEG_VA_2008 dummy_trademark profitability_2008 solvency_ratio_2008 
-rename dummy_hrz_2011 dummy_hrz_zombie
-rename fin_cons_2008 fin_cons
-rename real_SA_2008 real_SA
-rename ICR_failure_2008 ICR_failure
-rename liquidity_return_2008 liquidity_return
-rename NEG_VA_2008 NEG_VA
-rename profitability_2008 profitability
-rename solvency_ratio_2008 solvency_ratio
-eststo: quietly logit dummy_hrz_zombie control fin_cons real_SA ICR_failure liquidity_return NEG_VA dummy_trademark profitability solvency_ratio, cluster(nace) robust
-restore 
-
-* Get Latex Table
-esttab using post_logit_regressions_9.tex, label ///
-title(Logistic Regressions \label{tab1})
 
 
 

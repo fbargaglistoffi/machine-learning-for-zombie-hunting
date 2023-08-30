@@ -4,9 +4,11 @@
 *                                                                              *
 ********************************************************************************
 
+* Change path accordingly
+cd "H:\.shortcut-targets-by-id\1keYb51HXkcQwzkU2kBgbnguQaqUy3umX\Zombie Hunting New Data"
 
-use "zombie_data.dta", clear
-keep if iso=="IT"
+* Load data from yeay-by-year analysis 
+use "data_failure.dta", clear
 
 
 gen missing_ICR_2016= missing(ICR_2016)
@@ -44,9 +46,61 @@ gen missing_real_SA_2015=missing(real_SA_2015)
 gen missing_real_SA_2014=missing(real_SA_2014)
 
 
-xi: logit failure_2017 missing_ICR i.nace i.nuts2, or cluster(nace)
-xi: logit failure_2017 missing_interest_diff i.nace i.nuts2, or cluster(nace)
-xi: logit failure_2017 missing_profitability i.nace i.nuts2, or cluster(nace)
-xi: logit failure_2017 missing_Z i.nace i.nuts2, or cluster(nace)
-xi: logit failure_2017 missing_tfp_acf i.nace i.nuts2, or cluster(nace)
-xi: logit failure_2017 missing_NEG_VA i.nace i.nuts2, or cluster(nace)
+xi: logit failure_2016 missing_ICR i.nace i.nuts2, or cluster(nace)
+/* 
+------------------------------------------------------------------------------
+             |               Robust
+failure_2016 | Odds ratio   std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+ missing_ICR |   5.703321    1.07283     9.26   0.000     3.944678    8.246015
+*/
+
+
+xi: logit failure_2016 missing_interest_diff i.nace i.nuts2, or cluster(nace)
+/*
+---------------------------------------------------------------------------------------
+                      |               Robust
+         failure_2016 | Odds ratio   std. err.      z    P>|z|     [95% conf. interval]
+----------------------+----------------------------------------------------------------
+missing_interest_diff |   4.088188   .7491278     7.68   0.000     2.854664    5.854728
+*/
+
+
+xi: logit failure_2016 missing_profitability i.nace i.nuts2, or cluster(nace)
+/*
+---------------------------------------------------------------------------------------
+                      |               Robust
+         failure_2016 | Odds ratio   std. err.      z    P>|z|     [95% conf. interval]
+----------------------+----------------------------------------------------------------
+missing_profitability |   5.703321    1.07283     9.26   0.000     3.944678    8.246015
+*/
+
+
+xi: logit failure_2016 missing_Z i.nace i.nuts2, or cluster(nace)
+/*
+------------------------------------------------------------------------------
+             |               Robust
+failure_2016 | Odds ratio   std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+   missing_Z |   10.29281   2.206031    10.88   0.000     6.762358    15.66642
+*/
+
+
+xi: logit failure_2016 missing_tfp_acf i.nace i.nuts2, or cluster(nace)
+/*
+---------------------------------------------------------------------------------
+                |               Robust
+   failure_2016 | Odds ratio   std. err.      z    P>|z|     [95% conf. interval]
+----------------+----------------------------------------------------------------
+missing_tfp_acf |   7.045051   1.220613    11.27   0.000     5.016565     9.89377
+*/
+
+
+xi: logit failure_2016 missing_NEG_VA i.nace i.nuts2, or cluster(nace)
+/* 
+--------------------------------------------------------------------------------
+               |               Robust
+  failure_2016 | Odds ratio   std. err.      z    P>|z|     [95% conf. interval]
+---------------+----------------------------------------------------------------
+missing_NEG_VA |   6.650088   1.218358    10.34   0.000     4.643862    9.523036
+*/

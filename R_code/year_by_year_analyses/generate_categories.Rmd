@@ -104,7 +104,7 @@ trn_mtrx
 ```
 
 
-(Figure A3): Transition plot 
+Transition plot 
 ```{r}
 output_perc <- function(txt) sprintf("%s", txt)
 box_txt <-cbind(mapply(output_perc, 

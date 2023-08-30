@@ -117,7 +117,11 @@ data_italy_non_liq = data_italy[which(data_italy$Status == "Bankruptcy" | data_i
 Construct yearly failure Indicator
 ```{r}
 data_italy <- failure_yearly(data_italy)
-#write_dta(data_italy, "data_failure.dta")
+```
+
+Save data with year-by-year failures
+```{r}
+write_dta(data_italy, "data_failure.dta")
 ```
 
 
