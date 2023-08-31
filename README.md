@@ -125,6 +125,20 @@ Within the <tt>`lagged_analysis`</tt> folder, you can find the code to reproduce
 Within the <tt>`year_by_year_analyses`</tt> folder you can find the following files:
 * <tt>`year_by_year.R`</tt>: R code to reproduce the yearly machine learning analyses (Tables A.3, A.4; Figures 9, 10, A.2);
 * <tt>`generate_categories.R`</tt>: R code to generate transitions across deciles of risk (Table 5), transitions of zombies to other risk categories (Figure 8) and to create the panel dataset for Table 6.
+ 
+
+## References
+
+Machine Learning for Zombie Hunting ([paper](https://arxiv.org/abs/2306.08165))
+```
+@article{bargagli2023machine,
+  title={Machine Learning for Zombie Hunting: Predicting Distress from Firms' Accounts and Missing Values},
+  author={Bargagli-Stoffi, Falco J and Incerti, Fabio and Riccaboni, Massimo and Rungi, Armando},
+  journal={arXiv preprint arXiv:2306.08165},
+  year={2023}
+}={2023}
+}
+```
 
 
 
