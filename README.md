@@ -2,9 +2,10 @@
 
 In this repository, we provide the code for the data analysis part of the paper [_"Machine Learning for Zombie Hunting:
 Predicting Distress from Firms’ Accounts and Missing Values"_](https://arxiv.org/pdf/2306.08165.pdf) by F.J. Bargagli-Stoffi, F. Incerti, M. Riccaboni and A. Rungi. <br />
-The code is written both in <tt>`Stata`</tt> and <tt>`R`</tt>. The data cleaning, the creation of the indicators, and the logit-lasso analyses were performed in <tt>`Stata`</tt>. <tt>`R`</tt> was used for the machine learning analyses.
 
-Below a brief legend of the Data and the <tt>`Stata`</tt> and <tt>`R`</tt> code files. 
+The code is written both in <tt>`Stata`</tt> and <tt>`R`</tt>. The data cleaning, the creation of the indicators, the Logit missingness and LOGIT-LASSO analyses were performed in <tt>`Stata`</tt>. <tt>`R`</tt> was used for the machine learning analyses.
+
+Below is a brief legend of the data and the <tt>`Stata`</tt> and <tt>`R`</tt> code files. 
 
 # Data
 
@@ -102,35 +103,28 @@ Within the <tt>`creating_indicators_and_cleaning_data`</tt> folder you can find 
 N.B.1 The lagged variables were created to run a series of machine learning models with lagger predictors used to assess the performance of each model. In particular, the lagged variable assumes the values of the corresponding variable at "t-1", where "t" is either the censorship time for those firms that did not fail in the time span of the analysis (2008-2018), or the failure time for those firms that failed in the same time span. <br />
 N.B.2. The data cleaning is performed in multiple do files and not just in one specific file.
 
-Within the <tt>`lasso_analyses`</tt> folder you can find the following file:
-* <tt>`logitlasso_analyses`</tt>: code to run the LOGIT-LASSO to extract the set of predictors with the highest ability to detect financial distress (the results are used for Table C.1);
+Within the <tt>`lasso_analyses`</tt> folder, you can find the code to extract the set of predictors with the highest ability to detect financial distress with the LOGIT-LASSO model (the results are used for Table C.1).
 
-Within the <tt>`logit_missingness_analyses`</tt> folder you can find the following files:
-* <tt>`logit_missingness_analyses`</tt>: code for the logit missingess analyses (the results are depicted in Table 2).
+Within the <tt>`logit_missingness_analyses`</tt> folder, you can find the code for the logit missingness analyses (the results are depicted in Table 2).
 
-
-Within the <tt>`productivity_zombie`</tt> folder you can find the following file:
-* <tt>`productivity_zombie_panel_analysis`</tt>: code to create Table 6 (Productivity and size premia for healthy firms vs. zombies).
+Within the <tt>`productivity_zombie`</tt> folder, you can find the code to create Table 6 (Productivity and size premia for healthy firms vs. zombies).
 
 
 # R code
 
-The <tt>`R`</tt> code files can be found </b> [<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/R_code">here</a>]. The files are divided in five folders:
+The <tt>`R`</tt> code files can be found </b> [<a href="https://github.com/barstoff/ml-zombie-hunting/tree/master/R_code">here</a>]. The files are divided into four folders:
 * <tt>`functions`</tt>;
 * <tt>`lagged_analysis`</tt>;
 * <tt>`Shapley`</tt>;
 * <tt>`year_by_year_analyses`</tt>.
 
-Within the <tt>`functions`</tt> folder you can find the following files:
-* <tt>`function.R`</tt>: R code with main function used in the analyses (Distance-to-Default, F1-Score, Balanced Accuracy, Models Comparisons and others);
+Within the <tt>`functions`</tt> folder, you can find the main functions used in the analyses (Distance-to-Default, F1-Score, Balanced Accuracy, Models Comparisons and others).
 
-Within the <tt>`lagged_analysis`</tt> folder you can find the following files:
-* <tt>`lagged_analyses_liq_and_non_liq.Rmd`</tt>: Rmarkdown code to reproduce the lagged machine learning analyses (Tables 3, 4, D.1, D.2; Figures 4);
-
+Within the <tt>`lagged_analysis`</tt> folder, you can find the code to reproduce the lagged machine learning analyses (Tables 3, 4, D.1, D.2; Figures 4).
 
 Within the <tt>`year_by_year_analyses`</tt> folder you can find the following files:
 * <tt>`year_by_year.R`</tt>: R code to reproduce the yearly machine learning analysis (Tables A.3, A.4; Figures 9, 10, A.2);
-* <tt>`generate_categories.R`</tt>: R code to generate transitions across deciles and zombie status (Table 5; Figure 8) and to create the panel dataset for Table 6
+* <tt>`generate_categories.R`</tt>: R code to generate transitions across deciles and zombie status (Table 5; Figure 8) and to create the panel dataset for Table 6.
 
 
 
