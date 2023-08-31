@@ -103,7 +103,7 @@ Within the <tt>`creating_indicators_and_cleaning_data`</tt> folder you can find 
 N.B.1 The lagged variables were created to run a series of machine learning models with lagger predictors used to assess the performance of each model. In particular, the lagged variable assumes the values of the corresponding variable at "t-1", where "t" is either the censorship time for those firms that did not fail in the time span of the analysis (2008-2018), or the failure time for those firms that failed in the same time span. <br />
 N.B.2. The data cleaning is performed in multiple do files and not just in one specific file.
 
-Within the <tt>`lasso_analyses`</tt> folder, you can find the code to extract the set of predictors with the highest ability to detect financial distress with the LOGIT-LASSO model (the results are used for Table C.1).
+Within the <tt>`logit_lasso_analyses`</tt> folder, you can find the code to extract the set of predictors with the highest ability to detect financial distress with the LOGIT-LASSO model (the results are used for Table C.1).
 
 Within the <tt>`logit_missingness_analyses`</tt> folder, you can find the code for the logit missingness analyses (the results are depicted in Table 2).
 
@@ -120,11 +120,11 @@ The <tt>`R`</tt> code files can be found </b> [<a href="https://github.com/barst
 
 Within the <tt>`functions`</tt> folder, you can find the main functions used in the analyses (Distance-to-Default, F1-Score, Balanced Accuracy, Models Comparisons and others).
 
-Within the <tt>`lagged_analysis`</tt> folder, you can find the code to reproduce the lagged machine learning analyses (Tables 3, 4, D.1, D.2; Figures 4).
+Within the <tt>`lagged_analysis`</tt> folder, you can find the code to reproduce the lagged machine learning analyses (Tables 3, 4, D.1, D.2; Figure 4).
 
 Within the <tt>`year_by_year_analyses`</tt> folder you can find the following files:
-* <tt>`year_by_year.R`</tt>: R code to reproduce the yearly machine learning analysis (Tables A.3, A.4; Figures 9, 10, A.2);
-* <tt>`generate_categories.R`</tt>: R code to generate transitions across deciles and zombie status (Table 5; Figure 8) and to create the panel dataset for Table 6.
+* <tt>`year_by_year.R`</tt>: R code to reproduce the yearly machine learning analyses (Tables A.3, A.4; Figures 9, 10, A.2);
+* <tt>`generate_categories.R`</tt>: R code to generate transitions across deciles of risk (Table 5), transitions of zombies to other risk categories (Figure 8) and to create the panel dataset for Table 6.
 
 
 
