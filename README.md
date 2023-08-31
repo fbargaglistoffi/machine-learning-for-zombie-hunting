@@ -9,7 +9,7 @@ Below is a brief legend of the data and the <tt>`Stata`</tt> and <tt>`R`</tt> co
 
 # Data
 
-Unfortunately, we are unable to disclose the data used for our application due to our privacy policy agreement with (Bureau Van Dijk)[https://www.bvdinfo.com/en-us/]. However, we provide detailed information on which data were downloaded below.
+Unfortunately, we are unable to disclose the data used for our application due to our privacy policy agreement with [Bureau Van Dijk](https://www.bvdinfo.com/en-us/). However, we provide detailed information on which data were downloaded below.
 
 First, we downloaded data on firm-level characteristics and financial accounts for around 300,000 enterprises in Italy from the ORBIS database (Bureau Van Dijk). The status data (e.g., active firms, bankrupted firms, etc.) are available for the years 2008-2018 (first four months), while financial account data are available for the year 2008-2016.
 
