@@ -5,7 +5,7 @@ Predicting Distress from Firms’ Accounts and Missing Values"_](https://arxiv.o
 
 The code is written both in <tt>`Stata`</tt> and <tt>`R`</tt>. The data cleaning, the creation of the indicators, the Logit missingness and LOGIT-LASSO analyses were performed in <tt>`Stata`</tt>. <tt>`R`</tt> was used for the machine learning analyses.
 
-Below is a brief legend of the data and the <tt>`Stata`</tt> and <tt>`R`</tt> code files. 
+Below is a brief legend of the data and the <tt>`Stata`</tt> and <tt>`R`</tt> code files. If you use this code, in any of its parts, please make sure to cite the original paper (please see the reference below).
 
 # Data
 
@@ -127,7 +127,7 @@ Within the <tt>`year_by_year_analyses`</tt> folder you can find the following fi
 * <tt>`generate_categories.R`</tt>: R code to generate transitions across deciles of risk (Table 5), transitions of zombies to other risk categories (Figure 8) and to create the panel dataset for Table 6.
  
 
-## References
+# References
 
 Machine Learning for Zombie Hunting ([paper](https://arxiv.org/abs/2306.08165))
 ```
