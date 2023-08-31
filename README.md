@@ -102,9 +102,8 @@ Within the <tt>`creating_indicators_and_cleaning_data`</tt> folder you can find 
 N.B.1 The lagged variables were created to run a series of machine learning models with lagger predictors used to assess the performance of each model. In particular, the lagged variable assumes the values of the corresponding variable at "t-1", where "t" is either the censorship time for those firms that did not fail in the time span of the analysis (2008-2018), or the failure time for those firms that failed in the same time span. <br />
 N.B.2. The data cleaning is performed in multiple do files and not just in one specific file.
 
-Within the <tt>`lasso_analyses`</tt> folder you can find the following files:
-* <tt>`logitlasso_analyses_9th_decile`</tt>: code to run logitlasso on zombie firms above the 9th decile of failure probability (the results are used for Table 5);
-* <tt>`logitlasso_analyses_8th_decile`</tt>: code to run logitlasso on zombie firms above the 8th decile of failure probability (the results are used for robustness checks).
+Within the <tt>`lasso_analyses`</tt> folder you can find the following file:
+* <tt>`logitlasso_analyses`</tt>: code to run the LOGIT-LASSO to extract the set of predictors with the highest ability to detect financial distress (the results are used for Table C.1);
 
 Within the <tt>`logit_missingness_analyses`</tt> folder you can find the following files:
 * <tt>`logit_missingness_analyses`</tt>: code for the logit missingess analyses (the results are depicted in Table 2).
