@@ -1,4 +1,4 @@
-"Machine Learning for Zombie Hunting"
+# "Machine Learning for Zombie Hunting"
 
 In this repository, we provide the code for the data analysis part of the paper [_"Machine Learning for Zombie Hunting:
 Predicting Distress from Firms’ Accounts and Missing Values"_](https://arxiv.org/pdf/2306.08165.pdf) by F.J. Bargagli-Stoffi, F. Incerti, M. Riccaboni and A. Rungi. <br />
