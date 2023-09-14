@@ -126,7 +126,7 @@ Within the <tt>`functions`</tt> folder, you can find the main functions used in 
 Within the <tt>`lagged_analysis`</tt> folder, you can find the code to reproduce the lagged machine learning analyses (Tables 3, 4, D.1, D.2; Figure 4).
 
 Within the <tt>`year_by_year_analyses`</tt> folder you can find the following files:
-* <tt>`year_by_year.R`</tt>: R code to reproduce the yearly machine learning analyses (Tables A.3, A.4; Figures 9, 10, A.2);
+* <tt>`year_by_year.R`</tt>: R code to reproduce the yearly machine learning analyses (Tables A.3, A.4; Figures 9, 10, A.2). This code also creates the dataset "data_failure.dta" employed for the <tt>`logit_missingness_analyses`</tt>;
 * <tt>`generate_categories.R`</tt>: R code to generate transitions across deciles of risk (Table 5), transitions of zombies to other risk categories (Figure 8) and to create the panel dataset for Table 6.
  
 
